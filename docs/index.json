@@ -1,0 +1,23 @@
+[
+
+  { "file": "../project/README.md", "title": "Overview all, but better to look at chunks" },
+  { "file": "ONBOARDING.md", "title": "Just joined us?" },
+  { "file": "CONTRIBUTING.md", "title": "Wanna contribute?" },
+  { "file": "BUG_REPORT.md", "title": "Bug report button" },
+  { "file": "adrs/0001-bug-reporting-via-discord-webhook.md", "title": "Why Bug report was done like that?" },
+  { "file": "HOW_TO_ADD_A_THEME.md", "title": "Theme roadmap" },
+  { "file": "THEME_STRUCTURE.md", "title": "Theme structure" },
+  { "file": "adrs/0002-theme-systeme.md", "title": "Why theme was done like that?" },
+  { "file": "IMPROVE_PERFORMANCES_PROBLEM.md", "title": "Performances problems" },
+  { "file": "adrs/0003-improve-systeme.md", "title": "What can explain our decisions to improve improved fields?" },
+  { "file": "../project/Changelogs/CHANGELOG.md", "title": "Changelog" },
+  { "file": "../project/Changelogs/Documentation.md", "title": "Changelog documentation" },
+  { "file": "../.github/pull_request_template.md", "title": "Pull request" },
+  { "file": "../.github/Documentation.md", "title": "Pr documentation" },
+  { "file": "../project/BranchesHandling/BranchesHandling.md", "title": "Branches handling" },
+  { "file": "../project/docs/MICROPHONE_FEATURE.md", "title": "Microphone feature" },
+  { "file": "TRANSLATION.md", "title": "Translation System" },
+  { "file": "adrs/0004-translate-systeme.md", "title": "What can explain our decisions to use json for translate features?" },
+  { "file": "DIAGRAMS.md", "title": "Diagrams explained" },
+  { "file": "feature_evaluation.md", "title": "Features evaluation" }
+]
