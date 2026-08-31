@@ -1,0 +1,30 @@
+name: "Vérification du Changelog"
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check-changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Vérifier les fichiers modifiés
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+        with:
+          files: |
+            CHANGELOG.md
+      - name: Validate Update
+        if: steps.changed-files.outputs.any_changed != 'true'
+        run: |
+          echo "ERROR: Update file  CHANGELOG.md to explain your edits."
+          exit 1
+
+      - name: Success
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: echo "You pass this test(changelog checking)"
