@@ -30,26 +30,15 @@ Les chemins de ce document sont relatifs à `backend/`, sauf mention contraire.
 
 ## 2. `migrations/`
 
-Une migration par fichier, jamais modifiée après exécution. `sqlx` refuse une migration dont l'empreinte a changé.
+Le schéma tient en **un seul fichier**, `migrations/0001_schema.sql`, conformément à la répartition des tâches (`TASK-DISTRIBUTION-BACKEND.md` §4.1). Le découpage en douze migrations n'a de sens qu'une fois le schéma déployé quelque part : tant que rien n'a tourné, un fichier unique est plus simple à relire et à rejouer. `sqlx` refuse toute migration dont l'empreinte change après exécution, donc à partir du premier déploiement les corrections passeront par `0002_*.sql`, `0003_*.sql`, etc.
 
 | Fichier | Contenu | Prio |
 |---|---|---|
-| `0001_extensions.sql` | `CREATE EXTENSION IF NOT EXISTS citext; pgcrypto;` | P0 |
-| `0002_enums.sql` | Les 13 types énumérés du dictionnaire §2, **y compris `service_mode` et `highlight_placement`**. | P0 |
-| `0003_identity.sql` | `users`, `sessions`, `cities`, `employers` + index. Insérer le référentiel de villes en fin de fichier. **Question ouverte 1 à trancher avant d'écrire ce fichier :** référentiel français ou béninois. | P0 |
-| `0004_accounts.sql` | `accounts` avec les quatre `CHECK`. Pas de FK sur `owner_id`. | P0 |
-| `0005_directory.sql` | `employees`, `employment_links`, `partners`, avec `uq_active_employment`, `uq_employer_ref`, `idx_partners_catalog`. | P0 |
-| `0006_payment_tokens.sql` | `payment_tokens`, `uq_active_short_code`, `idx_tokens_expiry`. | P0 |
-| `0007_ledger.sql` | `ledger_operations`, `ledger_entries` + index. | P0 |
-| `0008_satellites.sql` | `payments`, `topups`, `compensations`, `topup_batches`. | P0 |
-| `0009_audit.sql` | `audit_log`, `api_clients`. | P1 |
-| `0010_immutability.sql` | Fonction `forbid_mutation()`, triggers, `REVOKE UPDATE, DELETE, TRUNCATE`. | P0 |
-| `0011_system_accounts.sql` | `INSERT` des comptes `MINISTRY_ISSUANCE` et `CLOSURE_FORFEIT`. | P0 |
-| **`0012_amendments.sql`** | **A1** : `ALTER TABLE partners ADD COLUMN service_mode, website_url`, `ALTER COLUMN city_id DROP NOT NULL`, contrainte `physical_needs_city`, index catalogue par `service_mode`. **A2** : `CREATE TABLE partner_highlights` + les deux index uniques partiels. | P1 |
+| `0001_schema.sql` | Extensions (`citext`, `pgcrypto`), les 13 énumérations, les 16 tables dans l'ordre de leurs dépendances, les `CHECK`, les index uniques partiels (`uq_active_employment`, `uq_active_short_code`, `uq_employer_ref`, les deux de `partner_highlights`, `uq_batch_file`), la fonction `forbid_mutation()` et ses déclencheurs sur `ledger_entries`, `ledger_operations` et `audit_log`, le rôle `cartepro_app` avec ses `GRANT`/`REVOKE`, et l'insertion des comptes système `MINISTRY_ISSUANCE` et `CLOSURE_FORFEIT`. | P0 |
 
-> **Attention à `0010` :** une fois les `REVOKE` posés, tes migrations doivent tourner avec un rôle différent de `cartepro_app`. D'où les deux `DATABASE_URL` de la §10.
+> **Attention aux `REVOKE` :** une fois posés, les migrations doivent tourner avec un rôle différent de `cartepro_app`. D'où les deux `DATABASE_URL` de la §10.
 >
-> **Simplification possible :** si tu écris le schéma d'un seul tenant avant tout déploiement, fusionne `0012` dans `0005`. Le fichier séparé n'a de sens que si `0005` a déjà tourné quelque part.
+> **Référentiel de villes :** l'insertion est absente tant que la question ouverte 1 du dictionnaire (référentiel français ou béninois) n'est pas tranchée.
 
 ---
 
@@ -330,7 +319,9 @@ Le lot de resynchronisation est le seul cas particulier : chaque ligne dans sa p
 
 ---
 
-## 6. `tests/`
+## 6. `crates/tests/`
+
+Les tests d'intégration vivent dans un paquet dédié, `crates/tests/`, membre du workspace. Placés à la racine de `backend/`, ils n'appartenaient à aucun paquet et Cargo ne les compilait jamais. Les fichiers ci-dessous sont donc sous `crates/tests/tests/`.
 
 | Fichier | Contenu attendu | Prio |
 |---|---|---|
@@ -357,17 +348,17 @@ Le lot de resynchronisation est le seul cas particulier : chaque ligne dans sa p
 
 Pour n'obtenir que l'arborescence, sans contenu :
 
-> Crée l'arborescence complète décrite dans `docs/file-guide.md`, sous `backend/`. Génère les répertoires et les fichiers vides, à ces exceptions près : `Cargo.toml` du workspace et des trois crates avec leurs dépendances de la §4 de `CLAUDE.md` ; `rust-toolchain.toml` ; `.env.example` ; `.gitignore`. Chaque fichier `.rs` créé vide doit contenir uniquement un commentaire d'en-tête de deux lignes rappelant son rôle et sa priorité d'après ce guide. Ne génère aucune implémentation, aucun `struct`, aucune fonction. Ne crée pas les fichiers de `migrations/`, je les écris moi-même.
+> Crée l'arborescence complète décrite dans `docs/file-guide.md`, sous `backend/`. Génère les répertoires et les fichiers vides, à ces exceptions près : `Cargo.toml` du workspace et des trois crates avec leurs dépendances de la §4 de `CLAUDE.md` ; `rust-toolchain.toml` ; `.env.example` ; `.gitignore`. Chaque fichier `.rs` créé vide doit contenir uniquement un commentaire d'en-tête de deux lignes rappelant son rôle et sa priorité d'après ce guide. Ne génère aucune implémentation, aucun `struct`, aucune fonction. Les fichiers de `migrations/` sont pris en charge par Claude Code (voir §2).
 
 ---
 
 ## 9. Ordre de remplissage conseillé
 
 ```
-1.  migrations/0001 → 0012                    puis `cargo sqlx migrate run`
+1.  migrations/0001_schema.sql                 puis `cargo sqlx migrate run`
 2.  core: ids, money, clock, error, config
 3.  core/ledger: hash, repo, mod, balance
-4.  tests/invariants.rs                       ← ne pas avancer tant que ça ne passe pas
+4.  crates/tests/tests/invariants.rs                       ← ne pas avancer tant que ça ne passe pas
 5.  core/crypto: password, token_sig (Ed25519), short_code
 6.  core/identity + api/extractors/auth.rs
 7.  core/payments: authorize, settle
