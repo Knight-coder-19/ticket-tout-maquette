@@ -62,3 +62,45 @@ Mention de simulation **visible et non dissimulée** (un astérisque discret en 
 - tout document ou export produit par l'application
 
 Prévoir un **composant réutilisable** et fournir **une capture par emplacement**, prise sur l'application qui tourne.
+
+### 5. Accessibilité RGAA niveau AA (mail Pontaillac)
+
+- **RGAA AA s'applique** à tout le démonstrateur.
+- Une **déclaration d'accessibilité** doit accompagner la livraison.
+- Conséquences dev front : contrastes suffisants (attention à la couleur des boutons, `#1B3A6B` interdit en fond de bouton de toute façon), navigation clavier complète, focus visible, labels sur tous les champs de formulaire, textes alternatifs, hiérarchie sémantique des titres, attributs ARIA sur les composants custom (QR code, modales, tableaux de bord, tableaux de données).
+
+### 6. Écrans liés aux règles juridiques et métier
+
+- **Inscription partenaire** : champs **SIREN** et **objet social** obligatoires à la saisie, contrôlés au moins dans leur forme (SIREN = 9 chiffres).
+- **Écran admin de validation partenaire** : **motif écrit obligatoire** pour toute décision (acceptation comme refus) ; afficher la trace horodatée + l'identifiant de l'agent.
+- **Vue « partenaire refusé »** : définir ce que voit un partenaire dont la demande est refusée (statut + motif).
+- **Inscription salarié** : ne demander que le strict nécessaire (minimisation RGPD).
+- Cohérence UI ↔ CGU sur 3 comportements à afficher clairement :
+  - que se passe-t-il quand le **solde est insuffisant**
+  - que devient un **solde non consommé en fin de période**
+  - **qui peut annuler** une transaction validée et selon quelle procédure
+
+### 7. Contraintes techniques front (mail Vignal)
+
+- **Pas d'API cartographique tierce** (Google Maps, Mapbox…). La « recherche et localisation des partenaires » doit se faire sans service tiers propriétaire → carte auto-hébergée (type Leaflet + tuiles libres) ou simple liste filtrable par ville. **À trancher.**
+- Pas d'authentification tierce, pas de service d'envoi de mail commercial.
+- L'application doit tourner **intégralement en local** → héberger **Marianne et Spectral en local** (pas de CDN Google Fonts si on veut du 100 % hors-ligne, à vérifier).
+- **Écran QR code employé** : durée de vie **5 min max**, compte à rebours visible, régénération, état « expiré ».
+- **Feedback idempotence côté partenaire** : un 2ᵉ scan du même QR affiche la transaction déjà passée (même identifiant), pas une erreur ni un double débit.
+- **Message d'erreur explicite** quand un débit dépasse le solde (dire pourquoi).
+
+### 8. Vidéo de présentation (mail Sellami) — livrable front
+
+- Moins de **2 min**, **1080p**, **sous-titres incrustés**.
+- **Capture de la vraie application qui tourne** — pas de maquette, pas de prototype cliquable filmé. Une capture d'écran commentée suffit.
+- Parcours à montrer : un salarié ouvre son espace → voit son solde → choisit un partenaire près de chez lui → paie en 3 secondes.
+- À joindre : le **script avec minutages**, la **phrase-titre unique**, et si on dépasse 2 min, quel moment du parcours on coupe et pourquoi.
+
+---
+
+## Échéances
+
+- **Vendredi 12h00** : identité visuelle appliquée, nom `CartePro` partout (résultat du grep), captures de la mention de simulation, vidéo + script. (Côté juridique, mêmes échéances : fiche de registre RGPD, déclaration d'accessibilité, projet de CGU.)
+- **Vendredi 17h00** : livrables archi/back (schéma BDD, spec OpenAPI, tests d'intégrité). Pas du front, mais à synchroniser avec l'autre équipe.
+
+---
