@@ -3,7 +3,7 @@
 [//]: # (This is a changelog file)
 [//]: # (Each time you make a minor or minor change in the project, repertoriate it here according to the following format. So each changes equals to an affectation of this file with all the sections.)
 
-## 1.0.0
+## 1.0.0 01.09.2027 3:09 PM
 
 ### Added
 
@@ -13,6 +13,7 @@
 - `core/src/ids.rs` : ajout de `EmploymentLinkId`, requis par `data-dictionary.md` §3.4 et absent de la liste du guide.
 - `core/src/money.rs` : type `Money` en centimes d'euro, avec `parse_euros` pour l'import CSV et conversion euros/centimes aux frontières de sérialisation.
 
+database schema implementation in migrations/0001_schema.sql and insertion of France cities in the database in migrations/0002_cities.sql
 ### Changed
 
 - **Les comptes système sont exemptés de la contrainte de non-négativité des soldes.** `MINISTRY_ISSUANCE` est la contrepartie d'émission : son solde négatif mesure le total émis. La contrainte absolue rendait tout rechargement impossible, la somme des soldes valant identiquement zéro en partie double. I3 est reformulé sur les seuls comptes `employee` et `partner`.
