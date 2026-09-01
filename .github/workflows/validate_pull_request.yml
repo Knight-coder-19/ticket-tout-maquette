@@ -1,0 +1,25 @@
+name: "Validate Pull Request"
+on:
+  pull_request:
+    types: [opened, edited]
+
+jobs:
+  check-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check content
+        shell: bash
+        run: |
+          BODY="${{ github.event.pull_request.body }}"
+          if [[ "$BODY" == *"Please include a summary of the change"* ]]; then
+            echo "ERROR: You did not fill description section."
+            exit 1
+          fi
+
+          if [[ "$BODY" == *"- [ ] My code follows the style guidelines"* ]] || \
+             [[ "$BODY" == *"- [ ] I have performed a self-review"* ]]; then
+            echo "ERROR: You have to validate final checklist elements."
+            exit 1
+          fi
+
+          echo "Pull request validated!"

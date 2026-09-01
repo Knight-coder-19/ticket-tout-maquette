@@ -1,0 +1,23 @@
+[package]
+name = "cartepro-worker"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# Binaire distinct de l'API : il peut tomber sans interrompre les paiements.
+[[bin]]
+name = "cartepro-worker"
+path = "src/main.rs"
+
+[dependencies]
+cartepro-core = { workspace = true }
+tokio = { workspace = true }
+sqlx = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+dotenvy = { workspace = true }
