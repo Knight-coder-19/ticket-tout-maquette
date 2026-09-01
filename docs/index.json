@@ -1,4 +1,5 @@
 [
+  { "file": "TASK-DISTRIBUTION-BACKEND.md",        "title": "Répartition backend — qui fait quoi" },
   { "file": "file-guide.md",                       "title": "Guide fichier par fichier" },
   { "file": "data-dictionary.md",                  "title": "Dictionnaire de données" },
   { "file": "data-model.md",                       "title": "Modèle de données" },
