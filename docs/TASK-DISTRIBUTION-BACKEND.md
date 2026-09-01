@@ -176,15 +176,18 @@ newtype_id!(Jti); newtype_id!(CityId); newtype_id!(HighlightId);
 #### `core/src/money.rs` — **à livrer à H+1**
 
 ```rust
-pub struct Money(i64);          // francs entiers, jamais de flottant
+pub struct Money(i64);          // centimes d'euro, jamais de flottant
 
 impl Money {
-    pub fn try_new(v: i64) -> Result<Self>       // refuse < 0
+    pub fn try_new(cents: i64) -> Result<Self, InvalidMoneyError>   // refuse < 0
+    pub fn parse_euros(text: &str) -> Result<Self, InvalidMoneyError>
     pub fn checked_add(self, o: Money) -> Option<Money>
-    pub fn checked_sub(self, o: Money) -> Option<Money>
+    pub fn checked_sub(self, o: Money) -> Option<Money>   // refuse aussi le negatif
     pub fn is_positive(self) -> bool
+    pub fn cents(self) -> i64
 }
-// Serialize/Deserialize → i64 brut. sqlx::Type transparent sur BIGINT.
+// JSON : euros decimaux (456.56) dans les deux sens, conversion faite ici seulement.
+// Display : "456.56". sqlx::Type transparent sur BIGINT.
 ```
 
 #### `core/src/clock.rs` — **à livrer à H+1**

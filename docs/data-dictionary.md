@@ -14,7 +14,7 @@
 |---|---|---|
 | Casse | `snake_case` partout, JSON compris. Aucune traduction aux frontières. | `expires_at` |
 | Identifiants | Chaîne UUID v4, jamais un nombre | `"3f9a…"` |
-| Montants | **Entier**, en unité monétaire mineure. Jamais de décimale, jamais de chaîne. | `2500` |
+| Montants | **Nombre décimal en euros**, deux décimales au maximum. Jamais de chaîne. | `456.56` |
 | Dates | ISO 8601 UTC avec `Z`, jamais d'heure locale | `"2026-08-31T14:23:05Z"` |
 | Énumérations | Minuscules, identiques aux ENUM PostgreSQL | `"approved"` |
 | Absence de valeur | `null`, jamais chaîne vide ni `0` | `"ended_at": null` |
@@ -36,7 +36,7 @@
 | Concept | SQL | Rust | JSON | TypeScript |
 |---|---|---|---|---|
 | Identifiant | `UUID` | `AccountId`, `Jti`, … (newtypes) | `string` | `string` |
-| Montant | `BIGINT` | `Money(i64)` | `number` (entier) | `number` |
+| Montant | `BIGINT` (centimes) | `Money` | `number` en euros, ex. `456.56` | `number` |
 | Date | `TIMESTAMPTZ` | `DateTime<Utc>` | `string` ISO | `string` |
 | Date simple | `DATE` | `NaiveDate` | `string` `YYYY-MM-DD` | `string` |
 | Texte | `TEXT` | `String` | `string` | `string` |
@@ -308,6 +308,10 @@ Table centrale, **presque entièrement interne**. Le front ne voit jamais un obj
 ## 4. Payloads de l'API
 
 **C'est la seule section que le front doit lire.** Types TypeScript prêts à copier.
+
+> **Montants.** Tout champ typé `number` désignant une somme est un **montant en euros, décimal, à deux décimales au maximum** : `456.56`, `3.99`, `25` (qui vaut 25,00 €). Le backend refuse les valeurs négatives et celles à plus de deux décimales, avec un `422`. La devise est l'euro partout, et le champ `currency` vaut toujours `"EUR"`.
+>
+> Le stockage interne est en centimes entiers, mais cela ne concerne pas le front : il n'apparaît jamais dans un payload.
 
 ### 4.1 Enveloppes communes
 
