@@ -1,20 +1,13 @@
-# Rust — les artefacts de build vivent dans backend/target/
 target/
 **/*.rs.bk
 
-# Environnement — backend/.env.example est commite, backend/.env ne l'est jamais
 .env
 .env.*
 !.env.example
 
-# Secrets et certificats
 *.pem
 *.key
 !**/*.example
 
-# Outillage
 .DS_Store
 *.log
-
-# NB : `backend/.sqlx/` est volontairement absent de ce fichier.
-# Le cache des requetes doit etre commite, sinon la CI ne compile pas sans base.
