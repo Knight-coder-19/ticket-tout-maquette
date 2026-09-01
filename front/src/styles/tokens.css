@@ -1,0 +1,56 @@
+/*
+ * Jetons de design CartePro.
+ * Source : charte graphique ministerielle transmise par B. Sellami.
+ * Aucune couleur en dur ailleurs dans le projet.
+ */
+
+:root {
+  /* Couleurs institutionnelles */
+  --couleur-primaire: #1b3a6b;
+  --couleur-primaire-clair: #2f5590;
+  --couleur-primaire-sombre: #12294c;
+
+  /* Le bleu institutionnel ne sert jamais de fond de bouton.
+     Les boutons utilisent la couleur d'action ci-dessous. */
+  --couleur-action: #0b6b4f;
+  --couleur-action-survol: #08553f;
+
+  --couleur-texte: #1a1a1a;
+  --couleur-texte-secondaire: #5a5a5a;
+  --couleur-fond: #ffffff;
+  --couleur-fond-secondaire: #f4f6f9;
+  --couleur-bordure: #d6dbe3;
+
+  --couleur-alerte: #a0341c;
+  --couleur-succes: #0b6b4f;
+  --couleur-simulation: #8a6d1f;
+  --couleur-simulation-fond: #fdf6e3;
+
+  /* Typographie : Marianne pour les titres, Spectral pour le corps.
+     Polices auto-hebergees dans public/fonts, aucun CDN externe. */
+  --police-titre: "Marianne", system-ui, sans-serif;
+  --police-corps: "Spectral", Georgia, serif;
+
+  --taille-xs: 0.75rem;
+  --taille-sm: 0.875rem;
+  --taille-base: 1rem;
+  --taille-lg: 1.25rem;
+  --taille-xl: 1.5rem;
+  --taille-2xl: 2rem;
+  --taille-3xl: 2.75rem;
+
+  /* Espacements */
+  --espace-1: 0.25rem;
+  --espace-2: 0.5rem;
+  --espace-3: 0.75rem;
+  --espace-4: 1rem;
+  --espace-6: 1.5rem;
+  --espace-8: 2rem;
+  --espace-12: 3rem;
+
+  --rayon-sm: 2px;
+  --rayon-md: 4px;
+
+  --largeur-contenu: 72ch;
+  --largeur-page: 1200px;
+}

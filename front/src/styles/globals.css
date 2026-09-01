@@ -1,0 +1,56 @@
+@import "./tokens.css";
+
+/*
+ * Declarations de polices.
+ * Les fichiers doivent etre deposes dans public/fonts.
+ * Marianne : police de l'Etat francais, telechargeable sur le site de la DILA.
+ * Spectral : licence SIL Open Font, redistribuable.
+ * Aucun appel a un CDN externe, contrainte de souverainete.
+ */
+
+/*
+@font-face {
+  font-family: "Marianne";
+  src: url("/fonts/Marianne-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+*/
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--police-corps);
+  font-size: var(--taille-base);
+  line-height: 1.6;
+  color: var(--couleur-texte);
+  background: var(--couleur-fond);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--police-titre);
+  line-height: 1.2;
+}
+
+/* Accessibilite RGAA : focus toujours visible. */
+:focus-visible {
+  outline: 3px solid var(--couleur-primaire);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
