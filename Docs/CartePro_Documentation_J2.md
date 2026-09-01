@@ -104,3 +104,27 @@ Prévoir un **composant réutilisable** et fournir **une capture par emplacement
 - **Vendredi 17h00** : livrables archi/back (schéma BDD, spec OpenAPI, tests d'intégrité). Pas du front, mais à synchroniser avec l'autre équipe.
 
 ---
+
+# Journal de bord — Jour 2
+
+## Ce qu'on a fait aujourd'hui
+
+- Réception et dépouillement des 3 mails du cabinet (com, juridique, numérique).
+- Tri de ce qui concerne le front-end (voir ci-dessus).
+- Repérage des points de vigilance sécurité (expéditeurs externes, lien douteux dans le cahier des charges annoté).
+
+## Décisions front à acter
+
+- Mettre en place le **système de catégories partenaires piloté par les données** dès maintenant.
+- Créer un **composant « mention simulation »** réutilisable, posé sur chaque écran affichant un montant.
+- Choisir la solution de **cartographie sans service tiers** (Leaflet + tuiles libres, ou liste filtrable par ville).
+- **Héberger Marianne + Spectral en local**.
+- Définir les **design tokens** : `#1B3A6B` en primaire, règle « jamais en fond de bouton » → choisir la couleur d'action des boutons.
+
+## À compléter pour la suite
+
+- Détail des écrans maquettés (reporté du Jour 1).
+- Récupérer la charte graphique complète (47 pages) annoncée par le secrétariat de Sellami.
+- Caler avec le back : contrat `GET /api/v1/employees/{id}/balance`, format du QR signé, clé d'idempotence.
+- Rédiger le script de la vidéo + minutages + phrase-titre.
+- Répartition précise des tâches Giscard / Espoir pour demain.
