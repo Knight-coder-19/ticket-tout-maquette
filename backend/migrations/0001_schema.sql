@@ -56,9 +56,9 @@ CREATE TABLE accounts (
     version         BIGINT NOT NULL DEFAULT 0,
     opened_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
     closed_at       TIMESTAMPTZ,
-    CONSTRAINT settled_never_negative CHECK (balance_settled >= 0),
+    CONSTRAINT settled_never_negative CHECK (owner_type = 'system' OR balance_settled >= 0),
     CONSTRAINT held_never_negative    CHECK (balance_held >= 0),
-    CONSTRAINT held_within_settled    CHECK (balance_held <= balance_settled),
+    CONSTRAINT held_within_settled    CHECK (owner_type = 'system' OR balance_held <= balance_settled),
     CONSTRAINT system_account_shape   CHECK (
         (owner_type = 'system' AND owner_id IS NULL AND system_code IS NOT NULL)
         OR

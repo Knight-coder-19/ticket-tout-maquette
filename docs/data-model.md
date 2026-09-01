@@ -53,37 +53,44 @@ Le solde stocké est un cache : le ledger est la vérité. Si les deux divergent
 qui a tort, et la divergence signifie qu'une écriture a été passée sans mettre à jour le compte,
 ou l'inverse — donc qu'une transaction n'était pas atomique.
 
-### I3 — Aucun compte n'a de solde négatif
+### I3 — Aucun compte d'utilisateur n'a de solde négatif
 
-Pour tout compte : `balance_settled >= 0`, `balance_held >= 0`, et `balance_held <= balance_settled`.
-**Y compris les comptes système.** Un solde négatif signifierait qu'on a laissé dépenser de
-l'argent qui n'existe pas.
+Pour tout compte de `owner_type` valant `employee` ou `partner` : `balance_settled >= 0`,
+`balance_held >= 0`, et `balance_held <= balance_settled`. **Les comptes système en sont
+exemptés.**
 
 La troisième condition est celle qui protège le disponible : `available = settled - held` ne doit
 jamais devenir négatif, sinon un employé pourrait générer deux jetons couvrant chacun la totalité
 de son solde.
 
-> **⚠️ Point à trancher — I2 et I3 se contredisent aujourd'hui sur le compte d'émission.**
->
-> `MINISTRY_ISSUANCE` est créé à zéro par la migration. En partie double, un rechargement de
-> 50,00 € le débite d'autant. J'ai mesuré le résultat sur une base réelle : `recompute_balance`
-> rend **−5000** pour ce compte. I2 dit que le solde doit refléter les écritures, I3 dit qu'aucun
-> compte système n'est négatif. Les deux ne peuvent pas être vrais en même temps.
->
-> **A — Approvisionner le compte d'émission.** Il reçoit une dotation initiale, et chaque
-> rechargement la consomme. I2 et I3 tiennent toutes les deux, et le système gagne au passage un
-> plafond d'émission : on ne peut pas créditer plus que ce qui a été autorisé, ce qui est une
-> propriété désirable pour de l'argent public. Coût : un montant de dotation à décider et à
-> justifier, et une opération d'abondement à prévoir.
->
-> **B — Exempter les comptes système de I3.** I3 devient « aucun compte `employee` ou `partner`
-> n'est négatif », et `MINISTRY_ISSUANCE` est assumé comme un compte de contrepartie dont le solde
-> négatif mesure le total émis. Coût : la contrainte `settled_never_negative` de la migration doit
-> être restreinte aux comptes non système, et la règle « aucun solde négatif » perd sa forme
-> absolue.
->
-> À décider avant d'écrire `funding/topup.rs`. Tant que ce n'est pas tranché, le premier
-> rechargement échouera.
+L'exemption des comptes système n'est pas un assouplissement de confort, c'est une nécessité
+arithmétique. En partie double équilibrée, chaque crédit a un débit jumeau du même montant : la
+somme de tous les soldes vaut donc identiquement zéro. Si tous les comptes devaient être positifs
+ou nuls, ils vaudraient tous zéro et le système ne pourrait contenir aucun argent. Vérifié sur
+une base réelle après deux rechargements :
+
+```
+CLOSURE_FORFEIT    :     0
+MINISTRY_ISSUANCE  : -8000
+employé A          :  8000
+employé B          :     0
+─────────────────────────────
+somme              :     0
+```
+
+Pré-créditer `MINISTRY_ISSUANCE` ne résoudrait rien : pour le créditer par une opération du
+ledger il faut débiter autre chose du même montant, ce qui déplace le solde négatif sans le
+supprimer. Écrire son solde directement au seed casserait I2 de façon permanente.
+
+Le solde négatif du compte d'émission n'est donc pas un découvert : **c'est la mesure du total
+émis**. Personne ne dépense depuis ce compte — aucun jeton de paiement ne s'y rattache et
+`authorize` ne le regarde jamais. La propriété de sûreté que I3 protège vraiment, c'est qu'on ne
+laisse jamais dépenser de l'argent qui n'existe pas, et cela ne concerne que les comptes depuis
+lesquels on peut dépenser.
+
+> **Plafonner l'émission**, si le besoin s'en fait sentir, relève d'une règle métier vérifiée dans
+> `funding/topup.rs` avant de poster l'opération — jamais d'une contrainte de solde, qui
+> réintroduirait le blocage.
 
 ### I4 — Les réservations correspondent aux jetons actifs
 
