@@ -62,7 +62,7 @@ Une migration par fichier, jamais modifiée après exécution. `sqlx` refuse une
 | `lib.rs` | Déclaration et réexport des modules. Rien d'autre. | P0 |
 | `config.rs` | `struct CoreConfig { token_ttl, resync_max_age, closure_grace, public_cache }`. Pas de lecture d'environnement ici, `api` la construit et l'injecte. | P0 |
 | `clock.rs` | `trait Clock: Send + Sync { fn now(&self) -> DateTime<Utc>; }`, `SystemClock`, et `FixedClock { at: Mutex<DateTime<Utc>> }` avec `advance(Duration)` pour les tests. | P0 |
-| `money.rs` | `struct Money(i64)` avec `checked_add`, `checked_sub`, `Display`, `Serialize`/`Deserialize` en `i64` brut, `TryFrom<i64>` refusant le négatif. | P0 |
+| `money.rs` | `struct Money(i64)` en **centimes d'euro**, champ privé. `try_new`, `checked_add`, `checked_sub`, `is_positive`, `zero`, `cents`, et `parse_euros(&str)` pour l'import CSV. `Display` rend `"456,56"`. `Serialize`/`Deserialize` convertissent aux frontières : euros décimaux en JSON, centimes en interne. `TryFrom<i64>` refusant le négatif. `sqlx::Type` transparent sur `BIGINT`. | P0 |
 | `ids.rs` | Newtypes `AccountId`, `EmployeeId`, `EmployerId`, `PartnerId`, `OperationId`, `Jti`, `UserId`, `CityId`, `BatchId`, **`HighlightId`**. Écris une macro `newtype_id!` plutôt que dix blocs identiques. Chacun implémente `sqlx::Type`, `Serialize`, `Display`. | P0 |
 | `error.rs` | `enum CoreError` agrégeant les erreurs de modules via `#[from]`. Le seul type que `api` a besoin de convertir. | P0 |
 
@@ -285,7 +285,7 @@ Chacun contient les structures de requête et de réponse, avec `Serialize`/`Des
 
 **`dto/public.rs` mérite une vigilance particulière (règle R9).** Il ne contient qu'un seul type, `PublicPartner`, dont chaque champ est une décision explicite. Ne jamais y ajouter un `#[serde(flatten)]` ni réutiliser `CatalogItem` : c'est par là que fuiterait un champ non voulu.
 
-Montants toujours en entier : `"amount": 2500`.
+Montants toujours en euros décimaux, deux décimales au maximum : `"amount": 456.56`. La conversion vers les centimes entiers du stockage est faite par `Money`, jamais dans un DTO ni dans un handler : aucun `* 100` ni `/ 100` ne doit apparaître ailleurs que dans `core/src/money.rs`.
 
 ### 4.5 `routes/`
 
