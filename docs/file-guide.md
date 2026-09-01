@@ -62,7 +62,7 @@ Une migration par fichier, jamais modifiée après exécution. `sqlx` refuse une
 | `lib.rs` | Déclaration et réexport des modules. Rien d'autre. | P0 |
 | `config.rs` | `struct CoreConfig { token_ttl, resync_max_age, closure_grace, public_cache }`. Pas de lecture d'environnement ici, `api` la construit et l'injecte. | P0 |
 | `clock.rs` | `trait Clock: Send + Sync { fn now(&self) -> DateTime<Utc>; }`, `SystemClock`, et `FixedClock { at: Mutex<DateTime<Utc>> }` avec `advance(Duration)` pour les tests. | P0 |
-| `money.rs` | `struct Money(i64)` en **centimes d'euro**, champ privé. `try_new`, `checked_add`, `checked_sub`, `is_positive`, `zero`, `cents`, et `parse_euros(&str)` pour l'import CSV. `Display` rend `"456,56"`. `Serialize`/`Deserialize` convertissent aux frontières : euros décimaux en JSON, centimes en interne. `TryFrom<i64>` refusant le négatif. `sqlx::Type` transparent sur `BIGINT`. | P0 |
+| `money.rs` | `struct Money(i64)` en **centimes d'euro**, champ privé. `try_new`, `checked_add`, `checked_sub`, `is_positive`, `zero`, `cents`, et `parse_euros(&str)` pour l'import CSV. `Display` rend `"456.56"`. `Serialize`/`Deserialize` convertissent aux frontières : euros décimaux en JSON, centimes en interne. `TryFrom<i64>` refusant le négatif. `sqlx::Type` transparent sur `BIGINT`. | P0 |
 | `ids.rs` | Newtypes `AccountId`, `EmployeeId`, `EmployerId`, `PartnerId`, `OperationId`, `Jti`, `UserId`, `CityId`, `BatchId`, **`HighlightId`**. Écris une macro `newtype_id!` plutôt que dix blocs identiques. Chacun implémente `sqlx::Type`, `Serialize`, `Display`. | P0 |
 | `error.rs` | `enum CoreError` agrégeant les erreurs de modules via `#[from]`. Le seul type que `api` a besoin de convertir. | P0 |
 

@@ -187,7 +187,7 @@ impl Money {
     pub fn cents(self) -> i64
 }
 // JSON : euros decimaux (456.56) dans les deux sens, conversion faite ici seulement.
-// Display : "456,56". sqlx::Type transparent sur BIGINT.
+// Display : "456.56". sqlx::Type transparent sur BIGINT.
 ```
 
 #### `core/src/clock.rs` — **à livrer à H+1**

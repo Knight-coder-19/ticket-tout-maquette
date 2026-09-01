@@ -9,43 +9,43 @@ use crate::money::InvalidMoneyError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum CoreError {
-    #[error("session absente ou expiree")]
+    #[error("missing or expired session")]
     Unauthorized,
 
-    #[error("role insuffisant")]
+    #[error("insufficient role")]
     Forbidden,
 
-    #[error("jeton introuvable")]
+    #[error("token not found")]
     TokenNotFound,
 
-    #[error("jeton expire")]
+    #[error("token expired")]
     TokenExpired,
 
-    #[error("jeton deja consomme par un autre partenaire")]
+    #[error("token already consumed by another partner")]
     TokenAlreadyUsed,
 
-    #[error("solde disponible insuffisant")]
+    #[error("insufficient available balance")]
     InsufficientFunds,
 
-    #[error("partenaire non agree")]
+    #[error("partner not approved")]
     PartnerNotApproved,
 
-    #[error("compte suspendu ou cloture")]
+    #[error("account suspended or closed")]
     AccountInactive,
 
-    #[error("lot deja importe")]
+    #[error("batch already imported")]
     DuplicateBatch,
 
-    #[error("le lot contient des lignes invalides")]
+    #[error("batch contains invalid rows")]
     BatchHasErrors,
 
-    #[error("partenaire non eligible a la mise en avant")]
+    #[error("partner not eligible for highlighting")]
     HighlightNotEligible,
 
-    #[error("emplacement de mise en avant deja occupe")]
+    #[error("highlight slot already taken")]
     HighlightDuplicate,
 
-    #[error("resynchronisation hors delai")]
+    #[error("resynchronisation past the allowed delay")]
     ResyncTooLate,
 
     #[error(transparent)]

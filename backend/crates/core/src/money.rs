@@ -19,16 +19,16 @@ pub struct Money(i64);
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum InvalidMoneyError {
-    #[error("montant negatif: {0}")]
+    #[error("negative amount: {0}")]
     Negative(String),
 
-    #[error("montant mal forme: {0}")]
+    #[error("malformed amount: {0}")]
     Malformed(String),
 
-    #[error("plus de deux decimales: {0}")]
+    #[error("more than two decimal places: {0}")]
     TooManyDecimals(String),
 
-    #[error("montant hors limites: {0}")]
+    #[error("amount out of range: {0}")]
     OutOfRange(String),
 }
 
@@ -133,7 +133,7 @@ impl From<Money> for i64 {
 impl fmt::Display for Money {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
     {
-        write!(f, "{},{:02}", self.0 / SUBUNIT, self.0 % SUBUNIT)
+        write!(f, "{}.{:02}", self.0 / SUBUNIT, self.0 % SUBUNIT)
     }
 }
 
@@ -153,7 +153,7 @@ impl<'de> Visitor<'de> for MoneyVisitor {
 
     fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
     {
-        write!(f, "un montant en euros, positif, a deux decimales au plus")
+        write!(f, "a non-negative amount in euros with at most two decimal places")
     }
 
     fn visit_f64<E>(self, value: f64) -> Result<Money, E>
