@@ -323,10 +323,18 @@ BEGIN
 END
 $$;
 
-GRANT SELECT, INSERT ON ledger_entries, ledger_operations, audit_log TO cartepro_app;
-REVOKE UPDATE, DELETE, TRUNCATE ON ledger_entries FROM cartepro_app;
+GRANT SELECT, INSERT, UPDATE ON
+    cities, users, employers, accounts, employees, employment_links,
+    partners, partner_highlights, payment_tokens, payments,
+    topup_batches, topups, compensations, sessions, api_clients
+TO cartepro_app;
+
+GRANT SELECT, INSERT ON ledger_operations, ledger_entries, audit_log TO cartepro_app;
+
 REVOKE UPDATE, DELETE, TRUNCATE ON ledger_operations FROM cartepro_app;
+REVOKE UPDATE, DELETE, TRUNCATE ON ledger_entries FROM cartepro_app;
 REVOKE UPDATE, DELETE, TRUNCATE ON audit_log FROM cartepro_app;
+
 GRANT USAGE, SELECT ON SEQUENCE ledger_entries_seq_seq TO cartepro_app;
 
 INSERT INTO accounts (owner_type, owner_id, system_code, balance_settled, balance_held)
