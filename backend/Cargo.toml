@@ -1,0 +1,87 @@
+[workspace]
+resolver = "2"
+members = ["crates/core", "crates/api", "crates/worker", "crates/tests"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "proprietary"
+publish = false
+
+# Dependances communes. Les crates y referent par `workspace = true`.
+# Les versions mineures sont a confirmer par un `cargo update` au premier build.
+[workspace.dependencies]
+
+# Runtime async
+tokio = { version = "1", features = ["full"] }
+
+# Framework web et middlewares (crate api uniquement)
+axum = { version = "0.8", features = ["macros"] }
+axum-extra = { version = "0.10", features = ["cookie", "typed-header"] }
+tower = { version = "0.5", features = ["util"] }
+tower-http = { version = "0.6", features = ["trace", "cors", "set-header", "request-id", "compression-gzip"] }
+
+# Base de donnees
+sqlx = { version = "0.8", default-features = false, features = [
+    "runtime-tokio",
+    "tls-rustls",
+    "postgres",
+    "uuid",
+    "chrono",
+    "macros",
+    "migrate",
+] }
+
+# Serialisation
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Erreurs — anyhow dans api et worker uniquement
+thiserror = "2"
+anyhow = "1"
+
+# Crypto — signature des jetons asymetrique et obligatoire (CLAUDE.md §9.5)
+argon2 = "0.5"
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+sha2 = "0.10"
+subtle = "2"
+rand = "0.8"
+base64 = "0.22"
+
+# Dates — TIMESTAMPTZ = DateTime<Utc>
+chrono = { version = "0.4", default-features = false, features = ["std", "clock", "serde"] }
+
+# Identifiants
+uuid = { version = "1", features = ["v4", "v7", "serde"] }
+
+# QR (generation SVG cote serveur si necessaire)
+qrcode = "0.14"
+
+# Logs — JSON en production
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# OpenAPI
+utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
+utoipa-swagger-ui = { version = "9", features = ["axum"] }
+
+# Validation — format uniquement, jamais de regle metier
+validator = { version = "0.19", features = ["derive"] }
+
+# Import de fichier
+csv = "1"
+
+# Environnement
+dotenvy = "0.15"
+
+# Tests
+testcontainers = "0.23"
+testcontainers-modules = { version = "0.11", features = ["postgres"] }
+
+# Crates internes
+cartepro-core = { path = "crates/core" }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "debuginfo"

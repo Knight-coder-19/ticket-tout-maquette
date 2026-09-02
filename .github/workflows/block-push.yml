@@ -1,0 +1,16 @@
+name: "Branch Protection"
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  block-direct-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reject push action
+        run: |
+          echo "ERROR. Do not play this Game with me!"
+          echo " Pull request only."
+          exit 1

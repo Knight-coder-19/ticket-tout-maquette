@@ -1,0 +1,3 @@
+# TODO: terminate TLS for cartepro.example, encode gzip, reverse_proxy to 127.0.0.1:8080, and forward
+# X-Forwarded-Proto and X-Forwarded-For. Let's Encrypt certificates are handled by Caddy; never implement
+# TLS inside the binary. Priority: P2

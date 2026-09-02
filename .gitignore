@@ -1,0 +1,13 @@
+target/
+**/*.rs.bk
+
+.env
+.env.*
+!.env.example
+
+*.pem
+*.key
+!**/*.example
+
+.DS_Store
+*.log

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Documentation Fun</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui;
+      background: radial-gradient(circle at 20% 30%, #0f1117, #0c0d12);
+      color: #e6edf3;
+      overflow-x: hidden;
+    }
+
+    .layout {
+      display: flex;
+      height: 100vh;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Sidebar */
+    #sidebar {
+      width: 260px;
+      background: #161b22;
+      border-right: 1px solid #30363d;
+      overflow-y: auto;
+      padding: 10px;
+    }
+
+    .nav-item {
+      padding: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-bottom: 5px;
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    .nav-item:hover {
+      background: #21262d;
+      transform: translateX(5px) scale(1.03);
+    }
+
+    .nav-item.active {
+      background: #30363d;
+      font-weight: bold;
+    }
+
+    #content {
+      flex: 1;
+      padding: 40px;
+      overflow-y: auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Markdown styling */
+    #content h1, #content h2, #content h3 {
+      border-bottom: 1px solid #30363d;
+      padding-bottom: 5px;
+      display: inline-block;
+      transition: transform 0.3s;
+    }
+
+    #content h1:hover, #content h2:hover {
+      transform: scale(1.05) rotate(-1deg);
+    }
+
+    #content pre {
+      background: #161b22;
+      padding: 15px;
+      border-radius: 8px;
+      overflow-x: auto;
+      position: relative;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #30363d;
+      border: none;
+      color: white;
+      padding: 5px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .copy-btn:hover {
+      background: #58a6ff;
+    }
+
+    #content code {
+      background: #21262d;
+      padding: 3px 6px;
+      border-radius: 4px;
+    }
+
+    #content table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+    #content th, #content td {
+      border: 1px solid #30363d;
+      padding: 8px;
+    }
+
+    #content blockquote {
+      border-left: 4px solid #58a6ff;
+      padding-left: 10px;
+      color: #8b949e;
+    }
+
+    #content::before {
+      content: "";
+      position: fixed;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(88,166,255,0.1) 0%, transparent 70%);
+      animation: floatBG 15s linear infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    @keyframes floatBG {
+      0% { transform: rotate(0deg) translate(0,0); }
+      50% { transform: rotate(180deg) translate(20px, 30px); }
+      100% { transform: rotate(360deg) translate(0,0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <div id="sidebar"></div>
+    <div id="content">Loading...</div>
+  </div>
+
+  <script>
+    const sidebar = document.getElementById("sidebar");
+    const content = document.getElementById("content");
+    let docs = [];
+
+    async function init() {
+      const res = await fetch("docs/index.json");
+      docs = await res.json();
+
+      buildSidebar(docs);
+
+      if (docs.length > 0) {
+        loadDoc(docs[0].file);
+      }
+    }
+
+    function buildSidebar(docs) {
+      sidebar.innerHTML = "";
+      docs.forEach(doc => {
+        const item = document.createElement("div");
+        item.className = "nav-item";
+        item.textContent = doc.title;
+        item.onclick = () => loadDoc(doc.file);
+        sidebar.appendChild(item);
+      });
+    }
+
+    async function loadDoc(file) {
+      const res = await fetch(`docs/${file}`);
+      const text = await res.text();
+      content.innerHTML = marked.parse(text);
+      highlightActive(file);
+      addCopyButtons();
+      scrollToTop();
+    }
+
+    function highlightActive(activeFile) {
+      document.querySelectorAll(".nav-item").forEach((el, index) => {
+        el.classList.remove("active");
+        if (docs[index].file === activeFile) el.classList.add("active");
+      });
+    }
+
+    function scrollToTop() {
+      content.scrollTop = 0;
+    }
+
+    function addCopyButtons() {
+      document.querySelectorAll("pre").forEach(block => {
+        if (block.querySelector(".copy-btn")) return;
+
+        const button = document.createElement("button");
+        button.innerText = "Copy";
+        button.className = "copy-btn";
+
+        button.onclick = (e) => {
+          navigator.clipboard.writeText(block.innerText);
+          button.innerText = "Copied!";
+          spawnConfetti(e.clientX, e.clientY);
+          setTimeout(() => button.innerText = "Copy", 1500);
+        };
+
+        block.style.position = "relative";
+        block.appendChild(button);
+      });
+    }
+
+    // Confettis copy
+    function spawnConfetti(x, y) {
+      for (let i = 0; i < 20; i++) {
+        const confetti = document.createElement("div");
+        confetti.style.position = "absolute";
+        confetti.style.width = "6px";
+        confetti.style.height = "6px";
+        confetti.style.background = `hsl(${Math.random()*360}, 80%, 60%)`;
+        confetti.style.left = x + "px";
+        confetti.style.top = y + "px";
+        confetti.style.borderRadius = "50%";
+        confetti.style.opacity = 1;
+        confetti.style.transition = "all 1s ease-out";
+        document.body.appendChild(confetti);
+
+        const dx = (Math.random()-0.5) * 100;
+        const dy = -Math.random() * 100 - 50;
+        setTimeout(() => {
+          confetti.style.transform = `translate(${dx}px, ${dy}px) rotate(${Math.random()*360}deg)`;
+          confetti.style.opacity = 0;
+        }, 10);
+        setTimeout(() => confetti.remove(), 1100);
+      }
+    }
+
+    // Curseur étoiles
+    document.addEventListener("mousemove", e => {
+      const star = document.createElement("div");
+      star.style.position = "absolute";
+      star.style.width = "4px";
+      star.style.height = "4px";
+      star.style.background = "#58a6ff";
+      star.style.borderRadius = "50%";
+      star.style.left = e.clientX + "px";
+      star.style.top = e.clientY + "px";
+      star.style.pointerEvents = "none";
+      star.style.opacity = 1;
+      star.style.transition = "all 0.5s ease-out";
+      document.body.appendChild(star);
+
+      setTimeout(() => {
+        star.style.transform = `translate(${Math.random()*20-10}px, ${Math.random()*20-10}px)`;
+        star.style.opacity = 0;
+      }, 10);
+
+      setTimeout(() => star.remove(), 500);
+    });
+
+    init();
+  </script>
+</body>
+</html>
