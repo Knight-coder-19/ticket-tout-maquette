@@ -3,6 +3,39 @@
 [//]: # (This is a changelog file)
 [//]: # (Each time you make a minor or minor change in the project, repertoriate it here according to the following format. So each changes equals to an affectation of this file with all the sections.)
 
+## 1.2.0 02.09.2026
+
+### Added
+
+- `core/src/crypto/token_sig.rs` : `TokenPayload`, `sign` et `verify` en Ed25519. Format de fil
+  `CP1.<b64url payload>.<b64url signature>`, alphabet base64 URL sans remplissage. `verify`
+  vérifie la signature **avant** de désérialiser, et distingue `UnsupportedVersion` d'une
+  signature invalide pour qu'un futur `CP2` ne passe pas pour une falsification.
+- `core/src/crypto/short_code.rs` : `generate`, `format_for_display`, `normalize` et `is_valid`.
+  Alphabet de 31 caractères sans `0`, `O`, `1`, `I` ni `l`, parce que le code est dicté à voix
+  haute. `normalize` ramène la saisie du commerçant vers la forme stockée.
+- `crates/core/tests/token_sig.rs` : treize tests, dont la réécriture du montant dans un payload
+  signé et un payload illisible présenté avec une signature de bonne longueur — ce dernier
+  vérifie que la signature est contrôlée avant la désérialisation.
+- `crates/core/tests/short_code.rs` : huit tests sur générateur à graine fixe, dont l'aller-retour
+  `normalize(format_for_display(c)) == c` sur mille tirages.
+
+### Changed
+
+- `core/src/lib.rs` déclare le module `crypto`, et `core/src/crypto/mod.rs` ses trois
+  sous-modules. Deux fichiers du périmètre de Giscard, modifications limitées aux déclarations.
+- `crates/core/Cargo.toml` : ajout de `rand`, `base64` et `ed25519-dalek` en
+  `[dev-dependencies]`, nécessaires pour fabriquer une paire de clés et forger un jeton depuis un
+  test d'intégration.
+
+### Notes
+
+- `amt` est un entier de centimes dans le payload signé, jamais un `Money` : la sérialisation de
+  `Money` produit un flottant pour l'API HTTP, et un flottant n'a pas de forme textuelle stable
+  à signer.
+- `verify` répond à une seule question, « avons-nous émis ce jeton ». L'expiration qui fait foi
+  reste celle que `settle` compare à l'horloge serveur.
+
 ## 1.1.0 02.09.2026
 
 ### Added
