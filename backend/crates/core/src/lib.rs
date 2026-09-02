@@ -4,6 +4,7 @@
 
 pub mod clock;
 pub mod config;
+pub mod crypto;
 pub mod error;
 pub mod ids;
 pub mod ledger;
