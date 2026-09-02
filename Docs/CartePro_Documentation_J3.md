@@ -35,3 +35,21 @@ Les prises où « CartePro » apparaît sont à refaire, ou reprendre le parcour
 - Envoyer par écrit, avec le livrable, ce qui a été laissé de côté et pourquoi. Une page manquante et assumée se défend en réunion ; une page bâclée, non.
 
 ---
+
+## Ce qui concerne le front-end
+
+Tout, cette fois. Résumé de l'impact :
+
+| Chantier | Détail |
+|---|---|
+| Renommage | `CartePro` vers `Ticket Tout` sur une dizaine de fichiers de `front/` (métadonnées, rail salarié, données de démo, README, `.env`, pages d'erreur). Grep de contrôle à refaire. |
+| Palette | `src/styles/tokens.css` est déjà le « fichier unique de variables ». À enrichir : 2 accents dérivés du `#1B3A6B`, remplacer le vert d'action jugé trop administratif. |
+| Logotype | À créer (aucun composant `Logo` dans le squelette aujourd'hui). Versions principale / monochrome / favicon. À poser dans le rail salarié et les futurs espaces partenaire et admin. |
+| Favicon | Absente. À ajouter (`app/icon` ou `app/favicon.ico`). |
+| Carte désirable | Aujourd'hui `CarteSolde` = rectangle bleu. À redessiner, états repos et paiement (ce sont les 2 captures demandées dans le book). |
+| Contrastes | Vérifier chaque couple texte/fond réellement utilisé, noter l'outil, signaler tout ratio inférieur à 4,5:1. |
+| Vidéo | Prises à refaire après bascule. |
+
+La charte ministérielle reste applicable au reste de l'interface. Ticket Tout est une marque produit qui vit **à l'intérieur** de la charte : `#1B3A6B` reste la couleur primaire.
+
+---
