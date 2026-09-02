@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { encaisser } from "@/lib/services/encaissement.service";
+import { useCleIdempotence } from "@/lib/api/idempotence";
 import {
   centimesDepuisSaisie,
   formaterCentimes,
@@ -21,21 +22,6 @@ const MESSAGES: Record<string, string> = {
   reseau: "Service injoignable. Réessayez : le même encaissement ne partira pas deux fois.",
 };
 
-/**
- * Forge une clé d'idempotence.
- *
- * `crypto.randomUUID` n'existe que dans un contexte sécurisé : en https ou
- * sur localhost. Une démonstration ouverte depuis un téléphone sur
- * http://192.168.x.x n'y a pas droit, et l'écran planterait au moment
- * précis où il compte. D'où la solution de repli.
- */
-function nouvelleCle(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return `cle-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
-}
-
 export function EtapeMontant({
   jeton,
   partnerId,
@@ -52,19 +38,10 @@ export function EtapeMontant({
   const [erreur, setErreur] = useState<string | null>(null);
   const [restant, setRestant] = useState(() => secondesRestantes(jeton.expiresAt));
 
-  /*
-   * R3 — la clé est forgée ici, à la caisse, une fois pour cette tentative,
-   * et elle ne bouge plus. C'est tout le mécanisme : si le caissier
-   * double-clique, si le réseau lâche après que le serveur a écrit, si la
-   * requête est rejouée depuis la file hors ligne, le serveur reconnaît la
-   * clé et renvoie la transaction déjà écrite. Un seul débit.
-   *
-   * Régénérer la clé à chaque essai — la mettre dans le corps du composant,
-   * ou dans un useState recalculé — annulerait la protection : deux clés
-   * différentes, deux débits.
-   */
-  const cle = useRef<string | null>(null);
-  if (cle.current === null) cle.current = nouvelleCle();
+  /* R3 — une clé par tentative, forgée à la caisse, qui ne change pas entre
+     deux essais. Le `useRef` qui porte cette garantie est dans le hook ; les
+     deux façons de la casser sont écrites au-dessus de lui. */
+  const cle = useCleIdempotence();
 
   useEffect(() => {
     const battement = setInterval(
@@ -89,7 +66,7 @@ export function EtapeMontant({
           token: jeton.token,
           partnerId,
           amount: centimes,
-          idempotencyKey: cle.current as string,
+          idempotencyKey: cle,
           channel: "manuel",
         }),
       );
