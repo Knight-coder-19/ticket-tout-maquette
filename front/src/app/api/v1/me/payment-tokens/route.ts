@@ -34,7 +34,7 @@ export async function POST(requete: Request): Promise<Response> {
   const employeeId = identite(requete, "X-Mock-Employe", "SAL-001");
   const salarie = trouverSalarie(employeeId);
   if (!salarie) {
-    return erreur(401, "UNAUTHORIZED", "Session absente ou expiree.");
+    return erreur(401, "UNAUTHORIZED", "Session absente ou expirée.");
   }
 
   const donnees: unknown = await requete.json().catch(() => null);
@@ -50,7 +50,7 @@ export async function POST(requete: Request): Promise<Response> {
     return erreur(
       422,
       "VALIDATION_FAILED",
-      "Le champ amount doit etre un montant en euros, strictement positif, a deux decimales au plus.",
+      "Le champ amount doit être un montant en euros, strictement positif, à deux décimales au plus.",
     );
   }
 

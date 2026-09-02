@@ -1,0 +1,384 @@
+/*
+ * L'ecran de validation des adhesions.
+ *
+ * Container queries, pas media queries : la file passe d'une a deux colonnes
+ * selon la largeur du CONTENEUR. Le seuil `46rem` est ecrit en dur -- une
+ * condition `@container` n'accepte pas `var(--...)`, les proprietes
+ * personnalisees ne sont pas resolues au moment ou la condition est evaluee.
+ *
+ * Toutes les couleurs viennent de tokens.css.
+ */
+
+.validations__section {
+  margin-block-end: var(--espace-8);
+}
+
+/*
+ * Hierarchie typographique.
+ *
+ * Le titre de page domine nettement : `--taille-3xl` (2,75rem) contre
+ * `--taille-xl` (1,5rem) pour un titre de section, soit deux crans d'ecart sur
+ * l'echelle -- `2xl` est saute. Les titres de carte descendent a
+ * `--taille-lg` (1,25rem).
+ *
+ * Les trois sont des `h1`/`h2` : les niveaux ne sautent pas, seules les
+ * tailles s'ecartent.
+ */
+.validations__page-titre {
+  font-size: var(--taille-3xl);
+  margin-block: 0 var(--espace-2);
+}
+
+.validations__titre {
+  font-size: var(--taille-xl);
+  margin-block: 0 var(--espace-2);
+}
+
+.validations__compte {
+  margin-block: 0 var(--espace-4);
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-sm);
+}
+
+/* == Les quatre etats ===================================================== */
+
+.etat {
+  border: 1px solid var(--couleur-bordure);
+  border-radius: var(--rayon-md);
+  padding: var(--espace-6);
+  max-width: var(--largeur-contenu);
+}
+
+/* Chargement : des silhouettes, pas un ecran blanc. */
+.etat--chargement {
+  display: grid;
+  gap: var(--espace-3);
+}
+
+.silhouette {
+  background: var(--couleur-fond-secondaire);
+  border-radius: var(--rayon-sm);
+  height: var(--espace-4);
+}
+
+.silhouette--titre { height: var(--espace-6); width: 60%; }
+.silhouette--ligne { width: 85%; }
+.silhouette--courte { width: 40%; }
+
+/* Liste vide : une bonne nouvelle, pas une erreur. Ni rouge, ni icone
+   d'avertissement -- le fond de succes et rien d'autre. */
+.etat--vide {
+  background: var(--couleur-succes-fond);
+  border-color: var(--couleur-succes);
+}
+
+.etat--vide h3 {
+  margin-block: 0 var(--espace-2);
+  color: var(--couleur-succes);
+}
+
+/* Echec : ce qui a echoue, et ce que l'agent peut faire. */
+.etat--echec {
+  background: var(--couleur-alerte-fond);
+  border-color: var(--couleur-alerte);
+}
+
+.etat--echec h3 {
+  margin-block: 0 var(--espace-2);
+  color: var(--couleur-alerte);
+}
+
+.etat p { margin-block: 0 var(--espace-3); }
+.etat p:last-child { margin-block-end: 0; }
+
+/* == La file ============================================================== */
+
+.file {
+  container-type: inline-size;
+  container-name: file;
+}
+
+.file__liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--espace-4);
+  grid-template-columns: minmax(0, 34rem);
+  /* Une carte ne s'etire pas sur du vide horizontalement : la colonne est
+     plafonnee et la grille est calee a gauche. En hauteur, en revanche, les
+     cartes d'une meme rangee s'alignent -- `stretch` est la valeur par defaut,
+     elle est ecrite ici parce qu'elle porte une decision. */
+  justify-content: start;
+  align-items: stretch;
+}
+
+/* L'element de liste transmet la hauteur de la rangee a la carte. */
+.file__liste > li {
+  display: flex;
+}
+
+@container file (min-width: 46rem) {
+  .file__liste {
+    grid-template-columns: repeat(2, minmax(0, 34rem));
+  }
+}
+
+/* == La carte d'une demande =============================================== */
+
+.demande {
+  /* Colonne : le contenu s'empile, et les actions se collent en bas quel que
+     soit le remplissage. Deux cartes cote a cote ont donc leurs boutons
+     alignes, meme si l'une porte une note que l'autre n'a pas. */
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  /* Un IFU, un courriel ou une adresse sans espace ne doit pas pousser la
+     carte au-dela de son filet. */
+  overflow-wrap: anywhere;
+  background: var(--couleur-carte-fond);
+  /* Filet decoratif, pas une frontiere de controle : la carte n'est pas un
+     element d'interface au sens du critere 1.4.11, elle groupe du texte et
+     des boutons qui portent chacun leur propre contraste. */
+  border: 1px solid var(--couleur-carte-bordure);
+  border-radius: var(--rayon-md);
+  padding: var(--espace-4);
+}
+
+.demande__enseigne {
+  font-size: var(--taille-lg);
+  margin-block: 0 var(--espace-1);
+}
+
+/*
+ * La note du dossier incomplet.
+ *
+ * Elle vit dans le flux de la carte, avant les actions, et non plus dans la
+ * classe empruntee au dialogue : c'est ce qui la maintenait a l'etroit et lui
+ * donnait l'air de deborder. Marge basse seulement -- la marge haute est
+ * portee par la liste de faits qui la precede.
+ */
+.demande__note {
+  margin-block: 0 var(--espace-4);
+  padding: var(--espace-2) var(--espace-3);
+  background: var(--couleur-alerte-fond);
+  color: var(--couleur-texte);
+  border-inline-start: var(--espace-1) solid var(--couleur-alerte);
+  border-radius: var(--rayon-sm);
+  font-size: var(--taille-sm);
+}
+
+.demande__raison-sociale {
+  margin-block: 0 var(--espace-3);
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-sm);
+}
+
+.demande__faits {
+  margin: 0 0 var(--espace-4);
+  min-width: 0;
+  display: grid;
+  gap: var(--espace-1) var(--espace-3);
+  grid-template-columns: max-content minmax(0, 1fr);
+  font-size: var(--taille-sm);
+}
+
+.demande__faits dt {
+  color: var(--couleur-texte-secondaire);
+}
+
+.demande__faits dd {
+  margin: 0;
+}
+
+/* La categorie vient des donnees : on la met en forme, on ne la traduit pas. */
+.demande__categorie {
+  text-transform: capitalize;
+}
+
+.demande__attente {
+  font-weight: 700;
+}
+
+.pastille {
+  display: inline-block;
+  padding: 0 var(--espace-2);
+  border-radius: var(--rayon-sm);
+  font-size: var(--taille-xs);
+  font-family: var(--police-titre);
+}
+
+.pastille--incomplet {
+  background: var(--couleur-alerte-fond);
+  color: var(--couleur-alerte);
+}
+
+.pastille--acceptee {
+  background: var(--couleur-succes-fond);
+  color: var(--couleur-succes);
+}
+
+.pastille--refusee {
+  background: var(--couleur-alerte-fond);
+  color: var(--couleur-alerte);
+}
+
+/* == Les boutons ========================================================== */
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+}
+
+/* Les boutons se posent en bas de la carte : c'est ce qui les aligne d'une
+   carte a l'autre. Sans effet ailleurs -- `auto` vaut zero hors flexbox. */
+.demande .actions {
+  margin-block-start: auto;
+}
+
+.bouton {
+  font-family: var(--police-titre);
+  font-size: var(--taille-sm);
+  padding: var(--espace-2) var(--espace-4);
+  border-radius: var(--rayon-sm);
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.bouton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* Accepter : la couleur d'action, jamais le bleu institutionnel. */
+.bouton--action {
+  background: var(--couleur-action);
+  color: var(--couleur-action-texte);
+}
+
+.bouton--action:hover:not(:disabled) {
+  background: var(--couleur-action-survol);
+}
+
+/* Refuser : un contour, pas un aplat. La bordure est ici une frontiere de
+   controle, donc soumise au seuil de 3:1 -- d'ou l'alerte et non le filet
+   decoratif des cartes. */
+.bouton--refus {
+  background: var(--couleur-carte-fond);
+  color: var(--couleur-alerte);
+  border-color: currentcolor;
+}
+
+.bouton--refus:hover:not(:disabled) {
+  background: var(--couleur-alerte-fond);
+}
+
+.bouton--discret {
+  background: transparent;
+  color: var(--couleur-texte);
+  border-color: var(--couleur-champ-bordure);
+}
+
+/* == Le dialogue de refus ================================================= */
+
+.dialogue {
+  border: 1px solid var(--couleur-champ-bordure);
+  border-radius: var(--rayon-md);
+  padding: var(--espace-6);
+  max-width: min(46rem, 92vw);
+  color: var(--couleur-texte);
+  background: var(--couleur-fond);
+}
+
+.dialogue::backdrop {
+  background: var(--couleur-voile);
+}
+
+.dialogue__titre {
+  margin-block: 0 var(--espace-2);
+  font-size: var(--taille-lg);
+}
+
+.dialogue__rappel {
+  margin-block: 0 var(--espace-4);
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-sm);
+}
+
+.dialogue label {
+  display: block;
+  margin-block-end: var(--espace-2);
+  font-family: var(--police-titre);
+  font-size: var(--taille-sm);
+}
+
+.dialogue textarea {
+  width: 100%;
+  min-height: 7rem;
+  padding: var(--espace-2);
+  font: inherit;
+  color: var(--couleur-texte);
+  background: var(--couleur-fond);
+  border: 1px solid var(--couleur-champ-bordure);
+  border-radius: var(--rayon-sm);
+  resize: vertical;
+}
+
+.dialogue__aide {
+  margin-block: var(--espace-1) var(--espace-4);
+  font-size: var(--taille-xs);
+  color: var(--couleur-texte-secondaire);
+}
+
+.dialogue__erreur {
+  margin-block: 0 var(--espace-4);
+  padding: var(--espace-2) var(--espace-3);
+  background: var(--couleur-alerte-fond);
+  color: var(--couleur-alerte);
+  border-radius: var(--rayon-sm);
+  font-size: var(--taille-sm);
+}
+
+/* == Le journal =========================================================== */
+
+.journal {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-width: var(--largeur-contenu);
+}
+
+.journal__entree {
+  display: grid;
+  gap: var(--espace-1);
+  padding: var(--espace-3) 0;
+  border-block-end: 1px solid var(--couleur-carte-bordure);
+}
+
+.journal__entree:last-child {
+  border-block-end: none;
+}
+
+.journal__tete {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+  align-items: baseline;
+}
+
+.journal__horodatage {
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.journal__motif {
+  margin: 0;
+  font-size: var(--taille-sm);
+}
+
+.journal__vide {
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-sm);
+}

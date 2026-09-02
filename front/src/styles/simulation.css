@@ -1,0 +1,64 @@
+/*
+ * Le bandeau de simulation.
+ *
+ * Mention permanente, non masquable : exigence du cahier des charges
+ * (F. Pontaillac), pas une decoration. Aucune regle de ce fichier ne doit
+ * permettre de le cacher — ni `display: none`, ni bascule, ni bouton.
+ *
+ * Toutes les couleurs viennent de tokens.css.
+ */
+
+.bandeau-simulation {
+  background: var(--couleur-simulation-fond);
+  color: var(--couleur-simulation-texte);
+  border-block-end: 1px solid var(--couleur-simulation-filet);
+  border-inline-start: var(--espace-1) solid var(--couleur-simulation-filet);
+  /* Une ligne : la hauteur vient de la police, l'espace vertical est reduit au
+     minimum lisible. Le bandeau est sur chaque ecran, il n'a pas a en prendre
+     le tiers. */
+  padding: var(--espace-2) var(--espace-4);
+
+  /*
+   * Il ne defile pas.
+   *
+   * Sur un ecran long -- le registre en compte des dizaines de lignes -- un
+   * bandeau qui part vers le haut laisse un tableau de montants sans sa
+   * mention. Une capture prise a mi-page passerait alors pour un document
+   * reel. Il colle donc en haut, et tout ce qui colle sous lui est cale sur
+   * `--hauteur-bandeau`.
+   *
+   * `z-index` au-dessus du rail et de l'en-tete de tableau, qui collent aussi :
+   * c'est lui qui doit rester visible si deux se rencontrent.
+   */
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+.bandeau-simulation__texte {
+  margin: 0;
+  font-size: var(--taille-sm);
+  line-height: 1.4;
+  /*
+   * PAS de `max-width` ici. C'est ce qui coutait trois lignes : la mesure de
+   * confort de lecture (`--largeur-contenu`, 72ch) est faite pour un
+   * paragraphe, pas pour une ligne d'avertissement qui doit tenir en largeur
+   * de page. Un bandeau n'est pas un texte courant.
+   */
+}
+
+.bandeau-simulation__mention {
+  font-family: var(--police-titre);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/*
+ * A l'impression aussi. Un ecran capture ou imprime sans la mention
+ * pourrait etre pris pour un document reel.
+ */
+@media print {
+  .bandeau-simulation {
+    border: 1px solid var(--couleur-simulation-filet);
+  }
+}

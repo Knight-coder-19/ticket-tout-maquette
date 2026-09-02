@@ -747,3 +747,106 @@ export type SirhBalance = {
   currency: string;
   as_of: string;
 };
+
+/* ===========================================================================
+ * 10. NOTRE PROPOSITION -- pas le contrat du back
+ * =========================================================================== */
+
+/**
+ * Une ligne du journal des decisions.
+ *
+ * ATTENTION : le back n'expose AUCUNE route de lecture d'`audit_log`. Le
+ * journal, lui, est bien le sien -- table `audit_log`
+ * (`0001_schema.sql:265-274`), alimentee par `review.rs:1-2`, et decrite
+ * « consultee par l'administration » (`data-dictionary.md:300`). Mais la
+ * section 4.7 n'en sert aucune ligne : la seule route d'audit du contrat est
+ * `GET /admin/audit/verify` (:575-580), qui rend une verification de chaine,
+ * pas un journal.
+ *
+ * Les champs ci-dessous sont donc les COLONNES de leur table, en snake_case
+ * (`data-dictionary.md:304`), servies par une route que nous proposons. A
+ * confirmer avec l'equipe back avant que quoi que ce soit s'y appuie
+ * durablement.
+ */
+export type LigneJournal = {
+  id: string;
+  actor_id: string | null;
+  /** Verbe libre. Le notre : `partner.approved`, `partner.rejected`. */
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  payload: Record<string, unknown> | null;
+  ip_address: string | null;
+  created_at: string;
+};
+
+/** Enveloppe de la meme route. `Paginated<T>` du contrat (:319-322). */
+export type JournalList = Paginated<LigneJournal>;
+
+/**
+ * Une ligne du registre des comptes partenaires.
+ *
+ * ⚠ NOTRE PROPOSITION, servie par `GET /api/v1/admin/partner-accounts`. Le
+ * contrat n'a qu'une liste de partenaires, `GET /admin/partners?status=&cursor=`
+ * (:490), qui sert `PartnerReviewItem` : les treize premiers champs ci-dessous,
+ * et rien de plus.
+ *
+ * Les cinq derniers sont de nous, avec les noms déjà écrits ailleurs dans leur
+ * contrat pour ne pas en inventer :
+ *   - `reviewed_by`, `reviewed_at`, `review_reason` — colonnes de `partners`
+ *     (`0001_schema.sql:115-117`), exposées à l'administration selon la §3.6
+ *     (:156-158) mais absentes du DTO de la §4.7 ;
+ *   - `total_received`, `transaction_count` — noms de `PartnerSummary`
+ *     (:419-421), que le contrat définit pour l'espace partenaire.
+ */
+export type PartnerAccountItem = PartnerReviewItem & {
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  review_reason: string | null;
+  /** Cumul encaissé, en euros décimaux. */
+  total_received: number;
+  transaction_count: number;
+};
+
+/** Enveloppe de la même route. `Paginated<T>` du contrat (:319-322). */
+export type PartnerAccountList = Paginated<PartnerAccountItem>;
+
+/**
+ * Une écriture du registre, telle que la sert
+ * `GET /api/v1/admin/ledger-entries`.
+ *
+ * ⚠ NOTRE PROPOSITION. Le contrat n'expose aucune lecture du journal : la
+ * section 4.7 n'en contient pas, et `GET /admin/audit/verify` (:575-580) rend
+ * un booléen et deux compteurs, pas des lignes.
+ *
+ * Les noms sont les COLONNES de `ledger_entries` et `ledger_operations`
+ * (`0001_schema.sql:160-185`), en snake_case comme le reste du contrat. Les
+ * quatre derniers champs sont des jointures servies pour éviter à l'écran de
+ * les faire lui-même — un identifiant de compte ne dit rien à un agent.
+ */
+export type LedgerEntryItem = {
+  seq: number;
+  operation_id: string;
+  account_id: string;
+  account_owner_type: "employee" | "partner" | "system" | null;
+  account_owner_id: string | null;
+  account_system_code: string | null;
+  direction: EntryDirection;
+  /** Euros décimaux, comme tout montant du contrat. */
+  amount: number;
+  recorded_at: string;
+  /** Empreinte de l'écriture précédente, 64 hexadécimaux. */
+  prev_hash: string;
+  hash: string;
+  kind: OperationKind | null;
+  memo: string | null;
+  occurred_at: string | null;
+  created_by: string | null;
+  /** Identifiant de l'opération qui a annulé celle-ci, `null` sinon. */
+  compensated_by: string | null;
+  compensation_reason: string | null;
+};
+
+/** Enveloppe de la même route. `Paginated<T>` du contrat (:319-322). */
+export type LedgerEntryList = Paginated<LedgerEntryItem>;
+

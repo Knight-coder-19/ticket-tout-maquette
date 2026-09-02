@@ -1,0 +1,145 @@
+/*
+ * La coquille de l'espace d'administration : le rail et le contenu.
+ *
+ * ─── Container queries, pas media queries ───
+ *
+ * La mise en page se reorganise selon la largeur du CONTENEUR, pas de la
+ * fenetre. C'est ce qui la rend juste dans un cadre d'appareil, un panneau
+ * lateral ou une capture a mi-ecran, et pas seulement dans un navigateur
+ * plein ecran. Aucune `@media (width)` ici ; la seule `@media` du fichier
+ * porte sur `prefers-contrast`, qui est une preference, pas une taille.
+ *
+ * ⚠ Le seuil est ecrit en dur, `60rem`. Une condition `@container` n'accepte
+ * pas `var(--…)` : les proprietes personnalisees ne sont pas resolues au
+ * moment ou la condition est evaluee. C'est la seule valeur de ce fichier qui
+ * ne vient pas de tokens.css, et elle n'est pas une couleur.
+ *
+ * Toutes les couleurs viennent de tokens.css.
+ */
+
+.espace-administration {
+  container-type: inline-size;
+  container-name: espace;
+  min-height: 100dvh;
+  background: var(--couleur-fond);
+}
+
+.espace-administration__grille {
+  display: grid;
+  /* Etroit par defaut : le rail passe en barre horizontale, en haut. */
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+.espace-administration__contenu {
+  min-width: 0;
+  padding: var(--espace-6) var(--espace-4);
+  max-width: var(--largeur-page);
+}
+
+/* ══ Le rail ═══════════════════════════════════════════════════════════════ */
+
+.rail {
+  background: var(--couleur-rail-fond);
+  border-block-end: 1px solid var(--couleur-rail-separateur);
+}
+
+.rail__titre {
+  margin: 0;
+  padding: var(--espace-3) var(--espace-4) var(--espace-1);
+  font-size: var(--taille-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--couleur-rail-texte);
+}
+
+.rail__liste {
+  list-style: none;
+  margin: 0;
+  padding: var(--espace-2);
+  display: flex;
+  flex-direction: row;
+  gap: var(--espace-1);
+  /* Barre horizontale : les dix entrees defilent plutot que de se tasser. */
+  overflow-x: auto;
+}
+
+.rail__lien {
+  display: block;
+  padding: var(--espace-2) var(--espace-3);
+  color: var(--couleur-rail-texte);
+  text-decoration: none;
+  border-radius: var(--rayon-sm);
+  white-space: nowrap;
+  /* Le filet de l'entree active, reserve des le depart pour qu'aucun texte
+     ne se decale au changement de page. */
+  border-block-end: 3px solid transparent;
+}
+
+.rail__lien:hover {
+  background: var(--couleur-rail-survol-fond);
+  text-decoration: underline;
+}
+
+/*
+ * L'entree courante. Trois marqueurs, jamais la couleur seule :
+ *   - `aria-current="page"`, porte par le composant, pour les technologies
+ *     d'assistance ;
+ *   - la graisse, lisible sans percevoir les couleurs ;
+ *   - le filet, qui donne la position dans la liste.
+ * Le selecteur porte sur l'attribut ARIA, pas sur une classe : la regle CSS
+ * ne peut donc pas diverger de ce qu'annonce l'attribut.
+ */
+.rail__lien[aria-current="page"] {
+  background: var(--couleur-rail-actif-fond);
+  border-block-end-color: var(--couleur-rail-actif-filet);
+  font-weight: 700;
+}
+
+/* ══ Large : le rail devient vertical, a gauche ════════════════════════════ */
+
+@container espace (min-width: 60rem) {
+  .espace-administration__grille {
+    grid-template-columns: var(--largeur-rail) minmax(0, 1fr);
+  }
+
+  .espace-administration__contenu {
+    padding: var(--espace-8);
+  }
+
+  .rail {
+    position: sticky;
+    /* Sous le bandeau, qui colle lui aussi : sinon le rail passerait derriere
+       et la mention de simulation serait recouverte. */
+    top: var(--hauteur-bandeau);
+    z-index: 1;
+    align-self: start;
+    min-height: 100dvh;
+    border-block-end: none;
+    border-inline-end: 1px solid var(--couleur-rail-separateur);
+  }
+
+  .rail__liste {
+    flex-direction: column;
+    overflow-x: visible;
+  }
+
+  .rail__lien {
+    /* Le filet passe du bas au bord de depart : une liste verticale se lit
+       par sa marge gauche, pas par un soulignement. */
+    border-block-end: none;
+    border-inline-start: 3px solid transparent;
+  }
+
+  .rail__lien[aria-current="page"] {
+    border-inline-start-color: var(--couleur-rail-actif-filet);
+  }
+}
+
+/* Preference systeme, pas une taille : le filet s'epaissit. */
+@media (prefers-contrast: more) {
+  .rail__lien[aria-current="page"] {
+    outline: 2px solid var(--couleur-rail-actif-filet);
+    outline-offset: -2px;
+  }
+}

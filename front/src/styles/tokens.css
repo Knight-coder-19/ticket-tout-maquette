@@ -51,6 +51,60 @@
   --rayon-sm: 2px;
   --rayon-md: 4px;
 
+
+  /* ── Rail de navigation ────────────────────────────────────────────────
+     Jetons semantiques : un composant ne cite jamais une couleur brute, il
+     cite le role. Contrastes mesures, notes en regard.
+     Le bleu institutionnel sert ici au TEXTE et au FILET de l'entree active,
+     jamais de fond plein — charte de l'Etat. */
+  --couleur-rail-fond: var(--couleur-fond-secondaire);
+  --couleur-rail-texte: var(--couleur-primaire);          /* 10,41:1 sur le fond du rail */
+  --couleur-rail-survol-fond: #e8ecf3;                    /* 9,51:1 pour le texte du rail */
+  --couleur-rail-actif-fond: var(--couleur-fond);         /* 11,27:1 pour le texte actif */
+  --couleur-rail-actif-filet: var(--couleur-primaire);
+  --couleur-rail-separateur: #c2c9d4;
+
+  /* ── Bandeau de simulation ─────────────────────────────────────────────
+     Mention permanente, non masquable. Le texte est en --couleur-texte et
+     non en --couleur-simulation : cette derniere ne passe qu'a 4,54:1 sur
+     son fond, ce qui tient tout juste le seuil. Un avertissement qui ne doit
+     jamais devenir illisible ne se contente pas de la limite. */
+  --couleur-simulation-texte: var(--couleur-texte);       /* 16,13:1 sur le fond du bandeau */
+  --couleur-simulation-filet: var(--couleur-simulation);
+
+  /* ── Dimensions de la coquille d'administration ────────────────────── */
+
+  /* -- Ecran de validation des adhesions ---------------------------------
+     Fonds nouveaux, contrastes mesures et notes en regard. */
+  --couleur-carte-fond: var(--couleur-fond);
+  --couleur-carte-bordure: var(--couleur-bordure);        /* filet decoratif, 1,39:1 -- voir validations.css */
+  --couleur-champ-bordure: #758498;                       /* 3,81:1 : bordure de CONTROLE, seuil 3:1 */
+
+  --couleur-action-texte: var(--couleur-fond);            /* 6,50:1 sur --couleur-action */
+  --couleur-alerte-fond: #fbeeea;                         /* 6,17:1 pour --couleur-alerte */
+  --couleur-succes-fond: #e8f3ef;                         /* 5,73:1 pour --couleur-succes */
+
+  /* Voile du dialogue modal. Teinte du bleu institutionnel, pas un noir pur :
+     un voile neutre sur une charte bleue vire au gris sale. */
+  --couleur-voile: rgb(18 41 76 / 55%);
+
+  --largeur-rail: 17rem;
+  /* Hauteur du bandeau de simulation, une ligne : deux fois --espace-2 de
+     rembourrage plus une ligne de --taille-sm a 1.4. Sert a caler ce qui colle
+     dessous -- le rail et l'en-tete de tableau -- pour que rien ne passe
+     derriere lui. */
+  --hauteur-bandeau: 2.5rem;
+
+
+  /* -- Registre des comptes partenaires ---------------------------------
+     Fonds nouveaux, contrastes mesures et notes en regard. */
+  --couleur-attente-fond: #fbf1d8;                        /* 6,51:1 pour le texte ci-dessous */
+  --couleur-attente-texte: #6b5310;
+  --couleur-neutre-fond: #ebedf1;                         /* 14,85:1 pour --couleur-texte */
+  --couleur-tableau-entete: #eef1f6;                      /* 15,37:1 pour --couleur-texte */
+  --couleur-tableau-survol: var(--couleur-fond-secondaire); /* 16,08:1 pour --couleur-texte */
+  --couleur-tableau-filet: var(--couleur-champ-bordure);  /* 3,81:1 : separe des cellules cliquables */
+
   --largeur-contenu: 72ch;
   --largeur-page: 1200px;
 }

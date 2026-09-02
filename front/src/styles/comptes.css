@@ -1,0 +1,285 @@
+/*
+ * Le registre des comptes partenaires.
+ *
+ * Un registre, pas une file de decisions : un tableau qu'on balaye, qu'on
+ * cherche et qu'on trie. La mise en page suit -- des lignes, pas des cartes.
+ *
+ * Container queries, pas media queries. Deux seuils, ecrits en dur parce
+ * qu'une condition `@container` n'accepte pas `var(--...)` :
+ *   48rem  la barre de filtres passe d'une colonne a une rangee ;
+ *   64rem  les colonnes secondaires reapparaissent.
+ *
+ * Toutes les couleurs viennent de tokens.css.
+ */
+
+.comptes {
+  container-type: inline-size;
+  container-name: registre;
+}
+
+.comptes__titre {
+  font-size: var(--taille-3xl);
+  margin-block: 0 var(--espace-2);
+}
+
+.comptes__intro {
+  margin-block: 0 var(--espace-6);
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-sm);
+  max-width: var(--largeur-contenu);
+}
+
+/* == La barre de recherche et de filtres ================================== */
+
+.filtres {
+  display: grid;
+  gap: var(--espace-3);
+  grid-template-columns: minmax(0, 1fr);
+  margin-block-end: var(--espace-4);
+  padding: var(--espace-4);
+  background: var(--couleur-fond-secondaire);
+  border: 1px solid var(--couleur-bordure);
+  border-radius: var(--rayon-md);
+}
+
+@container registre (min-width: 48rem) {
+  .filtres {
+    grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr));
+    align-items: end;
+  }
+}
+
+.filtres__champ {
+  display: grid;
+  gap: var(--espace-1);
+  min-width: 0;
+}
+
+.filtres__champ label {
+  font-family: var(--police-titre);
+  font-size: var(--taille-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--couleur-texte-secondaire);
+}
+
+.filtres input,
+.filtres select {
+  width: 100%;
+  padding: var(--espace-2);
+  font: inherit;
+  font-size: var(--taille-sm);
+  color: var(--couleur-texte);
+  background: var(--couleur-fond);
+  border: 1px solid var(--couleur-champ-bordure);
+  border-radius: var(--rayon-sm);
+}
+
+/*
+ * L'etat de la recherche, toujours visible.
+ *
+ * Un tableau filtre qui ne dit pas qu'il est filtre est un tableau qui ment :
+ * l'agent croit voir tous les comptes. Cette ligne dit ce qui est applique et
+ * combien de lignes en resultent, meme quand rien n'est filtre.
+ */
+.filtres__etat {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: var(--taille-sm);
+}
+
+.filtres__actif {
+  font-weight: 700;
+}
+
+/* == Le tableau =========================================================== */
+
+/*
+ * Le defilement horizontal vit ICI, pas sur la page.
+ *
+ * `overflow-x: auto` sur ce conteneur et non sur `body` : si la place manque,
+ * c'est le tableau qui glisse sous le doigt, pendant que l'en-tete de page, la
+ * barre de filtres et le rail restent ou ils sont. Une page qui part de biais
+ * emmene tout avec elle, y compris ce qui n'avait pas besoin de bouger.
+ *
+ * `tabindex="0"` est pose sur ce conteneur dans le composant : une zone qui
+ * defile doit etre atteignable au clavier, sinon elle n'est pas consultable
+ * sans souris.
+ */
+.tableau-defilant {
+  overflow-x: auto;
+  border: 1px solid var(--couleur-bordure);
+  border-radius: var(--rayon-md);
+}
+
+.tableau-defilant:focus-visible {
+  outline: 3px solid var(--couleur-primaire);
+  outline-offset: -3px;
+}
+
+.registre {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--taille-sm);
+  /* En dessous de cette largeur les colonnes se tasseraient : mieux vaut
+     defiler que rendre illisible. */
+  min-width: 56rem;
+}
+
+.registre caption {
+  text-align: start;
+  padding: var(--espace-3) var(--espace-4);
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-xs);
+}
+
+.registre th,
+.registre td {
+  padding: var(--espace-3) var(--espace-4);
+  text-align: start;
+  vertical-align: top;
+  border-block-end: 1px solid var(--couleur-bordure);
+}
+
+.registre thead th {
+  background: var(--couleur-tableau-entete);
+  font-family: var(--police-titre);
+  font-size: var(--taille-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-block-end: 1px solid var(--couleur-tableau-filet);
+  /* Colle sous le bandeau, pas sous le haut de la fenetre : un long tableau
+     garde ses en-tetes ET sa mention de simulation. */
+  position: sticky;
+  top: var(--hauteur-bandeau);
+  z-index: 1;
+}
+
+.registre tbody tr:last-child th,
+.registre tbody tr:last-child td {
+  border-block-end: none;
+}
+
+.registre tbody tr:hover {
+  background: var(--couleur-tableau-survol);
+}
+
+/* La ligne dont l'action est en vol : elle seule est mise en retrait. */
+.registre tbody tr[aria-busy="true"] {
+  background: var(--couleur-tableau-survol);
+}
+
+.registre__enseigne {
+  font-weight: 700;
+}
+
+.registre__raison-sociale {
+  display: block;
+  font-weight: 400;
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-xs);
+}
+
+.registre__nombre {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.registre__secondaire {
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-xs);
+}
+
+.registre__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+}
+
+.registre__actions .bouton {
+  font-size: var(--taille-xs);
+  padding: var(--espace-1) var(--espace-2);
+}
+
+/*
+ * Etroit : deux colonnes disparaissent.
+ *
+ * Categorie et ville sont deja rappelees sous l'enseigne dans ce cas -- elles
+ * ne sont pas perdues, elles changent de place. On ne cache jamais le statut
+ * ni les actions.
+ */
+.registre__repli {
+  display: none;
+}
+
+@container registre (max-width: 64rem) {
+  .registre__secondaire-colonne {
+    display: none;
+  }
+
+  .registre__repli {
+    display: block;
+    color: var(--couleur-texte-secondaire);
+    font-size: var(--taille-xs);
+  }
+}
+
+/* == Les pastilles de statut ============================================== */
+
+/*
+ * Le texte dit le statut. La couleur ne fait que le repeter.
+ *
+ * Chaque pastille porte son libelle en toutes lettres -- « Agree »,
+ * « Suspendu », « Ferme ». Un agent qui ne percoit pas les teintes lit
+ * exactement la meme information que les autres, et une capture en noir et
+ * blanc reste exacte.
+ */
+.statut {
+  display: inline-block;
+  padding: 0 var(--espace-2);
+  border-radius: var(--rayon-sm);
+  font-family: var(--police-titre);
+  font-size: var(--taille-xs);
+  white-space: nowrap;
+}
+
+.statut--en_attente {
+  background: var(--couleur-attente-fond);
+  color: var(--couleur-attente-texte);
+}
+
+.statut--agree {
+  background: var(--couleur-succes-fond);
+  color: var(--couleur-succes);
+}
+
+.statut--refuse {
+  background: var(--couleur-alerte-fond);
+  color: var(--couleur-alerte);
+}
+
+.statut--suspendu {
+  background: var(--couleur-alerte-fond);
+  color: var(--couleur-alerte);
+  /* Suspendu et refuse partagent la teinte d'alerte : ce sont deux etats
+     defavorables. Le filet les distingue sans compter sur la couleur seule,
+     et le libelle les distingue tout court. */
+  border-inline-start: var(--espace-1) solid var(--couleur-alerte);
+}
+
+.statut--ferme {
+  background: var(--couleur-neutre-fond);
+  color: var(--couleur-texte);
+}
+
+/* == L'avertissement du dialogue de fermeture ============================= */
+
+.dialogue__avertissement {
+  margin-block: 0 var(--espace-4);
+  padding: var(--espace-3);
+  background: var(--couleur-alerte-fond);
+  color: var(--couleur-texte);
+  border-inline-start: var(--espace-1) solid var(--couleur-alerte);
+  border-radius: var(--rayon-sm);
+  font-size: var(--taille-sm);
+}
