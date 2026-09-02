@@ -53,3 +53,46 @@ Tout, cette fois. Résumé de l'impact :
 La charte ministérielle reste applicable au reste de l'interface. Ticket Tout est une marque produit qui vit **à l'intérieur** de la charte : `#1B3A6B` reste la couleur primaire.
 
 ---
+
+# Journal de bord, Jour 3
+
+## Ce qu'on a fait aujourd'hui
+
+### Décision d'architecture : on adopte le squelette `front-employee`
+
+En attaquant la branche `employee`, on a découvert qu'elle contenait une **architecture front complète et différente** de celle des branches `front-info-page` / `front-login-register` : dossier `front/src/`, groupes de routes par rôle (`(salarie)`, `(partenaire)`, `(administration)`, `(auth)`, `(public)`), couche services et mocks, CSS pur avec `tokens.css`, noms français, couleur d'action verte. Environ 200 fichiers, la plupart des stubs vides, montés par un·e coéquipier·e.
+
+Les deux architectures sont incompatibles. **On a tranché : on adopte le squelette `front-employee`.** Il est plus complet (les 3 espaces, les livrables juridiques dans `docs/`, un `ARCHITECTURE.md` avec des règles strictes), et son `tokens.css` répond déjà à la demande « palette dans un fichier unique ». Le travail des branches `front-info-page` et `front-login-register` sera reporté dans `(public)/accueil` et `(auth)/*` plus tard.
+
+### Espace salarié construit (sur `front/`)
+
+- **Remise en état de l'infra** : `front/package.json` pointait des versions non installables (`typescript@^7`), corrigé (Next 16.3.3, React 19.2.8, TS 5). Polices Marianne et Spectral auto-hébergées dans `public/fonts/`. `.env.local` créé (mode mocks).
+- **Couche données** : fixtures (catégories, partenaires, salarié, une dizaine de transactions dont une contre-écriture), `magasin.ts` en mémoire (solde calculé, génération de code avec TTL borné à 300 s), adaptateurs mock, `services/index.ts` (bascule mocks / API), hooks `useSolde` / `useCodePaiement` / `usePagination`, utils `montant` / `date`.
+- **Primitives UI** (CSS Modules, jetons uniquement) : `Bouton`, `Carte`, `Pastille`, `EtatVide`, `EtatErreur`, `Chargement`, `Icone` (SVG maison, pas de librairie).
+- **Simulation** : `Montant` (seul point d'affichage d'une valeur monétaire), `MentionSimulation`, `BandeauSimulation`.
+- **Écrans** :
+  - `/salarie` : carte solde (formulation positive et mention de simulation), actions rapides, dernières opérations, « Coup de cœur du Ministre ».
+  - `/salarie/paiement` : génération du code, représentation matricielle, jeton et copie, minuteur de validité, régénération, état expiré, écran « paiement accepté ».
+  - `/salarie/historique` : filtre par mois, liste paginée, pastilles Validée / Annulée / Correction.
+  - `/salarie/partenaires` : recherche + filtre catégories (piloté par les données) + liste.
+  - `/salarie/demandes` : version légère (état vide + formulaire simulé).
+  - `RailSalarie` et layout : navigation latérale, lien d'évitement, `<main>`.
+- **Vérifications** : `tsc --noEmit` 0 erreur, `eslint` 0 erreur (2 warnings dans des stubs de l'équipe), `next build` OK, captures headless des 4 écrans.
+
+## Décisions
+
+- Squelette `front-employee` retenu comme architecture front unique.
+- Espaces partenaire et admin : encore en stubs, à construire ensuite.
+- Le code de paiement affiché est une représentation (un vrai code signé relève du backend). C'est indiqué à l'écran.
+- Pas de vraie carte scannable ni d'API cartographique (souveraineté).
+
+## À compléter pour la suite (mail Sellami, échéance demain 12h)
+
+- [ ] Basculer `CartePro` vers `Ticket Tout` partout, avec grep de contrôle.
+- [ ] `tokens.css` : 2 accents dérivés de `#1B3A6B`, remplacer le vert d'action, produire la table de contrastes.
+- [ ] Logotype Ticket Tout (principale / monochrome / favicon) posé dans les 3 espaces.
+- [ ] Favicon.
+- [ ] Redessiner la carte (repos et paiement) pour qu'elle donne envie.
+- [ ] Brand book PDF (10 pages minimum), avec captures réelles.
+- [ ] Reprendre les prises vidéo où « CartePro » apparaît.
+- [ ] Écrire noir sur blanc ce qui est laissé de côté et pourquoi.
