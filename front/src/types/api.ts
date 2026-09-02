@@ -850,3 +850,24 @@ export type LedgerEntryItem = {
 /** Enveloppe de la même route. `Paginated<T>` du contrat (:319-322). */
 export type LedgerEntryList = Paginated<LedgerEntryItem>;
 
+/**
+ * L'état du compte d'un partenaire, vu par son titulaire.
+ *
+ * ⚠ NOTRE PROPOSITION, servie par `GET /api/v1/partner/account`. La section 4.5
+ * du contrat n'expose aucune route de ce genre, alors que la section 3.6 dit
+ * `review_reason` « visible du partenaire en cas de rejet » (:158) : l'intention
+ * est écrite, la route manque.
+ *
+ * Les noms sont les colonnes de `partners` (`0001_schema.sql:98-124`).
+ */
+export type PartnerAccountStatus = {
+  id: string;
+  trade_name: string;
+  status: PartnerStatus;
+  review_reason: string | null;
+  reviewed_at: string | null;
+  submitted_at: string;
+  contact_email: string;
+  city: CityRef | null;
+};
+

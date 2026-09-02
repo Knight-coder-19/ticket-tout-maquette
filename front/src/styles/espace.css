@@ -1,5 +1,11 @@
 /*
- * La coquille de l'espace d'administration : le rail et le contenu.
+ * La coquille d'un espace : le rail et le contenu.
+ *
+ * ⚠ CE FICHIER A REMONTE. Il s'appelait `administration.css` et ses classes
+ * `.espace-administration*`. Deux espaces le partagent maintenant --
+ * l'administration et le partenaire -- et la regle de `CLAUDE.md` est claire :
+ * ce que deux espaces partagent ne se copie pas, il remonte. Les noms sont donc
+ * devenus generiques : `.espace`, `.espace__grille`, `.espace__contenu`.
  *
  * ─── Container queries, pas media queries ───
  *
@@ -17,21 +23,21 @@
  * Toutes les couleurs viennent de tokens.css.
  */
 
-.espace-administration {
+.espace {
   container-type: inline-size;
   container-name: espace;
   min-height: 100dvh;
   background: var(--couleur-fond);
 }
 
-.espace-administration__grille {
+.espace__grille {
   display: grid;
   /* Etroit par defaut : le rail passe en barre horizontale, en haut. */
   grid-template-columns: minmax(0, 1fr);
   align-items: start;
 }
 
-.espace-administration__contenu {
+.espace__contenu {
   min-width: 0;
   padding: var(--espace-6) var(--espace-4);
   max-width: var(--largeur-page);
@@ -99,11 +105,11 @@
 /* ══ Large : le rail devient vertical, a gauche ════════════════════════════ */
 
 @container espace (min-width: 60rem) {
-  .espace-administration__grille {
+  .espace__grille {
     grid-template-columns: var(--largeur-rail) minmax(0, 1fr);
   }
 
-  .espace-administration__contenu {
+  .espace__contenu {
     padding: var(--espace-8);
   }
 

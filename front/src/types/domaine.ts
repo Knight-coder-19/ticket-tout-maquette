@@ -228,3 +228,24 @@ export interface VerificationIntegrite {
   controleeA: number;
 }
 
+/**
+ * L'état de MON compte, tel que l'espace partenaire le manipule.
+ *
+ * Distinct de `ComptePartenaire`, qui est la vue de l'administration sur le
+ * compte d'un autre : celle-ci porte l'activité et le nom légal, celle-là porte
+ * ce qu'un commerçant a besoin de savoir sur lui-même. Ni volume, ni auteur de
+ * la décision — un partenaire n'a pas à savoir quel agent a tranché.
+ */
+export interface MonCompte {
+  id: Identifiant;
+  enseigne: string;
+  statut: StatutPartenaire;
+  /** Motif de la dernière décision. `null` si aucune. */
+  motif: string | null;
+  /** Date ISO 8601 de la décision, `null` si aucune. */
+  decideeLe: string | null;
+  deposeeLe: string;
+  courrielContact: string;
+  ville: string | null;
+}
+

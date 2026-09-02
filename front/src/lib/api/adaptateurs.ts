@@ -44,6 +44,7 @@ import type {
   LedgerEntryItem,
   LigneJournal,
   PartnerAccountItem,
+  PartnerAccountStatus,
   PartnerReviewItem,
   PartnerStatus,
   PaymentResponse,
@@ -57,6 +58,7 @@ import type {
   EcritureRegistre,
   DemandeAdhesion,
   DemandePartenaire,
+  MonCompte,
   Partenaire,
   NatureEcriture,
   SensDecision,
@@ -888,6 +890,35 @@ export function depuisVerification(
     ecrituresVerifiees: brut.checked_entries,
     premiereFautive: brut.first_invalid_seq,
     controleeA,
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * 8 quinquies. MON COMPTE — ESPACE PARTENAIRE
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * `PartnerAccountStatus` → `MonCompte`.
+ *
+ * ⚠ Le type d'entrée vient d'une route que NOUS proposons : le contrat n'a
+ * aucune route disant à un partenaire l'état de son compte. Voir
+ * `types/api.ts`.
+ *
+ * Le statut passe par `statutDepuisPartnerStatus`, la traduction unique du
+ * projet — celle-là même que la file de validation et le registre des comptes
+ * utilisent. Un statut est un statut, quel que soit l'écran qui le lit.
+ */
+export function depuisMonCompte(brut: PartnerAccountStatus): MonCompte {
+  return {
+    id: brut.id,
+    enseigne: brut.trade_name,
+    statut: statutDepuisPartnerStatus(brut.status),
+    motif: brut.review_reason,
+    decideeLe:
+      brut.reviewed_at === null ? null : horodatageIso(brut.reviewed_at, "reviewed_at"),
+    deposeeLe: horodatageIso(brut.submitted_at, "submitted_at"),
+    courrielContact: brut.contact_email,
+    ville: brut.city === null ? null : brut.city.name,
   };
 }
 

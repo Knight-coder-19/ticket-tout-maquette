@@ -1,0 +1,118 @@
+/*
+ * Les primitives d'interface partagees.
+ *
+ * ⚠ ELLES ONT REMONTE depuis `validations.css`. Les quatre etats -- chargement,
+ * vide, echec -- et les boutons servent desormais a deux espaces :
+ * l'administration et le partenaire. La regle de `CLAUDE.md` vaut pour le CSS
+ * comme pour les composants : ce que deux espaces partagent remonte au lieu
+ * d'etre copie.
+ *
+ * Toutes les couleurs viennent de tokens.css.
+ */
+
+/* == Les quatre etats ===================================================== */
+
+.etat {
+  border: 1px solid var(--couleur-bordure);
+  border-radius: var(--rayon-md);
+  padding: var(--espace-6);
+  max-width: var(--largeur-contenu);
+}
+
+/* Chargement : des silhouettes, pas un ecran blanc. */
+.etat--chargement {
+  display: grid;
+  gap: var(--espace-3);
+}
+
+.silhouette {
+  background: var(--couleur-fond-secondaire);
+  border-radius: var(--rayon-sm);
+  height: var(--espace-4);
+}
+
+.silhouette--titre { height: var(--espace-6); width: 60%; }
+.silhouette--ligne { width: 85%; }
+.silhouette--courte { width: 40%; }
+
+/* Liste vide : une bonne nouvelle, pas une erreur. Ni rouge, ni icone
+   d'avertissement -- le fond de succes et rien d'autre. */
+.etat--vide {
+  background: var(--couleur-succes-fond);
+  border-color: var(--couleur-succes);
+}
+
+/* `:is(h2, h3)` : le titre de ces blocs est passe de h3 a h2 le jour ou
+   « Demandes en attente » a disparu, et le selecteur etait reste sur h3 -- il
+   ne mordait plus. Les deux niveaux sont acceptes pour que le style ne
+   depende pas d'un choix de hierarchie qui peut encore bouger. */
+.etat--vide :is(h2, h3) {
+  margin-block: 0 var(--espace-2);
+  color: var(--couleur-succes);
+}
+
+/* Echec : ce qui a echoue, et ce que l'agent peut faire. */
+.etat--echec {
+  background: var(--couleur-alerte-fond);
+  border-color: var(--couleur-alerte);
+}
+
+.etat--echec :is(h2, h3) {
+  margin-block: 0 var(--espace-2);
+  color: var(--couleur-alerte);
+}
+
+.etat p { margin-block: 0 var(--espace-3); }
+.etat p:last-child { margin-block-end: 0; }
+
+/* == Les boutons ========================================================== */
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+}
+
+.bouton {
+  font-family: var(--police-titre);
+  font-size: var(--taille-sm);
+  padding: var(--espace-2) var(--espace-4);
+  border-radius: var(--rayon-sm);
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.bouton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* Accepter : la couleur d'action, jamais le bleu institutionnel. */
+.bouton--action {
+  background: var(--couleur-action);
+  color: var(--couleur-action-texte);
+}
+
+.bouton--action:hover:not(:disabled) {
+  background: var(--couleur-action-survol);
+}
+
+/* Refuser : un contour, pas un aplat. La bordure est ici une frontiere de
+   controle, donc soumise au seuil de 3:1 -- d'ou l'alerte et non le filet
+   decoratif des cartes. */
+.bouton--refus {
+  background: var(--couleur-carte-fond);
+  color: var(--couleur-alerte);
+  border-color: currentcolor;
+}
+
+.bouton--refus:hover:not(:disabled) {
+  background: var(--couleur-alerte-fond);
+}
+
+.bouton--discret {
+  background: transparent;
+  color: var(--couleur-texte);
+  border-color: var(--couleur-champ-bordure);
+}
+
