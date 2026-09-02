@@ -811,3 +811,42 @@ export type PartnerAccountItem = PartnerReviewItem & {
 /** Enveloppe de la même route. `Paginated<T>` du contrat (:319-322). */
 export type PartnerAccountList = Paginated<PartnerAccountItem>;
 
+/**
+ * Une écriture du registre, telle que la sert
+ * `GET /api/v1/admin/ledger-entries`.
+ *
+ * ⚠ NOTRE PROPOSITION. Le contrat n'expose aucune lecture du journal : la
+ * section 4.7 n'en contient pas, et `GET /admin/audit/verify` (:575-580) rend
+ * un booléen et deux compteurs, pas des lignes.
+ *
+ * Les noms sont les COLONNES de `ledger_entries` et `ledger_operations`
+ * (`0001_schema.sql:160-185`), en snake_case comme le reste du contrat. Les
+ * quatre derniers champs sont des jointures servies pour éviter à l'écran de
+ * les faire lui-même — un identifiant de compte ne dit rien à un agent.
+ */
+export type LedgerEntryItem = {
+  seq: number;
+  operation_id: string;
+  account_id: string;
+  account_owner_type: "employee" | "partner" | "system" | null;
+  account_owner_id: string | null;
+  account_system_code: string | null;
+  direction: EntryDirection;
+  /** Euros décimaux, comme tout montant du contrat. */
+  amount: number;
+  recorded_at: string;
+  /** Empreinte de l'écriture précédente, 64 hexadécimaux. */
+  prev_hash: string;
+  hash: string;
+  kind: OperationKind | null;
+  memo: string | null;
+  occurred_at: string | null;
+  created_by: string | null;
+  /** Identifiant de l'opération qui a annulé celle-ci, `null` sinon. */
+  compensated_by: string | null;
+  compensation_reason: string | null;
+};
+
+/** Enveloppe de la même route. `Paginated<T>` du contrat (:319-322). */
+export type LedgerEntryList = Paginated<LedgerEntryItem>;
+

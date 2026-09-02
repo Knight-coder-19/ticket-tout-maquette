@@ -52,12 +52,12 @@ import {
   trouverVille,
   type FiltreComptes,
   type PartenaireMagasin,
-  type StatutPartenaire,
+  type PartnerStatus,
 } from "@/mocks/magasin";
 
 export const dynamic = "force-dynamic";
 
-const STATUTS: readonly StatutPartenaire[] = [
+const STATUTS: readonly PartnerStatus[] = [
   "pending",
   "approved",
   "rejected",
@@ -65,7 +65,7 @@ const STATUTS: readonly StatutPartenaire[] = [
   "closed",
 ];
 
-function estStatut(valeur: string): valeur is StatutPartenaire {
+function estStatut(valeur: string): valeur is PartnerStatus {
   return STATUTS.some((statut) => statut === valeur);
 }
 

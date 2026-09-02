@@ -88,9 +88,14 @@ const path = require("node:path");
  * À l'inverse, n'ajoutez jamais un mot qui s'écrit SANS accent en français :
  * « opposable », « obligatoire », « transaction ». Le contrôle se mettrait à
  * crier sur du texte juste, et on cesserait de l'écouter.
+ *
+ * Attention au `e?` optionnel : `retiree?s?` attrape aussi « retire », qui est
+ * correct, et `inverse?e?` attrape « inverse », qui l'est aussi. Quand la forme
+ * courte est un mot valide sans accent, exigez la forme longue —
+ * `retirees?`, `inversees?` — ou renoncez à l'entrée.
  */
 const MOTS =
-  /(?:^|[^a-zà-ÿ])(adhesion|decisions?|categories?|deposees?|reelles?|sante|mobilite|numerique|epicerie|republique|oueme|expiree?|deja|ete|etre|reessayer|caracteres|commercant|etablissements?|agree|parametres?|tranchees?|enregistrees?|repondu|collegue|passees|chargee|decide|verifiez|amelie|marche|reel|apres|tres|donnees|systeme|controle|precedent|premiere|derniere|refuse|accepte|expire|encaisse|cree|verifie|reussi|echoue|demonstrateur|affichees?|affiches?|beneficiaires?|operations?|numero|reglement|emission|securisee?|necessaires?|evenement|resultat|selectionnee?|reserve|libere|horodatee?)(?![a-zà-ÿ])/i;
+  /(?:^|[^a-zà-ÿ])(adhesion|decisions?|categories?|deposees?|reelles?|sante|mobilite|numerique|epicerie|republique|oueme|expiree?|deja|ete|etre|reessayer|caracteres|commercant|etablissements?|agree|parametres?|tranchees?|enregistrees?|repondu|collegue|passees|chargee|decide|verifiez|amelie|marche|reel|apres|tres|donnees|systeme|controle|precedent|premiere|derniere|refuse|accepte|expire|encaisse|cree|verifie|reussi|echoue|demonstrateur|affichees?|affiches?|beneficiaires?|operations?|numero|reglement|emission|securisee?|necessaires?|evenement|resultat|selectionnee?|reserve|libere|horodatee?|chaine|integre|integrite|verifiees?|ecritures?|references?|decheance|salaries?|precede|retirees?|annulees?|inversees?|entete)(?![a-zà-ÿ])/i;
 
 /** Chemins, courriels, identifiants composés : jamais du texte affiché. */
 const NON_AFFICHE = /[@/]|^[a-z0-9]+(?:[_.:-]+[a-z0-9_-]+)+$/;
@@ -103,9 +108,12 @@ const MOT_SEUL = /^[a-z0-9]+$/;
  * composé. Aucune phrase française ne ressemble à cela.
  */
 function estClasseCss(texte) {
-  const jetons = texte.split(/\s+/);
+  const jetons = texte.split(/\s+/).filter((jeton) => jeton !== "");
+  /* Le `[-_]*` final couvre les gabarits dont l'interpolation vient d'etre
+     blanchie : `controle__resultat--${etat}` laisse `controle__resultat--`. */
   return (
-    jetons.every((jeton) => /^[a-z0-9]+(?:[-_]+[a-z0-9]+)*$/.test(jeton)) &&
+    jetons.length > 0 &&
+    jetons.every((jeton) => /^[a-z0-9]+(?:[-_]+[a-z0-9]+)*[-_]*$/.test(jeton)) &&
     jetons.some((jeton) => /[-_]/.test(jeton))
   );
 }
@@ -164,8 +172,12 @@ for (const fichier of fichiers(racine)) {
   source.split("\n").forEach((ligne, index) => {
     for (const morceau of textesAffichables(ligne)) {
       const texte = morceau.trim();
-      if (!MOTS.test(texte)) continue;
-      if (NON_AFFICHE.test(texte) || estClasseCss(texte)) continue;
+      /* Un identifiant snake_case ou SCREAMING_SNAKE cite dans une phrase
+         (`original_operation_id`, `OPERATION_NOT_FOUND`) est du code, pas du
+         francais : on le blanchit avant de chercher un mot mal accentue. */
+      const prose = texte.replace(/\b[a-z0-9]+(?:_[a-z0-9]+)+\b/gi, " ");
+      if (!MOTS.test(prose)) continue;
+      if (NON_AFFICHE.test(texte) || estClasseCss(prose)) continue;
       if (!dansMocks && MOT_SEUL.test(texte)) continue;
       console.log(`${fichier}:${index + 1}: ${texte}`);
       trouves += 1;

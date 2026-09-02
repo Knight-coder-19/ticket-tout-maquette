@@ -26,9 +26,13 @@ import {
   depuisComptePartenaire,
   depuisDecisionJournal,
   depuisDemandeAdhesion,
+  depuisEcritureRegistre,
+  depuisVerification,
 } from "@/lib/api/adaptateurs";
 import type {
+  ChainVerification,
   JournalList,
+  LedgerEntryList,
   Paginated,
   PartnerAccountList,
   PartnerReviewItem,
@@ -37,6 +41,8 @@ import type {
   ComptePartenaire,
   DecisionJournal,
   DemandeAdhesion,
+  EcritureRegistre,
+  VerificationIntegrite,
 } from "@/types/domaine";
 
 /** Une page de la file de validation, dans le vocabulaire du domaine. */
@@ -195,5 +201,86 @@ export async function fermerCompte(compteId: string, motif: string): Promise<voi
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ reason: motif }),
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * REGISTRE COMPTABLE
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+export interface FiltresRegistre {
+  /** Date ISO 8601 incluse, comparée à la date du fait. */
+  depuis?: string;
+  jusqua?: string;
+  partenaireId?: string;
+  /** Nature côté back : `topup`, `payment`, `compensation`, `closure_forfeit`. */
+  nature?: string;
+}
+
+export interface PageRegistre {
+  ecritures: EcritureRegistre[];
+  curseurSuivant: string | null;
+}
+
+/**
+ * Les écritures du registre, la plus récente en premier.
+ *
+ * ⚠ S'appuie sur une route que NOUS proposons : le contrat n'expose aucune
+ * lecture du journal. Voir `types/api.ts`, type `LedgerEntryItem`.
+ */
+export async function listerEcritures(
+  filtres: FiltresRegistre = {},
+  curseur?: string,
+): Promise<PageRegistre> {
+  const parametres = new URLSearchParams();
+  if (filtres.depuis !== undefined && filtres.depuis !== "") parametres.set("from", filtres.depuis);
+  if (filtres.jusqua !== undefined && filtres.jusqua !== "") parametres.set("to", filtres.jusqua);
+  if (filtres.partenaireId !== undefined && filtres.partenaireId !== "") parametres.set("partner", filtres.partenaireId);
+  if (filtres.nature !== undefined && filtres.nature !== "") parametres.set("kind", filtres.nature);
+  if (curseur !== undefined && curseur !== "") parametres.set("cursor", curseur);
+
+  const requete = parametres.toString();
+  const brut = await appelApi<LedgerEntryList>(
+    `/v1/admin/ledger-entries${requete === "" ? "" : `?${requete}`}`,
+    { cache: "no-store" },
+  );
+
+  return {
+    ecritures: brut.items.map(depuisEcritureRegistre),
+    curseurSuivant: brut.next_cursor,
+  };
+}
+
+/**
+ * Rejoue la vérification d'intégrité de la chaîne.
+ *
+ * ✅ Route du CONTRAT, `GET /api/v1/admin/audit/verify`
+ * (`data-dictionary.md:575-580`).
+ *
+ * L'heure du contrôle est posée ICI, à la réception : la route ne rend pas
+ * d'horodatage, et un résultat d'intégrité sans heure ne prouve rien — il
+ * pourrait dater d'hier.
+ */
+export async function verifierIntegrite(): Promise<VerificationIntegrite> {
+  const brut = await appelApi<ChainVerification>("/v1/admin/audit/verify", {
+    cache: "no-store",
+  });
+  return depuisVerification(brut, Date.now());
+}
+
+/**
+ * Annule une opération : écrit une écriture inverse, n'en supprime aucune.
+ *
+ * ✅ Route du CONTRAT, `POST /api/v1/admin/compensations`, corps
+ * `CompensationRequest { original_operation_id, reason }` (:558-559).
+ *
+ * Le motif est obligatoire et refusé côté serveur en `422` — le contrôle de
+ * l'écran n'est que de l'aide à la saisie.
+ */
+export async function annulerOperation(operationId: string, motif: string): Promise<void> {
+  await appelApi<unknown>("/v1/admin/compensations", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ original_operation_id: operationId, reason: motif }),
   });
 }

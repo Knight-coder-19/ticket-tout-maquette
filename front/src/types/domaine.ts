@@ -47,7 +47,30 @@ export interface CodePaiement {
   expireLe: string;
 }
 
-export type StatutPartenaire = "en_attente" | "valide" | "refuse" | "suspendu";
+/**
+ * Les cinq états d'un partenaire.
+ *
+ * Un partenaire, un statut, une union. Calée sur l'ENUM `partner_status` du
+ * back (`0001_schema.sql:7`), valeur pour valeur — cinq d'un côté, cinq de
+ * l'autre.
+ *
+ * ⚠ Elle en portait quatre, et il en existait une seconde à cinq valeurs sous
+ * un autre nom. Deux unions pour un concept, c'est la garantie qu'un jour un
+ * compte fermé sera traité comme autre chose sans que rien ne proteste : le
+ * type le plus étroit accepte la valeur du plus large par une conversion que
+ * personne ne relit. Il n'y en a plus qu'une.
+ *
+ * Un écran qui ne traite légitimement que certains statuts FILTRE — il ne
+ * redéclare pas un type plus étroit. `TableauPartenaires` n'offre d'actions
+ * que sur `agree` et `suspendu`, et le fait par des conditions, pas par un
+ * type.
+ */
+export type StatutPartenaire =
+  | "en_attente"
+  | "agree"
+  | "refuse"
+  | "suspendu"
+  | "ferme";
 
 export interface DemandePartenaire {
   id: Identifiant;
@@ -146,7 +169,7 @@ export interface ComptePartenaire {
   departement: string | null;
   estEnLigne: boolean;
   courrielContact: string;
-  statut: StatutCompte;
+  statut: StatutPartenaire;
   /** Cumul encaissé, en centimes entiers. */
   totalRecu: MontantCentimes;
   nombreTransactions: number;
@@ -156,18 +179,52 @@ export interface ComptePartenaire {
   motifDecision: string | null;
 }
 
+/** Le sens d'une écriture, en partie double. */
+export type SensEcriture = "debit" | "credit";
+
+/** La nature d'une opération. ENUM `operation_kind` du back. */
+export type NatureEcriture =
+  | "rechargement"
+  | "paiement"
+  | "annulation"
+  | "decheance";
+
 /**
- * Les cinq états d'un compte, en français.
+ * Une écriture du registre, telle que l'écran la manipule.
  *
- * ⚠ `StatutPartenaire` plus haut n'en couvre que quatre : il lui manque
- * l'équivalent de `closed`. Cette union-ci est calée sur l'ENUM du back
- * (`partner_status`, `0001_schema.sql:7`), qui en a cinq. Les deux coexistent
- * le temps que quelqu'un tranche laquelle survit.
+ * `montant` est un ENTIER DE CENTIMES, comme partout dans le domaine. Le back
+ * sert des euros décimaux ; la reconversion a lieu dans l'adaptateur, et le
+ * formatage à l'affichage seulement.
  */
-export type StatutCompte =
-  | "en_attente"
-  | "agree"
-  | "refuse"
-  | "suspendu"
-  | "ferme";
+export interface EcritureRegistre {
+  /** Numéro d'ordre au journal. C'est lui que la chaîne de hachage fige. */
+  seq: number;
+  operationId: Identifiant;
+  /** Le titulaire du compte touché : un salarié, un partenaire, ou le système. */
+  titulaire: string;
+  typeTitulaire: "employee" | "partner" | "system";
+  sens: SensEcriture;
+  montant: MontantCentimes;
+  nature: NatureEcriture;
+  libelle: string | null;
+  /** Date ISO 8601 du fait. */
+  survenueLe: string;
+  /** Date ISO 8601 de l'inscription au journal. */
+  inscriteLe: string;
+  empreinte: string;
+  empreintePrecedente: string;
+  /** L'opération qui a annulé celle-ci, `null` si elle ne l'a pas été. */
+  annuleePar: Identifiant | null;
+  motifAnnulation: string | null;
+}
+
+/** Le résultat d'un contrôle d'intégrité de la chaîne. */
+export interface VerificationIntegrite {
+  intacte: boolean;
+  ecrituresVerifiees: number;
+  /** Position de la première écriture en défaut, `null` si la chaîne tient. */
+  premiereFautive: number | null;
+  /** Heure du contrôle, en millisecondes. Posée par le front, pas par le back. */
+  controleeA: number;
+}
 

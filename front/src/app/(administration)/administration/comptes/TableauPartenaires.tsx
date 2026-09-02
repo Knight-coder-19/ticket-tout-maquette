@@ -2,7 +2,7 @@
 
 import { formaterCentimes } from "@/lib/montant";
 import { formaterDate } from "@/lib/utils/date";
-import type { ComptePartenaire, StatutCompte } from "@/types/domaine";
+import type { ComptePartenaire, StatutPartenaire } from "@/types/domaine";
 
 /**
  * Le libellé de chaque statut, en toutes lettres.
@@ -12,7 +12,7 @@ import type { ComptePartenaire, StatutCompte } from "@/types/domaine";
  * contrat (`partner_status`, `0001_schema.sql:7`) — cinq valeurs, un changement
  * cassant si elle bouge. Les traduire est le travail de l'interface.
  */
-const LIBELLES: Record<StatutCompte, string> = {
+const LIBELLES: Record<StatutPartenaire, string> = {
   en_attente: "En attente",
   agree: "Agréé",
   refuse: "Refusé",
@@ -27,7 +27,7 @@ const LIBELLES: Record<StatutCompte, string> = {
  * ne perçoit pas les teintes, ou qui imprime en noir et blanc, lit exactement
  * la même chose.
  */
-function Statut({ statut }: { statut: StatutCompte }) {
+function Statut({ statut }: { statut: StatutPartenaire }) {
   return <span className={`statut statut--${statut}`}>{LIBELLES[statut]}</span>;
 }
 

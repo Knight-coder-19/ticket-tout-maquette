@@ -19,6 +19,7 @@ import {
   TTL_JETON,
   enregistrerJeton,
   jetonExiste,
+  soldeDe,
   trouverSalarie,
   type JetonPaiement,
 } from "@/mocks/magasin";
@@ -94,7 +95,9 @@ export async function POST(requete: Request): Promise<NextResponse> {
   if (salarie.statut !== "actif") {
     return erreur(403, "account_inactive", "Ce compte n'est pas actif.");
   }
-  if (salarie.soldeCentimes <= 0) {
+  /* ANCIEN MODÈLE : le solde ne vit plus sur le salarié mais dans le registre.
+     Cette route ne sert plus qu'aux écrans d'encaissement historiques. */
+  if ((soldeDe(salarie.id, Date.now())?.disponibleCentimes ?? 0) <= 0) {
     return erreur(402, "empty_balance", "Le solde de ce compte est vide.");
   }
 

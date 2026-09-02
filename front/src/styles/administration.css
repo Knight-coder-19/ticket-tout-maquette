@@ -109,7 +109,10 @@
 
   .rail {
     position: sticky;
-    top: 0;
+    /* Sous le bandeau, qui colle lui aussi : sinon le rail passerait derriere
+       et la mention de simulation serait recouverte. */
+    top: var(--hauteur-bandeau);
+    z-index: 1;
     align-self: start;
     min-height: 100dvh;
     border-block-end: none;

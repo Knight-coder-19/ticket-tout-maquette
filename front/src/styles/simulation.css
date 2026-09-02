@@ -17,6 +17,22 @@
      minimum lisible. Le bandeau est sur chaque ecran, il n'a pas a en prendre
      le tiers. */
   padding: var(--espace-2) var(--espace-4);
+
+  /*
+   * Il ne defile pas.
+   *
+   * Sur un ecran long -- le registre en compte des dizaines de lignes -- un
+   * bandeau qui part vers le haut laisse un tableau de montants sans sa
+   * mention. Une capture prise a mi-page passerait alors pour un document
+   * reel. Il colle donc en haut, et tout ce qui colle sous lui est cale sur
+   * `--hauteur-bandeau`.
+   *
+   * `z-index` au-dessus du rail et de l'en-tete de tableau, qui collent aussi :
+   * c'est lui qui doit rester visible si deux se rencontrent.
+   */
+  position: sticky;
+  top: 0;
+  z-index: 3;
 }
 
 .bandeau-simulation__texte {

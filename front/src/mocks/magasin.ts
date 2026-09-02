@@ -29,6 +29,13 @@
  *       jeton quitte `active` pour exactement un etat terminal.
  */
 
+import {
+  idCompte,
+  posterOperation,
+  registre,
+  soldeDuCompte,
+  trouverOperation,
+} from "@/mocks/registre";
 import type {
   Identifiant,
   MontantCentimes,
@@ -46,8 +53,6 @@ export interface SalarieMagasin {
   nom: string;
   employeur: string;
   statut: StatutSalarie;
-  /** Entier de centimes. C'est `balance_settled` : le total possede. */
-  soldeCentimes: MontantCentimes;
 }
 
 /**
@@ -67,15 +72,21 @@ export interface VilleMagasin {
 }
 
 /**
- * Les cinq etats d'un partenaire.
- * ENUM `partner_status` (`0001_schema.sql:7`), repris tel quel — minuscules,
+ * Les cinq etats d'un partenaire, DANS LE VOCABULAIRE DU BACK.
+ *
+ * ENUM `partner_status` (`0001_schema.sql:7`), repris tel quel : minuscules,
  * en anglais, identiques des trois cotes (`data-dictionary.md:51,57`).
  *
- * ⚠ Ne pas confondre avec `StatutPartenaire` de `types/domaine.ts`, qui est
- * l'union francaise du domaine du front (`en_attente | valide | refuse |
- * suspendu`) et qui n'a pas d'equivalent pour `closed`.
+ * Le nom est anglais, et c'est voulu : le magasin simule la base, il parle la
+ * langue de la base. L'union FRANCAISE du domaine porte les memes cinq etats
+ * sous d'autres etiquettes, dans `types/domaine.ts`. Les deux portaient le
+ * meme nom, ce qui rendait une confusion possible a l'import : deux jeux de
+ * valeurs derriere un seul identifiant.
+ *
+ * La traduction de l'un vers l'autre a lieu a un seul endroit,
+ * `statutDepuisPartnerStatus` dans `lib/api/adaptateurs.ts`.
  */
-export type StatutPartenaire =
+export type PartnerStatus =
   | "pending"
   | "approved"
   | "rejected"
@@ -113,7 +124,7 @@ export interface PartenaireMagasin {
   cityId: Identifiant | null;
   district: string | null;
   addressLine: string | null;
-  statut: StatutPartenaire;
+  statut: PartnerStatus;
   /** Date ISO 8601 du depot de la demande. */
   submittedAt: string;
   /** Auteur de la decision. `null` tant qu'elle n'est pas prise. */
@@ -123,18 +134,13 @@ export interface PartenaireMagasin {
   /** Motif. Obligatoire au refus, facultatif a l'acceptation. */
   reviewReason: string | null;
   /**
-   * Activite deja encaissee AVANT le jeu de demonstration, en centimes.
+   * Nombre de reglements ANTERIEURS au registre.
    *
-   * ⚠ Amorce de simulation, sans equivalent dans le schema : `partners` n'a
-   * pas de colonne de volume, le back le calculerait depuis `payments`. Elle
-   * existe pour que la liste des comptes ne montre pas douze etablissements a
-   * zero euro -- un agent qui suspend doit voir ce qu'il suspend.
-   *
-   * L'activite servie est cette amorce PLUS les paiements reellement ecrits
-   * dans le magasin : encaisser en simulation fait bouger le chiffre.
+   * ⚠ Amorce de simulation, sans equivalent dans le schema. Le MONTANT, lui,
+   * n'est plus porte ici : il vit dans le registre, comme une reprise
+   * d'anteriorite. Deux sources pour un solde, c'est un solde qui derive --
+   * l'invariant I2 dit que le journal est la verite.
    */
-  historiqueCentimes: MontantCentimes;
-  /** Meme chose, en nombre de reglements. */
   historiqueTransactions: number;
 }
 
@@ -252,9 +258,9 @@ export interface Magasin {
 function donneesInitiales(): Magasin {
   return {
     salaries: [
-      { id: "SAL-001", nom: "Amélie Roussel", employeur: "Mairie de Cotonou", statut: "actif", soldeCentimes: 15_000 },
-      { id: "SAL-002", nom: "Bastien Nkoue", employeur: "Mairie de Cotonou", statut: "actif", soldeCentimes: 350 },
-      { id: "SAL-003", nom: "Clara Doumbia", employeur: "Office du tourisme", statut: "suspendu", soldeCentimes: 0 },
+      { id: "SAL-001", nom: "Amélie Roussel", employeur: "Mairie de Cotonou", statut: "actif" },
+      { id: "SAL-002", nom: "Bastien Nkoue", employeur: "Mairie de Cotonou", statut: "actif" },
+      { id: "SAL-003", nom: "Clara Doumbia", employeur: "Office du tourisme", statut: "suspendu" },
     ],
     villes: [
       { id: "VIL-COT", name: "Cotonou", department: "Littoral" },
@@ -300,8 +306,11 @@ function donneesInitiales(): Magasin {
         reviewedBy: "ADM-001",
         reviewedAt: "2026-07-15T10:30:00.000Z",
         reviewReason: null,
-        historiqueCentimes: 48_600,
-        historiqueTransactions: 39,
+        /* 37 et non 39 : les deux reglements du 28 et du 30 aout sont PORTES PAR LE
+           REGISTRE (voir `amorcerRegistre`). Les compter aussi ici les compterait
+           deux fois -- c'est le genre de double source que l'invariant I2
+           interdit pour les montants, et qui vaut aussi pour un compteur. */
+        historiqueTransactions: 37,
       },
       {
         id: "PRT-002",
@@ -320,7 +329,6 @@ function donneesInitiales(): Magasin {
         reviewedBy: null,
         reviewedAt: null,
         reviewReason: null,
-        historiqueCentimes: 0,
         historiqueTransactions: 0,
       },
       {
@@ -340,7 +348,6 @@ function donneesInitiales(): Magasin {
         reviewedBy: null,
         reviewedAt: null,
         reviewReason: null,
-        historiqueCentimes: 0,
         historiqueTransactions: 0,
       },
       {
@@ -361,7 +368,6 @@ function donneesInitiales(): Magasin {
         reviewedBy: null,
         reviewedAt: null,
         reviewReason: null,
-        historiqueCentimes: 0,
         historiqueTransactions: 0,
       },
       {
@@ -381,7 +387,6 @@ function donneesInitiales(): Magasin {
         reviewedBy: null,
         reviewedAt: null,
         reviewReason: null,
-        historiqueCentimes: 0,
         historiqueTransactions: 0,
       },
       {
@@ -401,7 +406,6 @@ function donneesInitiales(): Magasin {
         reviewedBy: null,
         reviewedAt: null,
         reviewReason: null,
-        historiqueCentimes: 0,
         historiqueTransactions: 0,
       },
       {
@@ -423,7 +427,6 @@ function donneesInitiales(): Magasin {
         reviewedBy: null,
         reviewedAt: null,
         reviewReason: null,
-        historiqueCentimes: 0,
         historiqueTransactions: 0,
       },
       {
@@ -443,7 +446,6 @@ function donneesInitiales(): Magasin {
         reviewedBy: null,
         reviewedAt: null,
         reviewReason: null,
-        historiqueCentimes: 0,
         historiqueTransactions: 0,
       },
       {
@@ -463,7 +465,6 @@ function donneesInitiales(): Magasin {
         reviewedBy: "ADM-001",
         reviewedAt: "2026-06-05T09:15:00.000Z",
         reviewReason: null,
-        historiqueCentimes: 1_284_50,
         historiqueTransactions: 106,
       },
       {
@@ -483,7 +484,6 @@ function donneesInitiales(): Magasin {
         reviewedBy: "ADM-002",
         reviewedAt: "2026-06-21T10:00:00.000Z",
         reviewReason: null,
-        historiqueCentimes: 312_75,
         historiqueTransactions: 41,
       },
       {
@@ -503,7 +503,6 @@ function donneesInitiales(): Magasin {
         reviewedBy: "ADM-001",
         reviewedAt: "2026-07-03T16:30:00.000Z",
         reviewReason: null,
-        historiqueCentimes: 47_20,
         historiqueTransactions: 6,
       },
       {
@@ -524,7 +523,6 @@ function donneesInitiales(): Magasin {
         reviewedAt: "2026-08-24T11:10:00.000Z",
         reviewReason:
           "Écarts répétés entre les encaissements déclarés et le registre. Compte suspendu le temps du contrôle.",
-        historiqueCentimes: 803_10,
         historiqueTransactions: 74,
       },
       {
@@ -544,7 +542,6 @@ function donneesInitiales(): Magasin {
         reviewedBy: "ADM-002",
         reviewedAt: "2026-08-30T09:00:00.000Z",
         reviewReason: "Identifiant fiscal jamais transmis malgré deux relances.",
-        historiqueCentimes: 18_00,
         historiqueTransactions: 3,
       },
       {
@@ -565,7 +562,6 @@ function donneesInitiales(): Magasin {
         reviewedAt: "2026-07-24T14:40:00.000Z",
         reviewReason:
           "Activité de conseil sans vente de biens ni de services au public : hors du champ du dispositif.",
-        historiqueCentimes: 0,
         historiqueTransactions: 0,
       },
       {
@@ -585,7 +581,6 @@ function donneesInitiales(): Magasin {
         reviewedBy: "ADM-002",
         reviewedAt: "2026-08-12T17:00:00.000Z",
         reviewReason: "Cessation d'activité déclarée par le gérant. Fermeture définitive du compte.",
-        historiqueCentimes: 259_40,
         historiqueTransactions: 22,
       },
     ],
@@ -709,6 +704,76 @@ const portee = globalThis as PorteeGlobale;
 
 export const magasin: Magasin =
   portee[CLE_MAGASIN] ?? (portee[CLE_MAGASIN] = donneesInitiales());
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * AMORCAGE DU REGISTRE
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * Le journal ne peut pas naitre vide : les comptes de demonstration ont un
+ * solde, et un solde sans ecriture violerait l'invariant I2. On ouvre donc le
+ * registre par une REPRISE D'ANTERIORITE -- une operation `topup` par compte,
+ * depuis le compte systeme d'emission -- puis les deux reglements historiques
+ * du jeu de donnees.
+ *
+ * C'est une pratique comptable ordinaire, pas un contournement : un livre qui
+ * s'ouvre en cours de route commence par reprendre les soldes existants.
+ *
+ * Les montants sont calcules pour retomber exactement sur les soldes de
+ * demonstration apres les reglements : SAL-001 recoit 162,50 EUR et en depense
+ * 12,50, ce qui laisse les 150,00 EUR attendus.
+ */
+function amorcerRegistre(): void {
+  /* Le registre est epingle sur globalThis : au rechargement a chaud, il est
+     deja rempli et ne doit surtout pas etre amorce deux fois. */
+  if (registre.operations.length > 0) return;
+
+  const t = (iso: string): number => Date.parse(iso);
+  const reprise = (
+    beneficiaire: string,
+    montant: MontantCentimes,
+    quand: string,
+    libelle: string,
+  ): void => {
+    if (montant <= 0) return;
+    posterOperation({
+      kind: "topup",
+      amountCentimes: montant,
+      debiter: "ACC-MINISTRY_ISSUANCE",
+      crediter: idCompte(beneficiaire),
+      memo: libelle,
+      createdBy: "ADM-001",
+      occurredAt: quand,
+      quand: t(quand),
+    });
+  };
+
+  reprise("SAL-001", 162_50, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
+  reprise("SAL-002", 8_30, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
+  reprise("PRT-001", 468_70, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
+  reprise("PRT-009", 1_284_50, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
+  reprise("PRT-010", 312_75, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
+  reprise("PRT-011", 47_20, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
+  reprise("PRT-012", 803_10, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
+  reprise("PRT-013", 18_00, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
+  reprise("PRT-015", 259_40, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
+
+  for (const [salarie, montant, quand] of [
+    ["SAL-001", 12_50, "2026-08-28T09:14:00.000Z"],
+    ["SAL-002", 4_80, "2026-08-30T12:02:00.000Z"],
+  ] as const) {
+    posterOperation({
+      kind: "payment",
+      amountCentimes: montant,
+      debiter: idCompte(salarie),
+      crediter: idCompte("PRT-001"),
+      memo: "Règlement au comptoir",
+      occurredAt: quand,
+      quand: t(quand),
+    });
+  }
+}
+
+amorcerRegistre();
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * REFERENTIEL
@@ -841,10 +906,13 @@ export function soldeDe(employeeId: string, maintenant: number): SoldeMagasin | 
     (somme, jeton) => somme + jeton.montantCentimes,
     0,
   );
+  /* `balance_settled` vient du REGISTRE, pas d'un champ du salarie : le
+     journal est la verite, le reste est un cache (invariant I2). */
+  const settledCentimes = soldeDuCompte(idCompte(salarie.id));
   return {
-    settledCentimes: salarie.soldeCentimes,
+    settledCentimes,
     heldCentimes,
-    disponibleCentimes: salarie.soldeCentimes - heldCentimes,
+    disponibleCentimes: settledCentimes - heldCentimes,
   };
 }
 
@@ -977,11 +1045,26 @@ export function reglerJeton(
     resolvedAt: new Date(maintenant).toISOString(),
   });
 
-  const salarie = trouverSalarie(jeton.employeeId);
-  if (salarie) salarie.soldeCentimes -= jeton.montantCentimes;
+  /*
+   * Le debit passe par le journal, jamais par un champ.
+   *
+   * `post_operation` est le seul point d'ecriture (`ledger/mod.rs:1-2`, regle
+   * R2) : il ecrit l'operation, ses deux ecritures chainees et les deux caches
+   * de solde. Retrancher le montant a la main laisserait le journal et le
+   * solde diverger -- exactement ce que l'invariant I2 interdit.
+   */
+  const operation = posterOperation({
+    kind: "payment",
+    amountCentimes: jeton.montantCentimes,
+    debiter: idCompte(jeton.employeeId),
+    crediter: idCompte(partenaireId),
+    memo: `Règlement du jeton ${jeton.shortCode}`,
+    occurredAt: scannedAt,
+    quand: maintenant,
+  });
 
   const paiement: PaiementMagasin = {
-    id: crypto.randomUUID(),
+    id: operation.id,
     jti: jeton.jti,
     partenaireId,
     montantCentimes: jeton.montantCentimes,
@@ -1013,7 +1096,7 @@ export function trouverAdministrateur(id: string): AdministrateurMagasin | undef
  * que le curseur encapsule, pour que la pagination keyset soit stable meme si
  * deux dossiers ont ete deposes a la meme seconde.
  */
-export function partenairesParStatut(statut: StatutPartenaire): PartenaireMagasin[] {
+export function partenairesParStatut(statut: PartnerStatus): PartenaireMagasin[] {
   return magasin.partenaires
     .filter((partenaire) => partenaire.statut === statut)
     .sort((a, b) =>
@@ -1161,12 +1244,26 @@ export function activiteDe(partenaireId: string): ActivitePartenaire {
   const partenaire = trouverPartenaireParId(partenaireId);
   if (!partenaire) return { totalRecuCentimes: 0, nombreTransactions: 0 };
 
-  const reglements = magasin.paiements.filter((p) => p.partenaireId === partenaireId);
+  /*
+   * Le CUMUL vient du solde du compte partenaire, tenu par le journal. La
+   * reprise d'anteriorite y est deja, ecrite comme une operation ordinaire au
+   * moment de l'amorcage : une seule source, un seul chiffre.
+   *
+   * Le NOMBRE, lui, additionne les reglements anterieurs au registre et ceux
+   * qu'il porte. Un compte n'est pas un compteur : le journal sait combien
+   * d'operations il contient, pas combien il en a existe avant lui.
+   */
+  const compte = idCompte(partenaireId);
+  const reglementsDuRegistre = registre.ecritures.filter(
+    (e) =>
+      e.accountId === compte &&
+      e.direction === "credit" &&
+      trouverOperation(e.operationId)?.kind === "payment",
+  ).length;
+
   return {
-    totalRecuCentimes:
-      partenaire.historiqueCentimes +
-      reglements.reduce((somme, p) => somme + p.montantCentimes, 0),
-    nombreTransactions: partenaire.historiqueTransactions + reglements.length,
+    totalRecuCentimes: soldeDuCompte(compte),
+    nombreTransactions: partenaire.historiqueTransactions + reglementsDuRegistre,
   };
 }
 
@@ -1176,7 +1273,7 @@ function sansAccent(texte: string): string {
 }
 
 export interface FiltreComptes {
-  statut?: StatutPartenaire;
+  statut?: PartnerStatus;
   categorie?: string;
   /** Nom de ville, compare sans accent ni casse. */
   ville?: string;
@@ -1260,7 +1357,7 @@ export type EchecStatut = "introuvable" | "transition_refusee" | "motif_manquant
  * `closed` n'a AUCUNE sortie, et c'est le point a faire trancher par l'equipe
  * back : voir le commentaire de `fermerCompte` dans la route.
  */
-const TRANSITIONS: Readonly<Record<string, readonly StatutPartenaire[]>> = {
+const TRANSITIONS: Readonly<Record<string, readonly PartnerStatus[]>> = {
   suspended: ["approved"],
   approved: ["suspended"],
   closed: ["approved", "suspended"],
@@ -1284,7 +1381,7 @@ const TRANSITIONS: Readonly<Record<string, readonly StatutPartenaire[]>> = {
  */
 export function changerStatutPartenaire(
   partenaireId: string,
-  cible: StatutPartenaire,
+  cible: PartnerStatus,
   administrateurId: string,
   motif: string | null,
   maintenant: number,

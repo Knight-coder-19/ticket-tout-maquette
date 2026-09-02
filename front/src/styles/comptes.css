@@ -148,8 +148,11 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   border-block-end: 1px solid var(--couleur-tableau-filet);
+  /* Colle sous le bandeau, pas sous le haut de la fenetre : un long tableau
+     garde ses en-tetes ET sa mention de simulation. */
   position: sticky;
-  top: 0;
+  top: var(--hauteur-bandeau);
+  z-index: 1;
 }
 
 .registre tbody tr:last-child th,

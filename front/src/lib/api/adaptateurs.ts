@@ -40,9 +40,12 @@ import type {
   CatalogItem,
   EmployeeTransaction,
   IssuedTokenResponse,
+  ChainVerification,
+  LedgerEntryItem,
   LigneJournal,
   PartnerAccountItem,
   PartnerReviewItem,
+  PartnerStatus,
   PaymentResponse,
   PublicPartner,
   SirhBalance,
@@ -51,14 +54,16 @@ import type {
   CodePaiement,
   ComptePartenaire,
   DecisionJournal,
+  EcritureRegistre,
   DemandeAdhesion,
   DemandePartenaire,
   Partenaire,
+  NatureEcriture,
   SensDecision,
   Solde,
-  StatutCompte,
   StatutPartenaire,
   StatutTransaction,
+  VerificationIntegrite,
   Transaction,
 } from "@/types/domaine";
 import type {
@@ -595,33 +600,37 @@ export function depuisPartenairePublic(brut: PublicPartner): Partenaire {
 /**
  * `PartnerStatus` → `StatutPartenaire`.
  *
- * Quatre valeurs sur cinq se correspondent. La cinquième, `"closed"`
- * (data-dictionary.md:57), n'a AUCUN équivalent dans l'union du front
- * (types/domaine.ts:50). La mapper sur `"suspendu"` serait confondre une
- * fermeture définitive avec une suspension réversible — deux situations qui
- * n'ouvrent pas les mêmes gestes.
+ * Les cinq valeurs de l'ENUM (`0001_schema.sql:7`) ont chacune la leur. C'est
+ * la SEULE traduction de statut de partenaire du projet : la file de
+ * validation et le registre des comptes l'utilisent toutes deux.
  *
- * On lève donc, plutôt que de rendre une valeur plausible et fausse. Le jour
- * où un partenaire fermé remonte dans une file de validation, l'écran doit
- * s'arrêter et quelqu'un doit décider ce que le front affiche — pas cette
- * couche, en silence.
+ * ⚠ Elle levait autrefois sur `"closed"`, faute d'équivalent dans une union du
+ * domaine qui n'en portait que quatre. Ce n'est plus le cas : l'union en a
+ * cinq, et un partenaire fermé se convertit comme les autres. Un écran qui ne
+ * veut pas en traiter le filtre — il ne compte plus sur une exception pour
+ * l'arrêter.
+ *
+ * Le `default` reste, et lève. Il ne couvre plus un trou de notre côté mais un
+ * élargissement du leur : « toute nouvelle valeur est un changement cassant »
+ * (`data-dictionary.md:51`), et mieux vaut s'arrêter que ranger un statut
+ * inconnu dans un fourre-tout.
  */
-function statutDepuisPartnerStatus(
-  statut: PartnerReviewItem["status"],
-): StatutPartenaire {
+function statutDepuisPartnerStatus(statut: PartnerStatus): StatutPartenaire {
   switch (statut) {
     case "pending":
       return "en_attente";
     case "approved":
-      return "valide";
+      return "agree";
     case "rejected":
       return "refuse";
     case "suspended":
       return "suspendu";
     case "closed":
+      return "ferme";
+    default:
       throw new ErreurService(
         "reponse_illisible",
-        'Le statut partenaire "closed" n\'a pas d\'équivalent dans le domaine du front (types/domaine.ts:50).',
+        `Réponse du serveur illisible : statut de partenaire inconnu (${String(statut)}).`,
         { champ: "status" },
       );
   }
@@ -760,40 +769,6 @@ export function depuisDecisionJournal(brut: LigneJournal): DecisionJournal {
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 /**
- * `partner_status` → `StatutCompte`.
- *
- * Les cinq valeurs de l'ENUM (`0001_schema.sql:7`) ont chacune leur équivalent,
- * `closed` compris — contrairement à `StatutPartenaire`, l'union du domaine
- * historique, qui n'en a que quatre et à laquelle `depuisDemandePartenaire()`
- * doit lever pour `"closed"`. Ici, plus rien ne lève : un registre montre tous
- * les comptes, y compris les fermés.
- *
- * Un statut inconnu lève plutôt que de se ranger dans un fourre-tout : c'est
- * que le back a élargi son ENUM sans nous prévenir, et « toute nouvelle valeur
- * est un changement cassant » (`data-dictionary.md:51`).
- */
-function statutDeCompte(statut: PartnerAccountItem["status"]): StatutCompte {
-  switch (statut) {
-    case "pending":
-      return "en_attente";
-    case "approved":
-      return "agree";
-    case "rejected":
-      return "refuse";
-    case "suspended":
-      return "suspendu";
-    case "closed":
-      return "ferme";
-    default:
-      throw new ErreurService(
-        "reponse_illisible",
-        `Réponse du serveur illisible : statut de partenaire inconnu (${String(statut)}).`,
-        { champ: "status" },
-      );
-  }
-}
-
-/**
  * `PartnerAccountItem` → `ComptePartenaire`.
  *
  * ⚠ Le type d'entrée vient d'une route que NOUS proposons — voir
@@ -815,13 +790,104 @@ export function depuisComptePartenaire(brut: PartnerAccountItem): ComptePartenai
     departement: brut.city === null ? null : brut.city.department,
     estEnLigne: brut.service_mode === "online",
     courrielContact: brut.contact_email,
-    statut: statutDeCompte(brut.status),
+    statut: statutDepuisPartnerStatus(brut.status),
     totalRecu: centimesDepuis(brut, "total_received"),
     nombreTransactions: brut.transaction_count,
     decideeLe:
       brut.reviewed_at === null ? null : horodatageIso(brut.reviewed_at, "reviewed_at"),
     auteurDecision: brut.reviewed_by,
     motifDecision: brut.review_reason,
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * 8 quater. REGISTRE COMPTABLE
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * `operation_kind` → `NatureEcriture`.
+ *
+ * Les quatre valeurs de l'ENUM (`data-dictionary.md:61`) ont chacune la leur.
+ * `closure_forfeit` devient « déchéance » : c'est le terme du glossaire pour le
+ * solde résiduel d'un compte fermé passé le délai de grâce.
+ *
+ * Une nature inconnue lève. Le registre est la pièce comptable du dispositif :
+ * y afficher une opération dont on ne sait pas dire la nature serait pire que
+ * de refuser de l'afficher.
+ */
+function natureDepuisKind(kind: LedgerEntryItem["kind"]): NatureEcriture {
+  switch (kind) {
+    case "topup":
+      return "rechargement";
+    case "payment":
+      return "paiement";
+    case "compensation":
+      return "annulation";
+    case "closure_forfeit":
+      return "decheance";
+    default:
+      throw new ErreurService(
+        "reponse_illisible",
+        `Réponse du serveur illisible : nature d'opération inconnue (${String(kind)}).`,
+        { champ: "kind" },
+      );
+  }
+}
+
+/**
+ * `LedgerEntryItem` → `EcritureRegistre`.
+ *
+ * ⚠ Le type d'entrée vient d'une route que NOUS proposons — voir
+ * `types/api.ts`. Cet adaptateur changera avec elle.
+ *
+ * `montant` repasse en CENTIMES : le back sert des euros décimaux
+ * (`money.rs:145`), le domaine ne connaît que des entiers. Le formatage
+ * n'arrive qu'à l'affichage.
+ *
+ * `titulaire` aplatit les trois colonnes de propriétaire en une seule chaîne
+ * lisible : l'identifiant du salarié ou du partenaire, ou le code du compte
+ * système. Un agent lit « SAL-001 » ou « MINISTRY_ISSUANCE », pas un UUID de
+ * compte.
+ */
+export function depuisEcritureRegistre(brut: LedgerEntryItem): EcritureRegistre {
+  const typeTitulaire = brut.account_owner_type ?? "system";
+  return {
+    seq: brut.seq,
+    operationId: brut.operation_id,
+    titulaire: brut.account_owner_id ?? brut.account_system_code ?? brut.account_id,
+    typeTitulaire,
+    sens: brut.direction,
+    montant: centimesDepuis(brut, "amount"),
+    nature: natureDepuisKind(brut.kind),
+    libelle: brut.memo,
+    survenueLe: horodatageIso(brut.occurred_at ?? brut.recorded_at, "occurred_at"),
+    inscriteLe: horodatageIso(brut.recorded_at, "recorded_at"),
+    empreinte: brut.hash,
+    empreintePrecedente: brut.prev_hash,
+    annuleePar: brut.compensated_by,
+    motifAnnulation: brut.compensation_reason,
+  };
+}
+
+/**
+ * `ChainVerification` → `VerificationIntegrite`.
+ *
+ * ✅ Le type d'entrée est celui du CONTRAT (`data-dictionary.md:576-580`), un
+ * des rares que le back ait entièrement spécifiés.
+ *
+ * `controleeA` est ajouté par le front, pas lu du serveur : la route ne rend
+ * pas d'horodatage, et l'écran doit pouvoir dire QUAND le contrôle a été fait.
+ * Un résultat d'intégrité sans heure ne prouve rien — il pourrait dater d'hier.
+ */
+export function depuisVerification(
+  brut: ChainVerification,
+  controleeA: number,
+): VerificationIntegrite {
+  return {
+    intacte: brut.valid,
+    ecrituresVerifiees: brut.checked_entries,
+    premiereFautive: brut.first_invalid_seq,
+    controleeA,
   };
 }
 
