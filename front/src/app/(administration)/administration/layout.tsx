@@ -1,10 +1,28 @@
+import "@/styles/administration.css";
+
+import { BandeauSimulation } from "@/components/simulation/BandeauSimulation";
 import { RailAdministration } from "./RailAdministration";
 
+/**
+ * La coquille de l'espace d'administration.
+ *
+ * Trois pieces et rien d'autre : la mention de simulation, le rail, le
+ * contenu. Aucun ecran n'est code ici — les dix pages restent ce qu'elles
+ * sont.
+ *
+ * L'element qui porte `container-type` est cette `div` : c'est par rapport a
+ * SA largeur que le rail bascule entre barre horizontale et colonne, et non
+ * par rapport a la fenetre. Le layout se comporte donc pareil dans un cadre
+ * d'appareil, un panneau lateral ou un plein ecran.
+ */
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="espace">
-      <RailAdministration />
-      <main>{children}</main>
+    <div className="espace-administration">
+      <BandeauSimulation />
+      <div className="espace-administration__grille">
+        <RailAdministration />
+        <main className="espace-administration__contenu">{children}</main>
+      </div>
     </div>
   );
 }

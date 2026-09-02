@@ -1,0 +1,40 @@
+/*
+ * Le bandeau de simulation.
+ *
+ * Mention permanente, non masquable : exigence du cahier des charges
+ * (F. Pontaillac), pas une decoration. Aucune regle de ce fichier ne doit
+ * permettre de le cacher — ni `display: none`, ni bascule, ni bouton.
+ *
+ * Toutes les couleurs viennent de tokens.css.
+ */
+
+.bandeau-simulation {
+  background: var(--couleur-simulation-fond);
+  color: var(--couleur-simulation-texte);
+  border-block-end: 1px solid var(--couleur-simulation-filet);
+  border-inline-start: var(--espace-1) solid var(--couleur-simulation-filet);
+  padding: var(--espace-3) var(--espace-4);
+}
+
+.bandeau-simulation__texte {
+  margin: 0;
+  font-size: var(--taille-sm);
+  line-height: 1.5;
+  max-width: var(--largeur-contenu);
+}
+
+.bandeau-simulation__mention {
+  font-family: var(--police-titre);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/*
+ * A l'impression aussi. Un ecran capture ou imprime sans la mention
+ * pourrait etre pris pour un document reel.
+ */
+@media print {
+  .bandeau-simulation {
+    border: 1px solid var(--couleur-simulation-filet);
+  }
+}

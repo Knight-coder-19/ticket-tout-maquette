@@ -51,6 +51,30 @@
   --rayon-sm: 2px;
   --rayon-md: 4px;
 
+
+  /* ── Rail de navigation ────────────────────────────────────────────────
+     Jetons semantiques : un composant ne cite jamais une couleur brute, il
+     cite le role. Contrastes mesures, notes en regard.
+     Le bleu institutionnel sert ici au TEXTE et au FILET de l'entree active,
+     jamais de fond plein — charte de l'Etat. */
+  --couleur-rail-fond: var(--couleur-fond-secondaire);
+  --couleur-rail-texte: var(--couleur-primaire);          /* 10,41:1 sur le fond du rail */
+  --couleur-rail-survol-fond: #e8ecf3;                    /* 9,51:1 pour le texte du rail */
+  --couleur-rail-actif-fond: var(--couleur-fond);         /* 11,27:1 pour le texte actif */
+  --couleur-rail-actif-filet: var(--couleur-primaire);
+  --couleur-rail-separateur: #c2c9d4;
+
+  /* ── Bandeau de simulation ─────────────────────────────────────────────
+     Mention permanente, non masquable. Le texte est en --couleur-texte et
+     non en --couleur-simulation : cette derniere ne passe qu'a 4,54:1 sur
+     son fond, ce qui tient tout juste le seuil. Un avertissement qui ne doit
+     jamais devenir illisible ne se contente pas de la limite. */
+  --couleur-simulation-texte: var(--couleur-texte);       /* 16,13:1 sur le fond du bandeau */
+  --couleur-simulation-filet: var(--couleur-simulation);
+
+  /* ── Dimensions de la coquille d'administration ────────────────────── */
+  --largeur-rail: 17rem;
+
   --largeur-contenu: 72ch;
   --largeur-page: 1200px;
 }
