@@ -1,4 +1,13 @@
 /**
+ * ⚠ ANCIEN MODÈLE — le caissier saisissait le montant.
+ *
+ * Le back en a un autre, servi par `src/app/api/v1/` : le salarie fixe le
+ * montant a l'emission et les fonds sont reserves. Cette route n'est conservee
+ * que parce que `EtapeMontant.tsx` en depend encore, et qu'aucun ecran ne doit
+ * changer dans ce passage. A supprimer avec la refonte du parcours partenaire
+ * — divergence D4 de `front/docs/contrat-api.md`.
+ */
+/**
  * Emission d'un jeton de paiement pour un salarie.
  * Cette route sert le front tant que le backend n'existe pas ; elle lit et
  * ecrit uniquement dans le magasin en memoire.

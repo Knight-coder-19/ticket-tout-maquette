@@ -1,4 +1,13 @@
 /**
+ * ⚠ ANCIEN MODÈLE — le caissier saisissait le montant.
+ *
+ * Le back en a un autre, servi par `src/app/api/v1/` : le salarie fixe le
+ * montant a l'emission et les fonds sont reserves. Cette route n'est conservee
+ * que parce que `EtapeMontant.tsx` en depend encore, et qu'aucun ecran ne doit
+ * changer dans ce passage. A supprimer avec la refonte du parcours partenaire
+ * — divergence D4 de `front/docs/contrat-api.md`.
+ */
+/**
  * Resolution d'un jeton de paiement, cote comptoir partenaire.
  * Lire un jeton ne le consomme pas : c'est l'encaissement qui le fera.
  */
