@@ -1,0 +1,926 @@
+<title>CartePro Backend Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root {
+    --ground: #eef2f0;
+    --surface: #ffffff;
+    --surface-sunk: #e6ebe8;
+    --ink: #121a17;
+    --ink-soft: #4c5c56;
+    --ink-faint: #7a8a84;
+    --rule: #d6dedb;
+    --rule-strong: #b9c5c0;
+    --accent: #1b5748;
+    --accent-soft: #dfeae6;
+    --state-done: #1b5748;
+    --state-done-bg: #dcebe5;
+    --state-todo: #6f5c2a;
+    --state-todo-bg: #f0e9d6;
+    --state-cut: #883b34;
+    --state-cut-bg: #f2e0dd;
+    --owner-bg: #e4e9e7;
+
+    --display: "Zilla Slab", Georgia, "Times New Roman", serif;
+    --body: "Source Sans 3", "Segoe UI", Helvetica, Arial, sans-serif;
+    --mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
+    --measure: 68ch;
+    --page: 1120px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0e1413;
+      --surface: #151d1b;
+      --surface-sunk: #111917;
+      --ink: #e0e7e4;
+      --ink-soft: #9db0aa;
+      --ink-faint: #71827c;
+      --rule: #253230;
+      --rule-strong: #33443f;
+      --accent: #66b6a0;
+      --accent-soft: #172a25;
+      --state-done: #6dbba4;
+      --state-done-bg: #142a24;
+      --state-todo: #c4a662;
+      --state-todo-bg: #2a2414;
+      --state-cut: #d38278;
+      --state-cut-bg: #2d1a18;
+      --owner-bg: #1e2725;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #0e1413;
+    --surface: #151d1b;
+    --surface-sunk: #111917;
+    --ink: #e0e7e4;
+    --ink-soft: #9db0aa;
+    --ink-faint: #71827c;
+    --rule: #253230;
+    --rule-strong: #33443f;
+    --accent: #66b6a0;
+    --accent-soft: #172a25;
+    --state-done: #6dbba4;
+    --state-done-bg: #142a24;
+    --state-todo: #c4a662;
+    --state-todo-bg: #2a2414;
+    --state-cut: #d38278;
+    --state-cut-bg: #2d1a18;
+    --owner-bg: #1e2725;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: var(--page);
+    margin: 0 auto;
+    padding: 56px 28px 96px;
+    display: flex;
+    flex-direction: column;
+    gap: 56px;
+  }
+
+  a { color: var(--accent); }
+  a:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  .masthead { display: flex; flex-direction: column; gap: 18px; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0;
+  }
+
+  h1 {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: clamp(34px, 5.2vw, 52px);
+    line-height: 1.05;
+    letter-spacing: -0.015em;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  .lede {
+    max-width: var(--measure);
+    font-size: 18px;
+    color: var(--ink-soft);
+    margin: 0;
+  }
+
+  .lede strong { color: var(--ink); font-weight: 600; }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 22px;
+    align-items: center;
+    padding-top: 6px;
+    border-top: 1px solid var(--rule);
+    margin-top: 4px;
+  }
+
+  .legend p {
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--ink-faint);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .chip {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+
+  .chip.done { color: var(--state-done); background: var(--state-done-bg); }
+  .chip.todo { color: var(--state-todo); background: var(--state-todo-bg); }
+  .chip.cut  { color: var(--state-cut);  background: var(--state-cut-bg); }
+
+  .owner {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 700;
+    width: 19px;
+    height: 19px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--owner-bg);
+    color: var(--ink-soft);
+  }
+
+  .principle {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .principle > div {
+    background: var(--surface);
+    padding: 22px 24px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+
+  .principle h3 {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    margin: 0;
+    color: var(--accent);
+  }
+
+  .principle p { margin: 0; font-size: 15px; color: var(--ink-soft); }
+  .principle .rule-line {
+    font-size: 13.5px;
+    color: var(--ink-faint);
+    border-top: 1px solid var(--rule);
+    padding-top: 9px;
+    margin-top: 3px;
+  }
+
+  section { display: flex; flex-direction: column; gap: 0; }
+
+  .section-head {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 18px;
+    border-bottom: 2px solid var(--rule-strong);
+  }
+
+  .section-head .path {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  .section-head h2 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 26px;
+    line-height: 1.15;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+
+  .section-head p {
+    margin: 0;
+    max-width: var(--measure);
+    color: var(--ink-soft);
+    font-size: 15.5px;
+  }
+
+  .files { display: flex; flex-direction: column; }
+
+  .file {
+    display: grid;
+    grid-template-columns: 244px 1fr auto;
+    gap: 8px 26px;
+    align-items: baseline;
+    padding: 15px 0 16px;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .file .name {
+    font-family: var(--mono);
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+  }
+
+  .file .why {
+    margin: 0;
+    font-size: 15.5px;
+    color: var(--ink-soft);
+    max-width: var(--measure);
+  }
+
+  .file .why em { color: var(--ink); font-style: italic; }
+
+  .file .tags {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-self: end;
+  }
+
+  .file.is-cut .name { color: var(--ink-faint); }
+
+  .subhead {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    padding: 26px 0 8px;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .note {
+    background: var(--accent-soft);
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px;
+    margin-top: 22px;
+    border-radius: 0 3px 3px 0;
+  }
+
+  .note p { margin: 0; font-size: 15px; color: var(--ink-soft); max-width: var(--measure); }
+  .note p + p { margin-top: 9px; }
+  .note strong { color: var(--ink); font-weight: 600; }
+  .note code, .file .why code, .principle code, .lede code {
+    font-family: var(--mono);
+    font-size: 0.86em;
+    color: var(--ink);
+  }
+
+  .sequence { display: flex; flex-direction: column; }
+
+  .step {
+    display: grid;
+    grid-template-columns: 42px 1fr auto;
+    gap: 20px;
+    align-items: baseline;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .step .n {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--ink-faint);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .step .what { font-family: var(--mono); font-size: 13.5px; }
+  .step .what span { font-family: var(--body); color: var(--ink-soft); font-size: 15px; }
+
+  .step.is-done .n { color: var(--state-done); }
+  .step.is-done .what { color: var(--ink-faint); }
+  .step.is-here {
+    background: var(--accent-soft);
+    margin: 0 -14px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .step.is-here .n { color: var(--accent); font-weight: 700; }
+
+  footer {
+    border-top: 1px solid var(--rule);
+    padding-top: 20px;
+    font-size: 14px;
+    color: var(--ink-faint);
+    max-width: var(--measure);
+  }
+
+  @media (max-width: 860px) {
+    .principle { grid-template-columns: 1fr; }
+    .file { grid-template-columns: 1fr; gap: 6px; }
+    .file .tags { justify-self: start; }
+  }
+</style>
+
+<div class="page">
+
+  <header class="masthead">
+    <p class="eyebrow">CartePro · Rust backend · September 2026</p>
+    <h1>CartePro Backend Map</h1>
+    <p class="lede">Ninety files, and for each one the only question worth asking: <strong>what would the application be missing if it were not there?</strong> The repository's <code>file-guide.md</code> says what each file contains; this page says why it exists, and where the code actually stands today.</p>
+    <div class="legend">
+      <p><span class="chip done">written</span> implemented and tested</p>
+      <p><span class="chip todo">to write</span> file created, contents to come</p>
+      <p><span class="chip cut">cut</span> out of scope for the hand-in, designed and documented</p>
+      <p><span class="owner">S</span> Sèdjro <span class="owner">G</span> Giscard</p>
+    </div>
+  </header>
+
+  <div class="principle">
+    <div>
+      <h3>crates/core</h3>
+      <p>The domain. The ledger, payments, identity, the catalogue. It knows nothing of HTTP, of cookies, or of status codes.</p>
+      <p class="rule-line">No <code>axum</code> type here. That is rule R1, and it is what makes the domain testable without a server.</p>
+    </div>
+    <div>
+      <h3>crates/api</h3>
+      <p>The HTTP layer. It turns a request into a domain call, a domain error into a status code, a domain type into JSON.</p>
+      <p class="rule-line">No business rule here. A handler longer than fifteen lines has taken a decision that is not its own.</p>
+    </div>
+    <div>
+      <h3>crates/worker</h3>
+      <p>Time. Everything that has to happen without anyone clicking: token expiry, chain verification.</p>
+      <p class="rule-line">A separate binary from the API: it can die without interrupting a single payment.</p>
+    </div>
+  </div>
+
+  <section>
+    <div class="section-head">
+      <p class="path">backend/</p>
+      <h2>The root: what makes the project reproducible</h2>
+      <p>None of these files run anything. They guarantee that the same source produces the same binary on both developers' machines and in CI.</p>
+    </div>
+    <div class="files">
+      <div class="file">
+        <div class="name">Cargo.toml</div>
+        <p class="why">Declares the workspace and centralises versions in <code>[workspace.dependencies]</code>. Without that, two crates could compile against two versions of <code>sqlx</code>, and a <code>PgPool</code> from one would not be a <code>PgPool</code> to the other.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip done">written</span></div>
+      </div>
+      <div class="file">
+        <div class="name">rust-toolchain.toml</div>
+        <p class="why">Pins the compiler version. Not a convenience: a new <code>rustc</code> that hardens one lint turns a warning into an error, and CI breaks without a single line having changed.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip done">written</span></div>
+      </div>
+      <div class="file">
+        <div class="name">.env.example</div>
+        <p class="why">The exhaustive list of what the application expects from its environment, secrets included — named, never filled in. This is the file you read to know what must be prepared before starting.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip done">written</span></div>
+      </div>
+      <div class="file">
+        <div class="name">.sqlx/</div>
+        <p class="why">Cache of compile-time-checked queries, produced by <code>cargo sqlx prepare</code>. Empty today: we chose runtime-checked queries so that no build ever requires a reachable database.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <p class="path">backend/migrations/</p>
+      <h2>The schema: half the guarantees live here</h2>
+      <p>The easy mistake is to read these files as a description of tables. They carry rules the Rust code cannot hold on its own, because those rules must survive a concurrent request and a direct connection through <code>psql</code>.</p>
+    </div>
+    <div class="files">
+      <div class="file">
+        <div class="name">0001_schema.sql</div>
+        <p class="why">Thirteen enumerations, eighteen tables, and above all three families of guard rail: the <code>CHECK</code> constraints that forbid a negative balance or a hold larger than the balance, the partial unique indexes that forbid two active employments for one person, and the <code>forbid_mutation()</code> triggers that refuse any <code>UPDATE</code> on the ledger — <em>including from the database owner</em>. That is the second layer: the code may be wrong, the database catches it.</p>
+        <div class="tags"><span class="owner">S</span><span class="chip done">written</span></div>
+      </div>
+      <div class="file">
+        <div class="name">0002_cities.sql</div>
+        <p class="why">The town reference data. A physical merchant must declare a town and the catalogue filters on it; without reference data the field would be free text, "Lyon" and "lyon" would be two towns, and the filter would never return anything trustworthy.</p>
+        <div class="tags"><span class="owner">S</span><span class="chip done">written</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <p class="path">backend/crates/core/src/</p>
+      <h2>The foundation: the types everything else handles</h2>
+      <p>Six files, written first because everything depends on them. Each removes a whole class of bug by making it impossible to write rather than by testing for it.</p>
+    </div>
+    <div class="files">
+      <div class="file">
+        <div class="name">lib.rs</div>
+        <p class="why">The list of modules, and nothing else. Frozen in the first hour with every module declared: that is what lets two people add files all night without ever producing a merge conflict on this one.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip done">written</span></div>
+      </div>
+      <div class="file">
+        <div class="name">ids.rs</div>
+        <p class="why">A distinct type per identifier, generated by a macro. In a schema where absolutely everything is a UUID, passing a <code>PartnerId</code> where an <code>AccountId</code> is expected is the easiest mistake in the project and the hardest to spot in review. Here, it does not compile.</p>
+        <div class="tags"><span class="owner">S</span><span class="chip done">written</span></div>
+      </div>
+      <div class="file">
+        <div class="name">money.rs</div>
+        <p class="why">The only place in the program that knows a euro is one hundred cents. No <code>* 100</code> or <code>/ 100</code> may exist anywhere else. The field is private and the constructor rejects negatives, so a negative amount cannot be produced by accident — and floating point, which has neither exact equality nor a canonical serialisation, never touches a money path.</p>
+        <div class="tags"><span class="owner">S</span><span class="chip done">written</span></div>
+      </div>
+      <div class="file">
+        <div class="name">clock.rs</div>
+        <p class="why">Time treated as an injected dependency rather than a system call. <code>FixedClock</code> is what makes it possible to test a five-minute token expiry without waiting five minutes, and to prove that a stale token is refused.</p>
+        <div class="tags"><span class="owner">S</span><span class="chip done">written</span></div>
+      </div>
+      <div class="file">
+        <div class="name">error.rs</div>
+        <p class="why">The error vocabulary shared by the whole domain. Its value shows downstream: <code>api</code> has exactly one type to translate into an HTTP response, and the mapping table lives in one place.</p>
+        <div class="tags"><span class="owner">S</span><span class="chip done">written</span></div>
+      </div>
+      <div class="file">
+        <div class="name">config.rs</div>
+        <p class="why">Durations and parameters — token TTL, resynchronisation window, closure grace period. <code>core</code> never reads the environment itself: <code>api</code> builds the configuration and injects it, which lets a test build a different one.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip done">written</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <p class="path">backend/crates/core/src/ledger/</p>
+      <h2>The ledger: the only door money is written through</h2>
+      <p>No other module may write to <code>accounts</code>, <code>ledger_operations</code> or <code>ledger_entries</code>. That exclusivity is what makes the nine invariants provable: there is only one path to check.</p>
+    </div>
+    <div class="files">
+      <div class="file">
+        <div class="name">ledger/mod.rs</div>
+        <p class="why">The five entry points of the money system — <code>lock_chain</code>, <code>lock_account</code>, <code>post_operation</code>, <code>place_hold</code>, <code>release_hold</code> — and the types they handle. <code>post_operation</code> never accepts a connection pool, only an open transaction: that is what guarantees it cannot run outside its caller's lock.</p>
+        <div class="tags"><span class="owner">S</span><span class="chip done">written</span></div>
+      </div>
+      <div class="file">
+        <div class="name">ledger/hash.rs</div>
+        <p class="why">The fingerprint of an entry, and therefore the chaining. Each entry carries the digest of the one before it: rewriting a past row would force every following digest to be recomputed, which the database triggers forbid. That is what makes tampering <em>detectable</em>, not merely difficult.</p>
+        <div class="tags"><span class="owner">S</span><span class="chip done">written</span></div>
+      </div>
+      <div class="file">
+        <div class="name">ledger/repo.rs</div>
+        <p class="why">The queries, with not one business decision. The balance guards do live here, though — inside the <code>WHERE</code> clause, never in an <code>if</code> beforehand: between a checking read and the write, another transaction slips through, and the check would have protected nothing.</p>
+        <div class="tags"><span class="owner">S</span><span class="chip done">written</span></div>
+      </div>
+      <div class="file">
+        <div class="name">ledger/balance.rs</div>
+        <p class="why">The read-back. Recomputes a balance from the entries, recomputes holds from the active tokens, and replays the hash chain to report the first inconsistent sequence number. This is what feeds the invariant tests and the <code>/admin/audit/verify</code> route: the system can say whether it contradicts itself.</p>
+        <div class="tags"><span class="owner">S</span><span class="chip done">written</span></div>
+      </div>
+    </div>
+    <div class="note">
+      <p><strong>Why the balance is both stored and recomputable.</strong> <code>accounts.balance_settled</code> is a cache: reading a balance must not sum ten thousand entries. The ledger remains the truth. <code>balance.rs</code> exists precisely to prove the two agree — and if they ever diverge, the cache is the one that is wrong, which means some transaction was not atomic.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <p class="path">backend/crates/core/src/crypto/</p>
+      <h2>Cryptography: three unrelated uses</h2>
+      <p>Grouped by technique rather than by feature, which is why one file serves signing in and another serves offline payment.</p>
+    </div>
+    <div class="files">
+      <div class="file">
+        <div class="name">crypto/password.rs</div>
+        <p class="why">Argon2id. Passwords are never stored, only their digest, and the function is deliberately slow so that a stolen database stays expensive to exploit.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">crypto/token_sig.rs</div>
+        <p class="why">Ed25519 signing of payment tokens. The asymmetric choice is the key to the whole degraded mode: the merchant must be able to verify a QR code <em>offline</em> with the public key alone. An HMAC would force them to hold the server's secret, and therefore the means to forge tokens.</p>
+        <div class="tags"><span class="owner">S</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">crypto/short_code.rs</div>
+        <p class="why">The fallback code typed by hand when the camera cannot read the QR. Its alphabet excludes <code>0</code>, <code>O</code>, <code>1</code>, <code>I</code> and <code>l</code>, because it gets read aloud across a counter — a usability constraint, not a security one.</p>
+        <div class="tags"><span class="owner">S</span><span class="chip todo">to write</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <p class="path">backend/crates/core/src/payments/</p>
+      <h2>Payment: issue a token, then settle it</h2>
+      <p>Two moments separated in time, sometimes by several minutes, sometimes by a network outage. The whole difficulty of the project lives there.</p>
+    </div>
+    <div class="files">
+      <div class="file">
+        <div class="name">payments/authorize.rs</div>
+        <p class="why">Issues a token and <em>holds</em> the funds. The hold is what stops an employee from generating two QR codes each covering their entire balance: the second fails because the first already immobilised the money, even though no payment has happened yet.</p>
+        <div class="tags"><span class="owner">S</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">payments/settle.rs</div>
+        <p class="why">Settles a token. The order of operations <em>is</em> the protection: idempotency first — replaying the same settlement returns the same payment instead of an error, which the merchant's offline queue depends on — then the locks, then and only then the checks, then the write. A balance check placed before the lock protects nothing.</p>
+        <div class="tags"><span class="owner">S</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">payments/repo.rs</div>
+        <p class="why">Queries over tokens and payments, including locking a token and consuming it. Kept apart from <code>settle.rs</code> so the protective sequence reads in one piece, without SQL in the middle.</p>
+        <div class="tags"><span class="owner">S</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">payments/mod.rs</div>
+        <p class="why">The payment domain types — token, status, entry mode — and the error vocabulary that distinguishes the three cases the offline client needs: already settled by me, consumed by someone else, expired.</p>
+        <div class="tags"><span class="owner">S</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">payments/expire.rs</div>
+        <p class="why">Moves lapsed tokens to <code>expired</code> and releases their holds. Without this sweep, a QR code generated and never presented would freeze money indefinitely. With the worker cut, expiry will happen lazily on each balance read.</p>
+        <div class="tags"><span class="owner">S</span><span class="chip todo">to write</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <p class="path">backend/crates/core/src/identity/ · directory/</p>
+      <h2>Who the user is, and which account they hold</h2>
+      <p><code>identity</code> answers "who is speaking", <code>directory</code> answers "which account that is". Two different questions, and conflating them is what produces authorisation holes.</p>
+    </div>
+    <p class="subhead">identity/</p>
+    <div class="files">
+      <div class="file">
+        <div class="name">identity/login.rs</div>
+        <p class="why">Verifies the password <em>even when the user does not exist</em>, by comparing against a dummy digest. Without that precaution, response time would reveal which accounts exist, and the roster of civil servants would be enumerable.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">identity/session.rs</div>
+        <p class="why">Creating, validating and revoking sessions. The token is <em>hashed</em> in the database; the clear value lives only in the browser cookie. A stolen database therefore lets nobody open a session as anyone.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">identity/repo.rs · mod.rs</div>
+        <p class="why">Queries over <code>users</code> and <code>sessions</code>, and the <code>AuthenticatedUser</code> type the HTTP extractor builds and handlers receive.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+    </div>
+    <p class="subhead">directory/</p>
+    <div class="files">
+      <div class="file">
+        <div class="name">directory/employees.rs</div>
+        <p class="why">Creates the employee and their account in the order the foreign-key cycle imposes, and resolves a staff number to an account. That last function is the entry point for top-ups <em>and</em> for the HR-system endpoint: it is how an employer designates a member of staff without knowing our internal identifiers.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">directory/employers.rs</div>
+        <p class="why">The register of employing administrations. This is identity territory, not money territory: modification is allowed here, unlike in the ledger.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">directory/cities.rs</div>
+        <p class="why">Read-only access to the town reference data, served to the merchant registration form and to the catalogue filter alike. One source so the two lists can never drift apart.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file is-cut">
+        <div class="name">directory/employment.rs</div>
+        <p class="why">Ending an employment and forfeiting the residual balance to the <code>CLOSURE_FORFEIT</code> system account once the grace period has passed. Designed, documented, not implemented: someone leaving the civil service is a real case, but not one that demonstrates well in a defence.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip cut">cut</span></div>
+      </div>
+      <div class="file">
+        <div class="name">directory/repo.rs · mod.rs</div>
+        <p class="why">Queries and types for the register.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <p class="path">backend/crates/core/src/partners/</p>
+      <h2>Merchants: from application to shop window</h2>
+      <p>A merchant passes through four states and every transition is an administrative decision. The module follows that life cycle, one file per stage.</p>
+    </div>
+    <div class="files">
+      <div class="file">
+        <div class="name">partners/registration.rs</div>
+        <p class="why">The application: creates the user, the account and the merchant in <code>pending</code> status. Validates that service mode and town agree — a physical shop with no town would appear in no catalogue filter and would therefore be invisible forever.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">partners/review.rs</div>
+        <p class="why">Approval or rejection by an administrator, traced in the audit log. This is what gives the <code>approved</code> status its meaning, and settlement depends on it: an unapproved merchant cannot receive public money.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">partners/catalog.rs</div>
+        <p class="why">Paginated search. Pagination is <em>keyset</em> and never by <code>OFFSET</code>: over a list that keeps changing, an <code>OFFSET</code> makes rows skip or repeat between pages, and its cost grows with the page requested.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">partners/highlights.rs</div>
+        <p class="why">The features chosen by the ministry. Removing a feature records a date and never deletes the row — the trace of who put which shop in the window, and when, is exactly what an audit can ask for.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">partners/repo.rs</div>
+        <p class="why">Holds <code>approved_account</code>, the function <code>settle</code> calls to obtain the account to credit — and which fails if the merchant is not approved. It is the interface contract between the two developers, and the only place a merchant's status blocks a payment.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">partners/mod.rs</div>
+        <p class="why">Merchant domain types and errors, including the service mode that distinguishes physical, online, or both.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <p class="path">backend/crates/core/src/funding/ · audit/ · corrections/ · reporting/</p>
+      <h2>Funding, tracing, correcting, reporting</h2>
+      <p>Four modules with no functional relation, brought together by what they do to the ledger: one writes new money into it, one writes alongside it, one corrects without erasing, and one only reads.</p>
+    </div>
+    <div class="files">
+      <div class="file">
+        <div class="name">funding/topup.rs</div>
+        <p class="why">The top-up: an operation from the <code>MINISTRY_ISSUANCE</code> system account to the member of staff's account. This is the only place money enters the system, and the issuance account's negative balance measures the total issued.</p>
+        <div class="tags"><span class="owner">S</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file is-cut">
+        <div class="name">funding/batch.rs · csv.rs</div>
+        <p class="why">Bulk import of a payroll file, with a file digest to refuse a duplicate upload and rejection of the whole batch if a single line is wrong. Cut: the single top-up demonstrates the same accounting mechanism, and the batch only adds file parsing.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip cut">cut</span></div>
+      </div>
+      <div class="file">
+        <div class="name">funding/repo.rs · mod.rs</div>
+        <p class="why">Queries and types for top-ups.</p>
+        <div class="tags"><span class="owner">S</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">audit/mod.rs</div>
+        <p class="why">Writing to the audit log — who did what, when, from which address. Append-only like the ledger: these are the two tables that cannot be rewritten, one for the money, one for the decisions.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file is-cut">
+        <div class="name">corrections/mod.rs</div>
+        <p class="why">Compensation: correcting an error with an inverse operation that leaves both traces behind. It is the only correction possible in an immutable ledger — you do not cancel, you post the reverse. Designed and documented, not implemented.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip cut">cut</span></div>
+      </div>
+      <div class="file">
+        <div class="name">reporting/mod.rs</div>
+        <p class="why">Read-only: a member of staff's balance and history, a merchant's receipts, the national dashboard. The wording is watched here — a merchant <em>takes in</em> money, they do not have a <em>balance</em>, because what they receive is not currency they could spend inside the system.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <p class="path">backend/crates/api/src/</p>
+      <h2>The HTTP layer: translate, never decide</h2>
+      <p>Every file here transforms something: a request into a call, an error into a status, a domain type into JSON. None holds a business rule — that is what lets the domain be tested without a server, and the API be changed without touching the ledger.</p>
+    </div>
+    <p class="subhead">foundation</p>
+    <div class="files">
+      <div class="file">
+        <div class="name">api/src/main.rs</div>
+        <p class="why">The starting point: reading the environment, the connection pool, mounting the router, graceful shutdown. Never runs migrations in production — a deployment that changes the schema by itself is a deployment that cannot be rolled back.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">api/src/state.rs</div>
+        <p class="why">What every handler receives: the pool, the clock, the signing keys, the configuration. Everything sits behind reference counters, so the state clones at no cost on each request.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">api/src/error.rs</div>
+        <p class="why">The table translating domain errors into HTTP codes. Its central rule is a negative one: <em>never</em> any SQL detail in a response. A database error becomes an anonymous 500, because a verbose error message is a map of the schema handed to whoever asks for it.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">api/src/openapi.rs</div>
+        <p class="why">The machine-readable description of the API, served in development only. It is the contract the front end consumes without having to read Rust.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+    </div>
+    <p class="subhead">extractors/ — what filters before the handler</p>
+    <div class="files">
+      <div class="file">
+        <div class="name">extractors/auth.rs</div>
+        <p class="why">The highest-return piece in the project. The expected role is carried by the parameter's <em>type</em>: a merchant-space handler that received an employee does not compile. Access control stops being a line you can forget to write and becomes a compile error.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">extractors/validated.rs</div>
+        <p class="why">Deserialises then validates the <em>shape</em> of a request — length, pattern, presence. Never a business rule: "the balance is sufficient" is not checked here, but under lock, in the ledger.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">extractors/pagination.rs</div>
+        <p class="why">The opaque cursor and the capped limit. Opaque because a readable cursor is a cursor a client will forge, and capped because an unbounded limit is an invitation to request a hundred thousand rows.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">extractors/api_client.rs</div>
+        <p class="why">Authentication for HR systems, distinct from the one for humans: no cookie, no session, an identifier and a hashed secret. The employer is derived from the authenticated client and never from the URL path.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+    </div>
+    <p class="subhead">middleware/ — what applies to everything</p>
+    <div class="files">
+      <div class="file">
+        <div class="name">middleware/request_id.rs</div>
+        <p class="why">Attaches an identifier to every request, present in the logs and in the error response. It is what lets a user report a problem and lets us find the exact trace.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">middleware/security_headers.rs</div>
+        <p class="why">The headers the browser enforces and the server cannot otherwise impose, plus the refusal of cleartext traffic outside development.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">middleware/rate_limit.rs</div>
+        <p class="why">Differentiated limits, because the exposed surfaces are not attacked the same way: sign-in is targeted per IP and per email address, short-code entry per merchant, the public surface far more strictly than the rest.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">middleware/admin_audit.rs</div>
+        <p class="why">Automatically records every successful administrative action. Making it automatic rather than calling the audit log inside each handler removes the question "did we remember to trace this one?".</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+    </div>
+    <p class="subhead">dto/ — the exposure boundary</p>
+    <div class="files">
+      <div class="file">
+        <div class="name">dto/employee.rs · partner.rs · admin.rs · catalog.rs · integration.rs</div>
+        <p class="why">One file per space. Domain types are never serialised directly: a DTO is a decision about exposure, not a shortcut. The difference shows the day an internal field is added to the domain — with no DTO, it ships in the HTTP response that same day.</p>
+        <div class="tags"><span class="owner">S</span><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file is-cut">
+        <div class="name">dto/public.rs</div>
+        <p class="why">The only type visible without authentication, where every field is an explicit decision. This is the file an unwanted field would leak through. Cut along with the public surface, pending confirmation of the specification.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip cut">cut</span></div>
+      </div>
+    </div>
+    <p class="subhead">routes/ — the five spaces</p>
+    <div class="files">
+      <div class="file">
+        <div class="name">routes/mod.rs</div>
+        <p class="why">Assembles the subtrees and the middleware stack. Frozen in the first hour: each developer fills their own route files without ever touching this one, which removes the project's most likely merge conflict.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">routes/auth.rs</div>
+        <p class="why">Sign in and sign out. The only place a session cookie is set and cleared.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">routes/employee.rs</div>
+        <p class="why">The member of staff's space: their balance, their history, creating and cancelling a payment token. Everything here is implicitly "me" — the account identifier comes from the session, never from a parameter, otherwise reading a colleague's balance would be one curl away.</p>
+        <div class="tags"><span class="owner">S</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">routes/partner.rs</div>
+        <p class="why">The merchant's space: settle a token, review receipts, and replay a batch of payments taken while offline. The batch is the one place in the project where each line gets its own transaction — a failing line must never bring down the others.</p>
+        <div class="tags"><span class="owner">S</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">routes/catalog.rs</div>
+        <p class="why">Merchant search, open to all three signed-in roles. The only shared space in the application.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">routes/admin.rs</div>
+        <p class="why">The ministry's space: reviewing applications, top-ups, features, the dashboard, and audit-chain verification. It is the only route that can prove live that the ledger has not been altered.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">routes/integration.rs</div>
+        <p class="why">The machine entry point for administrations' HR systems: a member of staff's balance from their staff number. Kept apart from the human spaces because it authenticates differently and is rate-limited differently.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file is-cut">
+        <div class="name">routes/public.rs</div>
+        <p class="why">The unauthenticated shop window: featured merchants and the list of towns, cached and strictly rate-limited. Cut: absent from the specification, pending confirmation.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip cut">cut</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <p class="path">backend/crates/tests/tests/</p>
+      <h2>The tests: what gets proved rather than asserted</h2>
+      <p>A separate package and a workspace member. Sitting at the root of <code>backend/</code>, these files belonged to no package and Cargo never compiled them — a test that does not run is worse than no test, because it reassures.</p>
+    </div>
+    <div class="files">
+      <div class="file">
+        <div class="name">tests/invariants.rs</div>
+        <p class="why">One test per invariant, against a real PostgreSQL — necessarily, since half the guarantees are carried by the schema rather than the code. This is the project's checkpoint: until it passes, nothing else gets built on top.</p>
+        <div class="tags"><span class="owner">S</span><span class="chip done">written</span></div>
+      </div>
+      <div class="file">
+        <div class="name">tests/common/mod.rs</div>
+        <p class="why">The fixtures: an employer, a member of staff with an account, an approved merchant, a top-up, a token, a settlement. Without them every test would restart forty lines of inserts, and nobody would write a tenth of them.</p>
+        <div class="tags"><span class="owner">S</span><span class="chip done">written</span></div>
+      </div>
+      <div class="file">
+        <div class="name">tests/payments_flow.rs</div>
+        <p class="why">The complete journey and its failures: insufficient balance, suspended merchant, cancelled token, closed account. Proves that the happy path works <em>and</em> that the refusals are the right ones.</p>
+        <div class="tags"><span class="owner">S</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">tests/degraded_mode.rs</div>
+        <p class="why">The offline merchant: a token verified without network, a settlement replayed later, a duplicate in the queue, a token that lapsed in the meantime. This is the file that demonstrates the hardest requirement in the specification.</p>
+        <div class="tags"><span class="owner">S</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file">
+        <div class="name">tests/rbac.rs</div>
+        <p class="why">Each space refuses foreign roles. The type system already makes the mistake impossible to write; this test checks that the response is a clean 403 and not an internal error.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip todo">to write</span></div>
+      </div>
+      <div class="file is-cut">
+        <div class="name">tests/public_surface.rs</div>
+        <p class="why">Checks that no field outside the list, no unapproved merchant and no cookie appear on the public surface. Cut along with it.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip cut">cut</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <p class="path">backend/crates/worker/ · backend/deploy/</p>
+      <h2>What runs without us, and what ships it</h2>
+      <p>The two blocks cut entirely for the hand-in, each with an argument to give rather than a silence.</p>
+    </div>
+    <div class="files">
+      <div class="file is-cut">
+        <div class="name">worker/src/main.rs</div>
+        <p class="why">Three loops: token expiry every minute, forfeiting closed balances daily, chain verification hourly. Cut — expiry is handled lazily on each balance read, which gives the user the same visible result.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip cut">cut</span></div>
+      </div>
+      <div class="file is-cut">
+        <div class="name">deploy/Dockerfile · docker-compose.yml · Caddyfile</div>
+        <p class="why">Image build, service orchestration and TLS termination. Cut: the demonstration runs on <code>cargo run</code> against a local PostgreSQL. The compose file stays useful for bringing up the database alone.</p>
+        <div class="tags"><span class="owner">G</span><span class="chip cut">cut</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <p class="path">build order</p>
+      <h2>Why the files get filled in this order</h2>
+      <p>This is not a task list, it is a dependency chain: each step needs the previous one to be true. Step 4 is the checkpoint — a ledger whose invariants are not proved makes everything built on top of it worthless.</p>
+    </div>
+    <div class="sequence">
+      <div class="step is-done"><span class="n">01</span><span class="what">migrations/0001_schema.sql <span>— nothing can be tested without a schema</span></span><span class="chip done">done</span></div>
+      <div class="step is-done"><span class="n">02</span><span class="what">core: ids, money, clock, error, config <span>— the types everything handles</span></span><span class="chip done">done</span></div>
+      <div class="step is-done"><span class="n">03</span><span class="what">core/ledger: hash, repo, mod, balance <span>— the only door to money</span></span><span class="chip done">done</span></div>
+      <div class="step is-done"><span class="n">04</span><span class="what">tests/invariants.rs <span>— the checkpoint</span></span><span class="chip done">done</span></div>
+      <div class="step is-here"><span class="n">05</span><span class="what">core/crypto: password, token_sig, short_code <span>— no signature, no token</span></span><span class="chip todo">current</span></div>
+      <div class="step"><span class="n">06</span><span class="what">core/identity + api/extractors/auth.rs <span>— no identity, no spaces</span></span><span class="chip todo">ahead</span></div>
+      <div class="step"><span class="n">07</span><span class="what">core/payments: authorize, settle <span>— the functional core</span></span><span class="chip todo">ahead</span></div>
+      <div class="step"><span class="n">08</span><span class="what">tests/payments_flow.rs, degraded_mode.rs <span>— proof of the degraded mode</span></span><span class="chip todo">ahead</span></div>
+      <div class="step"><span class="n">09</span><span class="what">api: state, error, routes auth / employee / partner <span>— payment over HTTP</span></span><span class="chip todo">ahead</span></div>
+      <div class="step"><span class="n">10</span><span class="what">core/directory, core/partners + routes <span>— the catalogue</span></span><span class="chip todo">ahead</span></div>
+      <div class="step"><span class="n">11</span><span class="what">core/funding/topup + routes/admin <span>— funding the accounts</span></span><span class="chip todo">ahead</span></div>
+      <div class="step"><span class="n">12</span><span class="what">core/partners/highlights, core/reporting <span>— shop window and dashboard</span></span><span class="chip todo">ahead</span></div>
+      <div class="step"><span class="n">13</span><span class="what">scripts/seed.sql <span>— without demo data, the defence opens with twenty minutes of typing</span></span><span class="chip todo">ahead</span></div>
+    </div>
+  </section>
+
+  <footer>
+    <p>Sources: <code>docs/file-guide.md</code>, <code>docs/TASK-DISTRIBUTION-BACKEND.md</code> and <code>docs/data-model.md</code> from the repository, checked against the actual state of the tree. The files marked cut do exist, are documented, and each has an argument to give — that is what separates a deliberate choice from running out of time.</p>
+  </footer>
+
+</div>

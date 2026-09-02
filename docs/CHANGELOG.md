@@ -3,6 +3,34 @@
 [//]: # (This is a changelog file)
 [//]: # (Each time you make a minor or minor change in the project, repertoriate it here according to the following format. So each changes equals to an affectation of this file with all the sections.)
 
+## 1.1.0 02.09.2026
+
+### Added
+
+- `core/src/ledger/hash.rs` : `GENESIS_HASH`, `entry_hash` et `digest_from_slice`. Le condensat
+  SHA-256 porte une étiquette de domaine versionnée et huit champs de longueur fixe.
+- `core/src/ledger/repo.rs` : les requêtes du journal, sans aucune règle métier — verrou
+  consultatif, lecture de compte avec et sans `FOR UPDATE`, insertion d'opération et d'écriture,
+  réservation du rang par `nextval`, ajustement des caches de solde et des réservations.
+- `core/src/ledger/mod.rs` : `Posting`, `Account`, `LedgerOperation`, `LedgerEntry`, les quatre
+  énumérations du journal, `LedgerError`, et les cinq points d'entrée `lock_chain`,
+  `lock_account`, `post_operation`, `place_hold`, `release_hold`.
+- `core/src/ledger/balance.rs` : `recompute_balance`, `recompute_held` et `verify_chain`, qui
+  renvoie `ChainStatus::BrokenAt(seq)` sur la première écriture incohérente.
+- `crates/tests/tests/invariants.rs` : un test par invariant I1 à I9 contre un PostgreSQL réel.
+- `crates/tests/tests/common/mod.rs` : les fabriques de jeux d'essai — employeur, employé avec
+  compte, partenaire approuvé, rechargement, émission de jeton et règlement.
+- `docs/decisions.md` : la sérialisation canonique du hachage des écritures, avec le format
+  champ par champ et les trois choix qui l'ont fixée.
+
+### Changed
+
+- `core/src/lib.rs` déclare le module `ledger`. C'est un fichier du périmètre de Giscard, la
+  modification se limite à cette ligne.
+- `core/src/error.rs` : ajout de `CoreError::Internal`, cible des variantes de `LedgerError` qui
+  signalent une erreur de programmation et non une situation métier. La conversion
+  `LedgerError` → `CoreError` vit dans `ledger/mod.rs`.
+
 ## 1.0.0 01.09.2027 3:09 PM
 
 ### Added

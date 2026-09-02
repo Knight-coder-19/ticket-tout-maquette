@@ -113,3 +113,74 @@ voulait.
   `TASK-DISTRIBUTION-BACKEND.md` ont été amendés en conséquence.
 - Le stockage reste `BIGINT`, et le champ `currency` des payloads vaut désormais toujours
   `"EUR"`.
+
+---
+
+## Décision — La sérialisation canonique du hachage des écritures
+
+### Contexte
+
+`ledger/hash.rs` calcule le condensat de chaque écriture, et chaque écriture porte le condensat
+de la précédente. C'est ce chaînage qui rend une falsification détectable : réécrire une ligne
+passée oblige à recalculer tous les condensats suivants, ce que les déclencheurs d'immuabilité
+et les privilèges interdisent.
+
+La conséquence est brutale et mérite d'être écrite noir sur blanc : **le jour où je change la
+façon dont les champs sont concaténés avant le hachage, toute la chaîne déjà écrite devient
+invérifiable.** `verify_chain` signalerait la toute première écriture comme incohérente, et je
+n'aurais aucun moyen de distinguer ce changement de format d'une véritable falsification. Ce
+format n'est donc pas un détail d'implémentation, c'est une donnée du schéma au même titre
+qu'un type de colonne.
+
+### Le format retenu
+
+SHA-256 sur la concaténation, sans séparateur ni encodage textuel, des champs suivants dans
+cet ordre exact :
+
+| Rang | Champ | Taille | Encodage |
+|---|---|---|---|
+| 1 | étiquette de domaine | 18 octets | `CARTEPRO/LEDGER/V1` en ASCII |
+| 2 | `seq` | 8 octets | entier signé, gros-boutien |
+| 3 | `operation_id` | 16 octets | les octets bruts de l'UUID |
+| 4 | `account_id` | 16 octets | les octets bruts de l'UUID |
+| 5 | `direction` | 1 octet | `0x00` pour un débit, `0x01` pour un crédit |
+| 6 | `amount` | 8 octets | centimes d'euro, entier signé, gros-boutien |
+| 7 | `recorded_at` | 8 octets | microsecondes depuis l'époque Unix, gros-boutien |
+| 8 | `prev_hash` | 32 octets | le condensat de l'écriture précédente, ou `GENESIS_HASH` |
+
+Tous les champs sont de longueur fixe. C'est la propriété qui rend la concaténation non
+ambiguë : sans elle, deux jeux de valeurs différents pourraient produire la même suite d'octets,
+et le condensat cesserait de dire quoi que ce soit de la ligne.
+
+### Les trois points qui m'ont demandé un choix
+
+**L'étiquette de domaine.** Elle ne protège de rien aujourd'hui, elle prépare demain : si un
+autre condensat SHA-256 apparaît dans le projet — l'empreinte d'un fichier d'import, un jeton
+de session — l'étiquette garantit qu'aucune valeur hachée dans un contexte ne peut être
+présentée comme valide dans l'autre. Elle porte un numéro de version, `V1`, pour que le jour
+où le format doit vraiment changer, la rupture soit explicite plutôt que silencieuse.
+
+**Les microsecondes, et pas les nanosecondes.** `DateTime<Utc>` en Rust porte la nanoseconde,
+`TIMESTAMPTZ` en PostgreSQL s'arrête à la microseconde. Hacher la nanoseconde reviendrait à
+hacher une valeur que la base tronque en la stockant : le condensat recalculé après relecture
+ne retomberait jamais sur celui qui est enregistré, et `verify_chain` déclarerait toute la
+chaîne rompue. Je hache donc la précision réellement stockée.
+
+**`recorded_at` est écrit explicitement, jamais laissé au `DEFAULT now()`.** Même raison : la
+valeur hachée et la valeur stockée doivent être la même. `post_operation` récupère le
+`recorded_at` renvoyé par l'insertion de l'opération et le réutilise tel quel pour les deux
+écritures, qui partagent ainsi un instant d'enregistrement unique.
+
+### Ce qui en découle sur le `seq`
+
+Le `seq` entre dans le condensat alors que la colonne est un `BIGSERIAL`. On ne peut donc pas
+insérer d'abord et calculer le condensat ensuite : la mise à jour serait refusée par le
+déclencheur d'immuabilité. `post_operation` réserve le rang par un `nextval` explicite avant
+de hacher, puis insère la ligne avec ce rang. C'est ce que le `GRANT USAGE, SELECT ON SEQUENCE
+ledger_entries_seq_seq` du schéma rendait déjà possible.
+
+Une transaction annulée consomme quand même le rang réservé : la suite des `seq` peut donc
+comporter des trous. Ce n'est pas un problème, parce que la continuité de la chaîne est portée
+par les condensats et non par la contiguïté des rangs. `verify_chain` lit les écritures dans
+l'ordre des `seq` et vérifie que chaque `prev_hash` est le condensat de la précédente ligne
+lue, sans jamais supposer que les rangs se suivent.
