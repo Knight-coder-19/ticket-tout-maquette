@@ -747,36 +747,3 @@ export type SirhBalance = {
   currency: string;
   as_of: string;
 };
-
-/* ═══════════════════════════════════════════════════════════════════════════
- * 10. TYPES DU FRONT — conservés tels quels
- * ═══════════════════════════════════════════════════════════════════════════
- *
- * Ce qui suit n'est PAS du réseau. `ReponsePaginee` est importé par
- * `services/salarie.service.ts:2`, `services/partenaire.service.ts:2` et
- * `services/administration.service.ts:2`. Les retirer casserait la
- * compilation, et la consigne est de ne brancher ni ne modifier aucun
- * service. Ils restent donc ici, inchangés, en attendant que quelqu'un
- * tranche entre l'enveloppe offset du front et l'enveloppe keyset du back
- * (divergence D10). */
-
-/**
- * Enveloppe de pagination du FRONT — offset, incompatible avec `Paginated<T>`.
- * Ne pas confondre : celle du back est déclarée en haut de ce fichier.
- */
-export interface ReponsePaginee<T> {
-  elements: T[];
-  page: number;
-  taillePage: number;
-  total: number;
-}
-
-/**
- * Forme d'erreur du FRONT. Ne correspond ni à `ApiError` (back, plat) ni à
- * `ErreurImbriquee` (mocks du front). N'est importée nulle part à ce jour.
- */
-export interface ErreurApi {
-  code: string;
-  message: string;
-  details?: Record<string, string>;
-}

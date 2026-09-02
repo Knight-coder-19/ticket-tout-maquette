@@ -1,5 +1,4 @@
-import type { DemandePartenaire } from "@/types/domaine";
-import type { ReponsePaginee } from "@/types/api";
+import type { DemandePartenaire, ReponsePaginee } from "@/types/domaine";
 
 export interface ServiceAdministration {
   listerDemandes(page: number): Promise<ReponsePaginee<DemandePartenaire>>;

@@ -30,16 +30,25 @@ export type EncaissementAccepte = {
   rejoue: boolean;
 };
 
-export type CodeErreurEncaissement =
-  | "unknown_token"
-  | "token_used"
-  | "token_expired"
-  | "insufficient_funds"
-  | "account_inactive"
-  | "partner_inactive"
-  | "invalid_amount"
-  | "reseau"
-  | "inconnu";
+type CodeConnu =
+  | "unknown_token" | "token_used" | "token_expired"
+  | "insufficient_funds" | "account_inactive" | "partner_inactive"
+  | "invalid_amount" | "reseau" | "inconnu";
+
+/**
+ * Les codes que le front sait traiter, plus tout code que le back inventerait
+ * sans nous prévenir.
+ *
+ * Le `& {}` n'est pas décoratif : sans lui, TypeScript effondre
+ * `CodeConnu | string` en `string`, et l'autocomplétion ne propose plus rien.
+ * Avec lui, l'union survit — les neuf codes connus restent suggérés à la
+ * frappe, et une chaîne inconnue passe sans assertion.
+ *
+ * C'est ce qui permet à `depuisErreur()` de conserver un code qu'il ne connaît
+ * pas au lieu de l'écraser en « inconnu » : un code que le front ignore encore
+ * est précisément celui qu'on veut lire dans un rapport de bug.
+ */
+export type CodeErreurEncaissement = CodeConnu | (string & {});
 
 /**
  * On ne jette pas une `Error` nue : le code porte la décision que l'écran

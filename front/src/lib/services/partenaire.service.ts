@@ -1,5 +1,9 @@
-import type { Categorie, Partenaire, Transaction } from "@/types/domaine";
-import type { ReponsePaginee } from "@/types/api";
+import type {
+  Categorie,
+  Partenaire,
+  ReponsePaginee,
+  Transaction,
+} from "@/types/domaine";
 
 export interface ServicePartenaire {
   listerCategories(): Promise<Categorie[]>;

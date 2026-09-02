@@ -1,5 +1,9 @@
-import type { CodePaiement, Solde, Transaction } from "@/types/domaine";
-import type { ReponsePaginee } from "@/types/api";
+import type {
+  CodePaiement,
+  ReponsePaginee,
+  Solde,
+  Transaction,
+} from "@/types/domaine";
 
 /**
  * Contrat du service salarie.

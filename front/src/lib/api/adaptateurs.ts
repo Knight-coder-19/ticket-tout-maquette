@@ -56,7 +56,6 @@ import type {
 } from "@/types/domaine";
 import {
   ErreurEncaissement,
-  type CodeErreurEncaissement,
   type EncaissementAccepte,
   type MontantCentimes,
 } from "@/types/encaissement";
@@ -296,29 +295,12 @@ export function centimesDepuis(
  * l'autre.
  */
 
-/** Codes que le front sait traiter (types/encaissement.ts:33-42). */
-const CODES_CONNUS: readonly CodeErreurEncaissement[] = [
-  "unknown_token",
-  "token_used",
-  "token_expired",
-  "insufficient_funds",
-  "account_inactive",
-  "partner_inactive",
-  "invalid_amount",
-  "reseau",
-  "inconnu",
-];
-
-function estCodeConnu(code: string): code is CodeErreurEncaissement {
-  return CODES_CONNUS.some((connu) => connu === code);
-}
-
 /**
  * Normalise un code d'erreur vers la casse du front : minuscules, tirets bas.
  *
  * Le back promet du SCREAMING_SNAKE « stable à vie »
  * (data-dictionary.md:21,626). Le front écrit ses codes en minuscules
- * (types/encaissement.ts:33-42). Le passage de l'un à l'autre est mécanique et
+ * (types/encaissement.ts:33-36). Le passage de l'un à l'autre est mécanique et
  * réversible, tant que personne n'introduit de tiret ou d'espace — d'où le
  * remplacement, qui n'est pas décoratif.
  */
@@ -346,25 +328,19 @@ function construire(
     return new ErreurEncaissement("inconnu", message);
   }
 
-  const code = normaliserCode(codeBrut);
-  if (estCodeConnu(code)) {
-    return new ErreurEncaissement(code, message);
-  }
-
   /*
-   * Code inconnu du front. La consigne est de le garder tel quel plutôt que de
-   * le perdre : le remplacer par « inconnu » effacerait la seule information
-   * exploitable de la réponse, et un code que le front ne connaît pas encore
-   * est précisément celui qu'on veut voir apparaître dans un rapport de bug.
+   * Un code que le front ne connaît pas traverse TEL QUEL, et c'est voulu : le
+   * remplacer par « inconnu » effacerait la seule information exploitable de la
+   * réponse, et un code encore inconnu est précisément celui qu'on veut voir
+   * apparaître dans un rapport de bug.
    *
-   * C'est le SEUL `as` du fichier, et il n'élargit rien qui n'ait été vérifié :
-   * `code` sort de `normaliserCode`, donc c'est une chaîne non vide, en
-   * minuscules, sans espace ni tiret. Ce qu'il traverse, c'est l'union fermée
-   * `CodeErreurEncaissement` — que je ne peux pas élargir sans modifier
-   * types/encaissement.ts, hors périmètre ici. À reprendre le jour où ce type
-   * accueillera une variante ouverte.
+   * Aucune assertion n'est nécessaire pour cela : `CodeErreurEncaissement` est
+   * une union ouverte (`CodeConnu | (string & {})`, types/encaissement.ts), donc
+   * une chaîne quelconque y entre sans forcer le typage. Les tables de messages
+   * des composants restent des `Record<string, string>` avec leur repli — un
+   * code inconnu y tombe sur le message par défaut, sans casser.
    */
-  return new ErreurEncaissement(code as CodeErreurEncaissement, message);
+  return new ErreurEncaissement(normaliserCode(codeBrut), message);
 }
 
 /**

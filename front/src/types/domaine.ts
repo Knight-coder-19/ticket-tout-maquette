@@ -59,3 +59,24 @@ export interface DemandePartenaire {
   motifDecision: string | null;
   decideeLe: string | null;
 }
+
+/**
+ * Enveloppe de pagination du front — offset : `page`, `taillePage`, `total`.
+ *
+ * Elle vit ici, avec le reste du domaine, parce que c'est ce que les services
+ * manipulent : `ServiceSalarie`, `ServicePartenaire` et `ServiceAdministration`
+ * la renvoient à côté de `Transaction`, `Partenaire` et `DemandePartenaire`.
+ * Elle ne décrit rien de ce que le back sert.
+ *
+ * ⚠ Ne pas confondre avec `Paginated<T>` de `types/api.ts`, qui est l'enveloppe
+ * keyset du back — `items` + `next_cursor`. Les deux sont incompatibles, et pas
+ * par renommage : le back ne compte pas les lignes et ne peut donc pas produire
+ * `total`. Aucune conversion n'existe entre elles ; voir
+ * front/docs/contrat-api.md, divergence D10.
+ */
+export interface ReponsePaginee<T> {
+  elements: T[];
+  page: number;
+  taillePage: number;
+  total: number;
+}
