@@ -54,36 +54,25 @@ import type {
   StatutTransaction,
   Transaction,
 } from "@/types/domaine";
-import {
-  ErreurEncaissement,
-  type EncaissementAccepte,
-  type MontantCentimes,
+import type {
+  EncaissementAccepte,
+  MontantCentimes,
 } from "@/types/encaissement";
+import { ErreurService } from "@/types/erreurs";
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * 0. L'ERREUR DE CETTE COUCHE
- * ═══════════════════════════════════════════════════════════════════════════ */
-
-/**
- * Levée quand une réponse du back est illisible : date qui n'est pas une
- * date, montant qui n'est pas un nombre, statut sans équivalent dans le
- * domaine.
+ * 0. CE QUE CETTE COUCHE LÈVE
+ * ═══════════════════════════════════════════════════════════════════════════
  *
- * Volontairement distincte d'`ErreurEncaissement`. Celle-ci dit « le serveur a
- * refusé, voici pourquoi, et l'écran sait quoi en faire ». Celle-là dit « le
- * serveur a répondu quelque chose que je ne sais pas lire » — ce n'est pas un
- * refus métier, c'est un contrat rompu, et aucun écran ne peut le rattraper.
+ * `ErreurService` avec le code `"reponse_illisible"`, et le nom du champ fautif
+ * dans `champ`. Pas de classe dédiée : une réponse qu'on ne sait pas lire est
+ * un échec comme un autre pour l'écran qui l'attrape, et lui demander de
+ * connaître deux classes pour ne rien laisser passer était le vrai défaut.
+ *
+ * Ce que le code dit exactement : « le serveur a répondu quelque chose que je
+ * ne sais pas lire ». Ce n'est pas un refus métier, c'est un contrat rompu —
+ * aucun écran ne peut le rattraper, il ne peut que l'afficher et le journaliser.
  */
-export class ErreurAdaptation extends Error {
-  /** Nom du champ fautif, tel qu'il apparaît dans la réponse du back. */
-  champ: string;
-
-  constructor(champ: string, message: string) {
-    super(message);
-    this.name = "ErreurAdaptation";
-    this.champ = champ;
-  }
-}
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * 1. HORODATAGES
@@ -106,12 +95,18 @@ export class ErreurAdaptation extends Error {
  * tout test qui le touche. Un compte à rebours alimenté par `NaN` affiche un
  * jeton éternellement valide. Mieux vaut échouer ici, bruyamment.
  */
-export function horodatage(valeur: string, champ: string): number {
-  const millisecondes = Date.parse(valeur);
+export function horodatage(valeur: unknown, champ: string): number {
+  /* `unknown` et pas `string` : c'est une fonction de frontière, et le corps
+     d'une réponse n'est pas encore vérifié quand elle est appelée. Un nombre
+     déjà en millisecondes passe tel quel — c'est ce que tolérait le service
+     avant de déléguer ici, et le retirer aurait changé son comportement. */
+  const millisecondes =
+    typeof valeur === "number" ? valeur : Date.parse(String(valeur));
   if (!Number.isFinite(millisecondes)) {
-    throw new ErreurAdaptation(
-      champ,
+    throw new ErreurService(
+      "reponse_illisible",
       `Réponse du serveur illisible : ${champ} n'est pas une date ISO 8601 (${valeur}).`,
+      { champ },
     );
   }
   return millisecondes;
@@ -197,9 +192,10 @@ export function centimesDepuisEuros(
 ): MontantCentimes {
   const centimes = Math.round(valeur * 100);
   if (!Number.isInteger(centimes)) {
-    throw new ErreurAdaptation(
-      champ,
+    throw new ErreurService(
+      "reponse_illisible",
       `Réponse du serveur illisible : ${champ} n'est pas un montant (${valeur}).`,
+      { champ },
     );
   }
   return centimes;
@@ -217,9 +213,10 @@ export function centimesDepuisCentimes(
   champ: string,
 ): MontantCentimes {
   if (!Number.isInteger(valeur)) {
-    throw new ErreurAdaptation(
-      champ,
+    throw new ErreurService(
+      "reponse_illisible",
       `Réponse du serveur illisible : ${champ} promet des centimes entiers mais vaut ${valeur}.`,
+      { champ },
     );
   }
   return valeur;
@@ -255,9 +252,10 @@ export function centimesDepuis(
   const valeurCentimes = brut[nomCentimes];
   if (valeurCentimes !== undefined) {
     if (typeof valeurCentimes !== "number") {
-      throw new ErreurAdaptation(
-        nomCentimes,
+      throw new ErreurService(
+        "reponse_illisible",
         `Réponse du serveur illisible : ${nomCentimes} n'est pas un nombre.`,
+        { champ: nomCentimes },
       );
     }
     return centimesDepuisCentimes(valeurCentimes, nomCentimes);
@@ -265,9 +263,10 @@ export function centimesDepuis(
 
   const valeurEuros = brut[champ];
   if (typeof valeurEuros !== "number") {
-    throw new ErreurAdaptation(
-      champ,
+    throw new ErreurService(
+      "reponse_illisible",
       `Réponse du serveur illisible : ${champ} n'est pas un nombre.`,
+      { champ },
     );
   }
   return centimesDepuisEuros(valeurEuros, champ);
@@ -300,7 +299,7 @@ export function centimesDepuis(
  *
  * Le back promet du SCREAMING_SNAKE « stable à vie »
  * (data-dictionary.md:21,626). Le front écrit ses codes en minuscules
- * (types/encaissement.ts:33-36). Le passage de l'un à l'autre est mécanique et
+ * (types/erreurs.ts:18-21). Le passage de l'un à l'autre est mécanique et
  * réversible, tant que personne n'introduit de tiret ou d'espace — d'où le
  * remplacement, qui n'est pas décoratif.
  */
@@ -323,9 +322,10 @@ function lireChaine(
 function construire(
   codeBrut: string | null,
   message: string,
-): ErreurEncaissement {
+  statut: number | undefined,
+): ErreurService {
   if (codeBrut === null) {
-    return new ErreurEncaissement("inconnu", message);
+    return new ErreurService("inconnu", message, { statut });
   }
 
   /*
@@ -334,18 +334,17 @@ function construire(
    * réponse, et un code encore inconnu est précisément celui qu'on veut voir
    * apparaître dans un rapport de bug.
    *
-   * Aucune assertion n'est nécessaire pour cela : `CodeErreurEncaissement` est
-   * une union ouverte (`CodeConnu | (string & {})`, types/encaissement.ts), donc
+   * Aucune assertion n'est nécessaire pour cela : `CodeErreur` est
+   * une union ouverte (`CodeConnu | (string & {})`, types/erreurs.ts), donc
    * une chaîne quelconque y entre sans forcer le typage. Les tables de messages
    * des composants restent des `Record<string, string>` avec leur repli — un
    * code inconnu y tombe sur le message par défaut, sans casser.
    */
-  return new ErreurEncaissement(normaliserCode(codeBrut), message);
+  return new ErreurService(normaliserCode(codeBrut), message, { statut });
 }
 
 /**
- * Transforme un corps d'erreur — l'une OU l'autre forme — en
- * `ErreurEncaissement`.
+ * Transforme un corps d'erreur — l'une OU l'autre forme — en `ErreurService`.
  *
  * `brut` est `unknown` parce qu'un corps d'erreur est exactement cela : ce
  * qu'on a réussi à lire d'une réponse qui a échoué. Il peut être absent, vide,
@@ -357,14 +356,14 @@ function construire(
 export function depuisErreur(
   brut: unknown,
   statut?: number,
-): ErreurEncaissement {
+): ErreurService {
   const messageParDefaut =
     statut === undefined
       ? "Le serveur a répondu une erreur sans corps lisible."
       : `Le serveur a répondu ${statut}.`;
 
   if (!estObjet(brut)) {
-    return new ErreurEncaissement("inconnu", messageParDefaut);
+    return new ErreurService("inconnu", messageParDefaut, { statut });
   }
 
   const champErreur = brut["error"];
@@ -373,18 +372,23 @@ export function depuisErreur(
   if (estObjet(champErreur)) {
     const code = lireChaine(champErreur, "code");
     const message = lireChaine(champErreur, "message");
-    return construire(code, message ?? messageParDefaut);
+    return construire(code, message ?? messageParDefaut, statut);
   }
 
   /* Forme plate : { error: "TOKEN_EXPIRED", message, request_id }. */
   if (typeof champErreur === "string") {
-    return construire(champErreur, lireChaine(brut, "message") ?? messageParDefaut);
+    return construire(
+      champErreur,
+      lireChaine(brut, "message") ?? messageParDefaut,
+      statut,
+    );
   }
 
   /* Ni l'une ni l'autre : on garde au moins le message s'il existe. */
-  return new ErreurEncaissement(
+  return new ErreurService(
     "inconnu",
     lireChaine(brut, "message") ?? messageParDefaut,
+    { statut },
   );
 }
 
@@ -608,9 +612,10 @@ function statutDepuisPartnerStatus(
     case "suspended":
       return "suspendu";
     case "closed":
-      throw new ErreurAdaptation(
-        "status",
+      throw new ErreurService(
+        "reponse_illisible",
         'Le statut partenaire "closed" n\'a pas d\'équivalent dans le domaine du front (types/domaine.ts:50).',
+        { champ: "status" },
       );
   }
 }

@@ -8,11 +8,8 @@ import {
   formaterDuree,
   secondesRestantes,
 } from "@/lib/montant";
-import {
-  ErreurEncaissement,
-  type EncaissementAccepte,
-  type JetonResolu,
-} from "@/types/encaissement";
+import type { EncaissementAccepte, JetonResolu } from "@/types/encaissement";
+import { ErreurService } from "@/types/erreurs";
 
 const MESSAGES: Record<string, string> = {
   token_used: "Ce code a déjà servi. Demandez-en un nouveau au client.",
@@ -98,7 +95,7 @@ export function EtapeMontant({
       );
     } catch (leve) {
       setErreur(
-        leve instanceof ErreurEncaissement
+        leve instanceof ErreurService
           ? (MESSAGES[leve.code] ?? leve.message)
           : "Une erreur inattendue est survenue.",
       );

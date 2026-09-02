@@ -2,7 +2,8 @@
 
 import { useState, type FormEvent } from "react";
 import { resoudreJeton } from "@/lib/services/encaissement.service";
-import { ErreurEncaissement, type JetonResolu } from "@/types/encaissement";
+import type { JetonResolu } from "@/types/encaissement";
+import { ErreurService } from "@/types/erreurs";
 
 /** Ce que le caissier doit lire, et le geste qu'il doit faire, pour chaque refus. */
 const MESSAGES: Record<string, string> = {
@@ -30,7 +31,7 @@ export function EtapeJeton({ onResolu }: { onResolu: (jeton: JetonResolu) => voi
       onResolu(await resoudreJeton(code));
     } catch (leve) {
       setErreur(
-        leve instanceof ErreurEncaissement
+        leve instanceof ErreurService
           ? (MESSAGES[leve.code] ?? leve.message)
           : "Une erreur inattendue est survenue.",
       );
