@@ -90,6 +90,16 @@
 
   --largeur-rail: 17rem;
 
+
+  /* -- Registre des comptes partenaires ---------------------------------
+     Fonds nouveaux, contrastes mesures et notes en regard. */
+  --couleur-attente-fond: #fbf1d8;                        /* 6,51:1 pour le texte ci-dessous */
+  --couleur-attente-texte: #6b5310;
+  --couleur-neutre-fond: #ebedf1;                         /* 14,85:1 pour --couleur-texte */
+  --couleur-tableau-entete: #eef1f6;                      /* 15,37:1 pour --couleur-texte */
+  --couleur-tableau-survol: var(--couleur-fond-secondaire); /* 16,08:1 pour --couleur-texte */
+  --couleur-tableau-filet: var(--couleur-champ-bordure);  /* 3,81:1 : separe des cellules cliquables */
+
   --largeur-contenu: 72ch;
   --largeur-page: 1200px;
 }

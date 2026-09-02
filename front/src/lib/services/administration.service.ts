@@ -22,9 +22,22 @@
  */
 
 import { appelApi, appelApiSansContenu } from "@/lib/api/client";
-import { depuisDecisionJournal, depuisDemandeAdhesion } from "@/lib/api/adaptateurs";
-import type { JournalList, Paginated, PartnerReviewItem } from "@/types/api";
-import type { DecisionJournal, DemandeAdhesion } from "@/types/domaine";
+import {
+  depuisComptePartenaire,
+  depuisDecisionJournal,
+  depuisDemandeAdhesion,
+} from "@/lib/api/adaptateurs";
+import type {
+  JournalList,
+  Paginated,
+  PartnerAccountList,
+  PartnerReviewItem,
+} from "@/types/api";
+import type {
+  ComptePartenaire,
+  DecisionJournal,
+  DemandeAdhesion,
+} from "@/types/domaine";
 
 /** Une page de la file de validation, dans le vocabulaire du domaine. */
 export interface PageDemandes {
@@ -99,4 +112,88 @@ export async function lireJournalDecisions(): Promise<DecisionJournal[]> {
     { cache: "no-store" },
   );
   return brut.items.map(depuisDecisionJournal);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * REGISTRE DES COMPTES PARTENAIRES
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+export interface FiltresComptes {
+  /** Statut du back (`pending`, `approved`, …) ou `undefined` pour tous. */
+  statut?: string;
+  categorie?: string;
+  ville?: string;
+  /** Recherche libre : enseigne, raison sociale, ville. */
+  recherche?: string;
+}
+
+export interface PageComptes {
+  comptes: ComptePartenaire[];
+  curseurSuivant: string | null;
+}
+
+/**
+ * Le registre des comptes, filtré, trié par enseigne.
+ *
+ * ⚠ S'appuie sur une route que NOUS proposons, `GET /admin/partner-accounts` :
+ * le contrat n'expose ni filtre de catégorie, ni recherche, ni volume
+ * d'activité. Voir `types/api.ts`, type `PartnerAccountItem`.
+ */
+export async function listerComptes(
+  filtres: FiltresComptes = {},
+  curseur?: string,
+): Promise<PageComptes> {
+  const parametres = new URLSearchParams();
+  if (filtres.statut !== undefined && filtres.statut !== "") parametres.set("status", filtres.statut);
+  if (filtres.categorie !== undefined && filtres.categorie !== "") parametres.set("category", filtres.categorie);
+  if (filtres.ville !== undefined && filtres.ville !== "") parametres.set("city", filtres.ville);
+  if (filtres.recherche !== undefined && filtres.recherche.trim() !== "") parametres.set("q", filtres.recherche.trim());
+  if (curseur !== undefined && curseur !== "") parametres.set("cursor", curseur);
+
+  const requete = parametres.toString();
+  const brut = await appelApi<PartnerAccountList>(
+    `/v1/admin/partner-accounts${requete === "" ? "" : `?${requete}`}`,
+    { cache: "no-store" },
+  );
+
+  return {
+    comptes: brut.items.map(depuisComptePartenaire),
+    curseurSuivant: brut.next_cursor,
+  };
+}
+
+/** Suspend un compte agréé. Motif obligatoire, refusé en `422` sans lui. */
+export async function suspendreCompte(compteId: string, motif: string): Promise<void> {
+  await appelApiSansContenu(`/v1/admin/partners/${encodeURIComponent(compteId)}/suspend`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ reason: motif }),
+  });
+}
+
+/**
+ * Réactive un compte suspendu.
+ *
+ * Pas de motif : la route n'en demande pas pour une décision favorable, comme
+ * `approve` qui répond `204` sans corps (`data-dictionary.md:507`).
+ */
+export async function reactiverCompte(compteId: string): Promise<void> {
+  await appelApiSansContenu(`/v1/admin/partners/${encodeURIComponent(compteId)}/reinstate`, {
+    method: "POST",
+  });
+}
+
+/**
+ * Ferme un compte, définitivement. Motif obligatoire.
+ *
+ * ⚠ Sans retour au-delà du délai de grâce : voir l'en-tête de
+ * `app/api/v1/admin/partners/[id]/close/route.ts`. L'écran doit l'annoncer
+ * avant la confirmation.
+ */
+export async function fermerCompte(compteId: string, motif: string): Promise<void> {
+  await appelApiSansContenu(`/v1/admin/partners/${encodeURIComponent(compteId)}/close`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ reason: motif }),
+  });
 }

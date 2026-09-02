@@ -783,3 +783,31 @@ export type LigneJournal = {
 /** Enveloppe de la meme route. `Paginated<T>` du contrat (:319-322). */
 export type JournalList = Paginated<LigneJournal>;
 
+/**
+ * Une ligne du registre des comptes partenaires.
+ *
+ * ⚠ NOTRE PROPOSITION, servie par `GET /api/v1/admin/partner-accounts`. Le
+ * contrat n'a qu'une liste de partenaires, `GET /admin/partners?status=&cursor=`
+ * (:490), qui sert `PartnerReviewItem` : les treize premiers champs ci-dessous,
+ * et rien de plus.
+ *
+ * Les cinq derniers sont de nous, avec les noms déjà écrits ailleurs dans leur
+ * contrat pour ne pas en inventer :
+ *   - `reviewed_by`, `reviewed_at`, `review_reason` — colonnes de `partners`
+ *     (`0001_schema.sql:115-117`), exposées à l'administration selon la §3.6
+ *     (:156-158) mais absentes du DTO de la §4.7 ;
+ *   - `total_received`, `transaction_count` — noms de `PartnerSummary`
+ *     (:419-421), que le contrat définit pour l'espace partenaire.
+ */
+export type PartnerAccountItem = PartnerReviewItem & {
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  review_reason: string | null;
+  /** Cumul encaissé, en euros décimaux. */
+  total_received: number;
+  transaction_count: number;
+};
+
+/** Enveloppe de la même route. `Paginated<T>` du contrat (:319-322). */
+export type PartnerAccountList = Paginated<PartnerAccountItem>;
+

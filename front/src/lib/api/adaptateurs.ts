@@ -41,6 +41,7 @@ import type {
   EmployeeTransaction,
   IssuedTokenResponse,
   LigneJournal,
+  PartnerAccountItem,
   PartnerReviewItem,
   PaymentResponse,
   PublicPartner,
@@ -48,12 +49,14 @@ import type {
 } from "@/types/api";
 import type {
   CodePaiement,
+  ComptePartenaire,
   DecisionJournal,
   DemandeAdhesion,
   DemandePartenaire,
   Partenaire,
   SensDecision,
   Solde,
+  StatutCompte,
   StatutPartenaire,
   StatutTransaction,
   Transaction,
@@ -749,6 +752,76 @@ export function depuisDecisionJournal(brut: LigneJournal): DecisionJournal {
     motif: chaineDuPayload(brut.payload, "reason"),
     auteurId: brut.actor_id,
     priseLe: horodatageIso(brut.created_at, "created_at"),
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * 8 ter. REGISTRE DES COMPTES PARTENAIRES
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * `partner_status` → `StatutCompte`.
+ *
+ * Les cinq valeurs de l'ENUM (`0001_schema.sql:7`) ont chacune leur équivalent,
+ * `closed` compris — contrairement à `StatutPartenaire`, l'union du domaine
+ * historique, qui n'en a que quatre et à laquelle `depuisDemandePartenaire()`
+ * doit lever pour `"closed"`. Ici, plus rien ne lève : un registre montre tous
+ * les comptes, y compris les fermés.
+ *
+ * Un statut inconnu lève plutôt que de se ranger dans un fourre-tout : c'est
+ * que le back a élargi son ENUM sans nous prévenir, et « toute nouvelle valeur
+ * est un changement cassant » (`data-dictionary.md:51`).
+ */
+function statutDeCompte(statut: PartnerAccountItem["status"]): StatutCompte {
+  switch (statut) {
+    case "pending":
+      return "en_attente";
+    case "approved":
+      return "agree";
+    case "rejected":
+      return "refuse";
+    case "suspended":
+      return "suspendu";
+    case "closed":
+      return "ferme";
+    default:
+      throw new ErreurService(
+        "reponse_illisible",
+        `Réponse du serveur illisible : statut de partenaire inconnu (${String(statut)}).`,
+        { champ: "status" },
+      );
+  }
+}
+
+/**
+ * `PartnerAccountItem` → `ComptePartenaire`.
+ *
+ * ⚠ Le type d'entrée vient d'une route que NOUS proposons — voir
+ * `types/api.ts`. Cet adaptateur changera avec elle.
+ *
+ * `totalRecu` repasse en CENTIMES : le back sert des euros décimaux
+ * (`money.rs:145`), le domaine ne connaît que des entiers de centimes. C'est
+ * exactement le travail de cette couche, et `centimesDepuis()` lève si le
+ * serveur envoie autre chose qu'un nombre.
+ */
+export function depuisComptePartenaire(brut: PartnerAccountItem): ComptePartenaire {
+  return {
+    id: brut.id,
+    raisonSociale: brut.legal_name,
+    enseigne: brut.trade_name,
+    categorie: brut.category,
+    identifiantFiscal: brut.ifu,
+    ville: brut.city === null ? null : brut.city.name,
+    departement: brut.city === null ? null : brut.city.department,
+    estEnLigne: brut.service_mode === "online",
+    courrielContact: brut.contact_email,
+    statut: statutDeCompte(brut.status),
+    totalRecu: centimesDepuis(brut, "total_received"),
+    nombreTransactions: brut.transaction_count,
+    decideeLe:
+      brut.reviewed_at === null ? null : horodatageIso(brut.reviewed_at, "reviewed_at"),
+    auteurDecision: brut.reviewed_by,
+    motifDecision: brut.review_reason,
   };
 }
 

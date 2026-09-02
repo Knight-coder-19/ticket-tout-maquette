@@ -126,3 +126,48 @@ export interface DecisionJournal {
   /** Date ISO 8601 de la decision. */
   priseLe: string;
 }
+
+/**
+ * Un compte partenaire, tel que le registre le manipule.
+ *
+ * Distinct de `DemandeAdhesion` : celle-ci décrit un dossier à trancher, sans
+ * statut utile — ils sont tous `pending` — ni activité. Un registre, lui,
+ * montre où en est chaque compte et ce qu'il a encaissé. Deux vues, deux types.
+ */
+export interface ComptePartenaire {
+  id: Identifiant;
+  raisonSociale: string;
+  enseigne: string;
+  /** Libellé venu des données. Aucune liste de catégories dans l'interface. */
+  categorie: string;
+  identifiantFiscal: string | null;
+  /** `null` pour un commerce exclusivement en ligne. */
+  ville: string | null;
+  departement: string | null;
+  estEnLigne: boolean;
+  courrielContact: string;
+  statut: StatutCompte;
+  /** Cumul encaissé, en centimes entiers. */
+  totalRecu: MontantCentimes;
+  nombreTransactions: number;
+  /** Date ISO 8601 de la dernière décision, `null` si aucune. */
+  decideeLe: string | null;
+  auteurDecision: Identifiant | null;
+  motifDecision: string | null;
+}
+
+/**
+ * Les cinq états d'un compte, en français.
+ *
+ * ⚠ `StatutPartenaire` plus haut n'en couvre que quatre : il lui manque
+ * l'équivalent de `closed`. Cette union-ci est calée sur l'ENUM du back
+ * (`partner_status`, `0001_schema.sql:7`), qui en a cinq. Les deux coexistent
+ * le temps que quelqu'un tranche laquelle survit.
+ */
+export type StatutCompte =
+  | "en_attente"
+  | "agree"
+  | "refuse"
+  | "suspendu"
+  | "ferme";
+

@@ -122,6 +122,20 @@ export interface PartenaireMagasin {
   reviewedAt: string | null;
   /** Motif. Obligatoire au refus, facultatif a l'acceptation. */
   reviewReason: string | null;
+  /**
+   * Activite deja encaissee AVANT le jeu de demonstration, en centimes.
+   *
+   * ⚠ Amorce de simulation, sans equivalent dans le schema : `partners` n'a
+   * pas de colonne de volume, le back le calculerait depuis `payments`. Elle
+   * existe pour que la liste des comptes ne montre pas douze etablissements a
+   * zero euro -- un agent qui suspend doit voir ce qu'il suspend.
+   *
+   * L'activite servie est cette amorce PLUS les paiements reellement ecrits
+   * dans le magasin : encaisser en simulation fait bouger le chiffre.
+   */
+  historiqueCentimes: MontantCentimes;
+  /** Meme chose, en nombre de reglements. */
+  historiqueTransactions: number;
 }
 
 /**
@@ -286,6 +300,8 @@ function donneesInitiales(): Magasin {
         reviewedBy: "ADM-001",
         reviewedAt: "2026-07-15T10:30:00.000Z",
         reviewReason: null,
+        historiqueCentimes: 48_600,
+        historiqueTransactions: 39,
       },
       {
         id: "PRT-002",
@@ -304,6 +320,8 @@ function donneesInitiales(): Magasin {
         reviewedBy: null,
         reviewedAt: null,
         reviewReason: null,
+        historiqueCentimes: 0,
+        historiqueTransactions: 0,
       },
       {
         id: "PRT-003",
@@ -322,6 +340,8 @@ function donneesInitiales(): Magasin {
         reviewedBy: null,
         reviewedAt: null,
         reviewReason: null,
+        historiqueCentimes: 0,
+        historiqueTransactions: 0,
       },
       {
         id: "PRT-004",
@@ -341,6 +361,8 @@ function donneesInitiales(): Magasin {
         reviewedBy: null,
         reviewedAt: null,
         reviewReason: null,
+        historiqueCentimes: 0,
+        historiqueTransactions: 0,
       },
       {
         id: "PRT-005",
@@ -359,6 +381,8 @@ function donneesInitiales(): Magasin {
         reviewedBy: null,
         reviewedAt: null,
         reviewReason: null,
+        historiqueCentimes: 0,
+        historiqueTransactions: 0,
       },
       {
         id: "PRT-006",
@@ -377,6 +401,8 @@ function donneesInitiales(): Magasin {
         reviewedBy: null,
         reviewedAt: null,
         reviewReason: null,
+        historiqueCentimes: 0,
+        historiqueTransactions: 0,
       },
       {
         id: "PRT-007",
@@ -397,6 +423,8 @@ function donneesInitiales(): Magasin {
         reviewedBy: null,
         reviewedAt: null,
         reviewReason: null,
+        historiqueCentimes: 0,
+        historiqueTransactions: 0,
       },
       {
         id: "PRT-008",
@@ -415,6 +443,150 @@ function donneesInitiales(): Magasin {
         reviewedBy: null,
         reviewedAt: null,
         reviewReason: null,
+        historiqueCentimes: 0,
+        historiqueTransactions: 0,
+      },
+      {
+        id: "PRT-009",
+        contactEmail: "gerant@aumarchedecotonou.bj",
+        legalName: "SARL Au Marché de Cotonou",
+        tradeName: "Au Marché de Cotonou",
+        category: "alimentation",
+        ifu: "3201902334455",
+        serviceMode: "physical",
+        websiteUrl: null,
+        cityId: "VIL-COT",
+        district: "Dantokpa",
+        addressLine: "Halle centrale, allée 3",
+        statut: "approved",
+        submittedAt: "2026-06-02T08:00:00.000Z",
+        reviewedBy: "ADM-001",
+        reviewedAt: "2026-06-05T09:15:00.000Z",
+        reviewReason: null,
+        historiqueCentimes: 1_284_50,
+        historiqueTransactions: 106,
+      },
+      {
+        id: "PRT-010",
+        contactEmail: "contact@chezadjoa.bj",
+        legalName: "Restaurant Chez Adjoa",
+        tradeName: "Chez Adjoa",
+        category: "restauration",
+        ifu: "3201902667788",
+        serviceMode: "physical",
+        websiteUrl: null,
+        cityId: "VIL-PAR",
+        district: "Guéma",
+        addressLine: "42 route de Djougou",
+        statut: "approved",
+        submittedAt: "2026-06-18T13:20:00.000Z",
+        reviewedBy: "ADM-002",
+        reviewedAt: "2026-06-21T10:00:00.000Z",
+        reviewReason: null,
+        historiqueCentimes: 312_75,
+        historiqueTransactions: 41,
+      },
+      {
+        id: "PRT-011",
+        contactEmail: "boutique@atelierdupapier.bj",
+        legalName: "Atelier du Papier",
+        tradeName: "Atelier du Papier",
+        category: "culture",
+        ifu: "3201902990011",
+        serviceMode: "both",
+        websiteUrl: "https://atelier-du-papier.bj",
+        cityId: "VIL-PNO",
+        district: "Ouando",
+        addressLine: "9 rue des Artisans",
+        statut: "approved",
+        submittedAt: "2026-07-01T09:45:00.000Z",
+        reviewedBy: "ADM-001",
+        reviewedAt: "2026-07-03T16:30:00.000Z",
+        reviewReason: null,
+        historiqueCentimes: 47_20,
+        historiqueTransactions: 6,
+      },
+      {
+        id: "PRT-012",
+        contactEmail: "direction@superettelafontaine.bj",
+        legalName: "SARL La Fontaine",
+        tradeName: "Supérette La Fontaine",
+        category: "alimentation",
+        ifu: "3201903223344",
+        serviceMode: "physical",
+        websiteUrl: null,
+        cityId: "VIL-COT",
+        district: "Fidjrossè",
+        addressLine: "120 boulevard de la Marina",
+        statut: "suspended",
+        submittedAt: "2026-05-11T07:30:00.000Z",
+        reviewedBy: "ADM-001",
+        reviewedAt: "2026-08-24T11:10:00.000Z",
+        reviewReason:
+          "Écarts répétés entre les encaissements déclarés et le registre. Compte suspendu le temps du contrôle.",
+        historiqueCentimes: 803_10,
+        historiqueTransactions: 74,
+      },
+      {
+        id: "PRT-013",
+        contactEmail: "club@tokpafitness.bj",
+        legalName: "Association Tokpa Fitness",
+        tradeName: "Tokpa Fitness",
+        category: "sport",
+        ifu: null,
+        serviceMode: "physical",
+        websiteUrl: null,
+        cityId: "VIL-BOH",
+        district: null,
+        addressLine: "Quartier Agbodjèdo",
+        statut: "suspended",
+        submittedAt: "2026-06-27T15:00:00.000Z",
+        reviewedBy: "ADM-002",
+        reviewedAt: "2026-08-30T09:00:00.000Z",
+        reviewReason: "Identifiant fiscal jamais transmis malgré deux relances.",
+        historiqueCentimes: 18_00,
+        historiqueTransactions: 3,
+      },
+      {
+        id: "PRT-014",
+        contactEmail: "info@servicesplusbenin.bj",
+        legalName: "Services Plus Bénin",
+        tradeName: "Services Plus",
+        category: "services",
+        ifu: "3201903556677",
+        serviceMode: "online",
+        websiteUrl: "https://services-plus.bj",
+        cityId: null,
+        district: null,
+        addressLine: null,
+        statut: "rejected",
+        submittedAt: "2026-07-20T10:05:00.000Z",
+        reviewedBy: "ADM-001",
+        reviewedAt: "2026-07-24T14:40:00.000Z",
+        reviewReason:
+          "Activité de conseil sans vente de biens ni de services au public : hors du champ du dispositif.",
+        historiqueCentimes: 0,
+        historiqueTransactions: 0,
+      },
+      {
+        id: "PRT-015",
+        contactEmail: "contact@deuxrouesduborgou.bj",
+        legalName: "SARL Deux-Roues du Borgou",
+        tradeName: "Deux-Roues du Borgou",
+        category: "mobilité",
+        ifu: "3201903889900",
+        serviceMode: "physical",
+        websiteUrl: null,
+        cityId: "VIL-PAR",
+        district: "Zongo",
+        addressLine: "7 avenue de l'Indépendance",
+        statut: "closed",
+        submittedAt: "2026-04-15T08:00:00.000Z",
+        reviewedBy: "ADM-002",
+        reviewedAt: "2026-08-12T17:00:00.000Z",
+        reviewReason: "Cessation d'activité déclarée par le gérant. Fermeture définitive du compte.",
+        historiqueCentimes: 259_40,
+        historiqueTransactions: 22,
       },
     ],
     journal: [
@@ -427,6 +599,94 @@ function donneesInitiales(): Magasin {
         payload: { trade_name: "Boulangerie du Marché" },
         ipAddress: null,
         createdAt: "2026-07-15T10:30:00.000Z",
+      },
+      {
+        id: "AUD-002",
+        actorId: "ADM-001",
+        action: "partner.approved",
+        entityType: "partner",
+        entityId: "PRT-009",
+        payload: { trade_name: "Au Marché de Cotonou" },
+        ipAddress: null,
+        createdAt: "2026-06-05T09:15:00.000Z",
+      },
+      {
+        id: "AUD-003",
+        actorId: "ADM-002",
+        action: "partner.approved",
+        entityType: "partner",
+        entityId: "PRT-010",
+        payload: { trade_name: "Chez Adjoa" },
+        ipAddress: null,
+        createdAt: "2026-06-21T10:00:00.000Z",
+      },
+      {
+        id: "AUD-004",
+        actorId: "ADM-001",
+        action: "partner.approved",
+        entityType: "partner",
+        entityId: "PRT-011",
+        payload: { trade_name: "Atelier du Papier" },
+        ipAddress: null,
+        createdAt: "2026-07-03T16:30:00.000Z",
+      },
+      {
+        id: "AUD-005",
+        actorId: "ADM-001",
+        action: "partner.rejected",
+        entityType: "partner",
+        entityId: "PRT-014",
+        payload: {
+          trade_name: "Services Plus",
+          status: "rejected",
+          reason:
+            "Activité de conseil sans vente de biens ni de services au public : hors du champ du dispositif.",
+        },
+        ipAddress: null,
+        createdAt: "2026-07-24T14:40:00.000Z",
+      },
+      {
+        id: "AUD-006",
+        actorId: "ADM-002",
+        action: "partner.closed",
+        entityType: "partner",
+        entityId: "PRT-015",
+        payload: {
+          trade_name: "Deux-Roues du Borgou",
+          status: "closed",
+          reason: "Cessation d'activité déclarée par le gérant. Fermeture définitive du compte.",
+        },
+        ipAddress: null,
+        createdAt: "2026-08-12T17:00:00.000Z",
+      },
+      {
+        id: "AUD-007",
+        actorId: "ADM-001",
+        action: "partner.suspended",
+        entityType: "partner",
+        entityId: "PRT-012",
+        payload: {
+          trade_name: "Supérette La Fontaine",
+          status: "suspended",
+          reason:
+            "Écarts répétés entre les encaissements déclarés et le registre. Compte suspendu le temps du contrôle.",
+        },
+        ipAddress: null,
+        createdAt: "2026-08-24T11:10:00.000Z",
+      },
+      {
+        id: "AUD-008",
+        actorId: "ADM-002",
+        action: "partner.suspended",
+        entityType: "partner",
+        entityId: "PRT-013",
+        payload: {
+          trade_name: "Tokpa Fitness",
+          status: "suspended",
+          reason: "Identifiant fiscal jamais transmis malgré deux relances.",
+        },
+        ipAddress: null,
+        createdAt: "2026-08-30T09:00:00.000Z",
       },
     ],
     jetons: new Map<Identifiant, JetonMagasin>(),
@@ -860,6 +1120,213 @@ export function trancherAdhesion(
   const entree = consignerAuJournal({
     actorId: administrateurId,
     action: decision === "approved" ? "partner.approved" : "partner.rejected",
+    entityType: "partner",
+    entityId: partenaire.id,
+    payload: {
+      trade_name: partenaire.tradeName,
+      status: partenaire.statut,
+      reason: motifNettoye,
+    },
+    quand: maintenant,
+  });
+
+  return { partenaire, entree };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * COMPTES PARTENAIRES — cycle de vie apres agrement
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+export interface ActivitePartenaire {
+  /** Cumul encaisse. Entier de centimes. */
+  totalRecuCentimes: MontantCentimes;
+  nombreTransactions: number;
+}
+
+/**
+ * L'activite d'un partenaire : son amorce de demonstration plus les reglements
+ * reellement ecrits dans le magasin.
+ *
+ * ⚠ Le schema n'a AUCUNE colonne de volume sur `partners`. Le back calculerait
+ * ces deux nombres depuis `payments`, comme le fait la seconde moitie de cette
+ * fonction. L'amorce, elle, n'a pas d'equivalent : elle existe pour que la
+ * liste des comptes ne montre pas quinze etablissements a zero euro.
+ *
+ * Le vocabulaire est celui de `PartnerSummary` (`data-dictionary.md:419-421`) :
+ * `total_received` et `transaction_count`. Le contrat les definit pour
+ * l'espace PARTENAIRE, pas pour l'administration -- les reutiliser ici est
+ * notre choix, pour donner au back un nom deja ecrit s'il adopte la route.
+ */
+export function activiteDe(partenaireId: string): ActivitePartenaire {
+  const partenaire = trouverPartenaireParId(partenaireId);
+  if (!partenaire) return { totalRecuCentimes: 0, nombreTransactions: 0 };
+
+  const reglements = magasin.paiements.filter((p) => p.partenaireId === partenaireId);
+  return {
+    totalRecuCentimes:
+      partenaire.historiqueCentimes +
+      reglements.reduce((somme, p) => somme + p.montantCentimes, 0),
+    nombreTransactions: partenaire.historiqueTransactions + reglements.length,
+  };
+}
+
+/** Enleve les diacritiques : « Épicerie » se trouve en tapant « epicerie ». */
+function sansAccent(texte: string): string {
+  return texte.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+}
+
+export interface FiltreComptes {
+  statut?: StatutPartenaire;
+  categorie?: string;
+  /** Nom de ville, compare sans accent ni casse. */
+  ville?: string;
+  /** Recherche libre sur l'enseigne, la raison sociale et la ville. */
+  recherche?: string;
+}
+
+/**
+ * Les comptes partenaires, filtres, tries par enseigne.
+ *
+ * Le tri est `(tradeName, id)` et non `(submittedAt, id)` comme la file de
+ * validation : ce n'est pas une file d'attente mais un annuaire, on y cherche
+ * un etablissement par son nom. C'est aussi la paire sur laquelle
+ * `catalog.rs:2` pagine, pour la meme raison.
+ *
+ * ⚠ Les filtres `categorie`, `ville` et `recherche` n'existent pas au contrat :
+ * `GET /api/v1/admin/partners` n'accepte que `status` et `cursor` (:490). Les
+ * noms `category`, `city` et `q` sont repris du catalogue (:469), qui est la
+ * seule route du contrat a filtrer ainsi.
+ */
+export function comptesPartenaires(filtre: FiltreComptes): PartenaireMagasin[] {
+  const recherche = filtre.recherche === undefined ? null : sansAccent(filtre.recherche.trim());
+  const ville = filtre.ville === undefined ? null : sansAccent(filtre.ville.trim());
+
+  return magasin.partenaires
+    .filter((p) => filtre.statut === undefined || p.statut === filtre.statut)
+    .filter((p) => filtre.categorie === undefined || p.category === filtre.categorie)
+    .filter((p) => {
+      if (ville === null || ville === "") return true;
+      const nomVille = p.cityId === null ? null : trouverVille(p.cityId)?.name;
+      return nomVille !== undefined && nomVille !== null && sansAccent(nomVille).includes(ville);
+    })
+    .filter((p) => {
+      if (recherche === null || recherche === "") return true;
+      const nomVille = p.cityId === null ? "" : (trouverVille(p.cityId)?.name ?? "");
+      return [p.tradeName, p.legalName, nomVille].some((champ) =>
+        sansAccent(champ).includes(recherche),
+      );
+    })
+    .sort(comparerParEnseigne);
+}
+
+/**
+ * L'ordre total de la liste des comptes : enseigne, puis identifiant.
+ *
+ * ⚠ CETTE FONCTION DOIT ETRE LA SEULE A DECIDER DE L'ORDRE. Le tri et le
+ * curseur de pagination l'utilisent tous les deux, et c'est indispensable :
+ * `localeCompare(…, "fr")` et l'operateur `>` ne rangent PAS pareil. En
+ * collation francaise « Épicerie » vient avant « Librairie » ; en unites de
+ * code, « É » vaut U+00C9 et « L » U+004C, donc l'inverse.
+ *
+ * Un curseur qui avance avec `>` sur une liste triee par collation saute des
+ * lignes, en repete d'autres, et peut ne jamais atteindre la fin. C'est ce qui
+ * arrivait avant ce correctif.
+ */
+export function comparerParEnseigne(
+  a: { tradeName: string; id: string },
+  b: { tradeName: string; id: string },
+): number {
+  const parEnseigne = a.tradeName.localeCompare(b.tradeName, "fr");
+  return parEnseigne !== 0 ? parEnseigne : a.id.localeCompare(b.id);
+}
+
+export type EchecStatut = "introuvable" | "transition_refusee" | "motif_manquant";
+
+/**
+ * Les transitions permises apres agrement.
+ *
+ * Le schema n'en impose AUCUNE : `partners.status` est une colonne
+ * `partner_status NOT NULL` sans `CHECK` de transition, et les trois
+ * declencheurs `forbid_mutation()` ne portent que sur `ledger_entries`,
+ * `ledger_operations` et `audit_log` (`0001_schema.sql:286-315`). Techniquement,
+ * la base accepterait n'importe quel passage, y compris un retour de `closed`.
+ *
+ * Ce tableau est donc NOTRE regle, pas la leur. Il dit :
+ *   - on suspend un compte agree, et lui seul -- une demande `pending` se
+ *     refuse, elle ne se suspend pas ;
+ *   - on reactive un compte suspendu, et lui seul ;
+ *   - on ferme un compte agree ou suspendu.
+ *
+ * `closed` n'a AUCUNE sortie, et c'est le point a faire trancher par l'equipe
+ * back : voir le commentaire de `fermerCompte` dans la route.
+ */
+const TRANSITIONS: Readonly<Record<string, readonly StatutPartenaire[]>> = {
+  suspended: ["approved"],
+  approved: ["suspended"],
+  closed: ["approved", "suspended"],
+};
+
+/**
+ * Change le statut d'un compte, et consigne le changement.
+ *
+ * Meme forme que `trancherAdhesion` : les trois champs de revision et
+ * l'ecriture au journal sont poses ensemble, en une seule operation
+ * (`review.rs:1-2`).
+ *
+ * ⚠ LE MOTIF ECRASE `review_reason`. Le schema n'a qu'UNE colonne de motif
+ * (`partners.review_reason`, :117), pensee pour le refus d'adhesion et
+ * « visible du partenaire » (`data-dictionary.md:158`). Une suspension qui
+ * survient apres une acceptation ecrase donc la date d'agrement dans
+ * `reviewed_at` et le motif d'agrement dans `review_reason` : la base ne garde
+ * que la DERNIERE decision. Seul `audit_log` conserve la suite complete.
+ * A signaler a l'equipe back -- il manque soit des colonnes dediees, soit
+ * l'aveu que le journal est la seule histoire.
+ */
+export function changerStatutPartenaire(
+  partenaireId: string,
+  cible: StatutPartenaire,
+  administrateurId: string,
+  motif: string | null,
+  maintenant: number,
+): { partenaire: PartenaireMagasin; entree: EntreeJournal } | { echec: EchecStatut } {
+  const partenaire = trouverPartenaireParId(partenaireId);
+  if (!partenaire) return { echec: "introuvable" };
+
+  const depuis = TRANSITIONS[cible] ?? [];
+  if (!depuis.includes(partenaire.statut)) return { echec: "transition_refusee" };
+
+  const motifNettoye = motif !== null && motif.trim() !== "" ? motif.trim() : null;
+
+  /*
+   * Le motif est obligatoire pour ce qui retire un droit -- suspension,
+   * fermeture -- et facultatif pour ce qui en rend un.
+   *
+   * C'est la regle du contrat, pas la notre : `reject` porte un
+   * `RejectRequest { reason }` obligatoire (`data-dictionary.md:509`), tandis
+   * qu'`approve` repond `204` sans aucun corps (:507). Une decision defavorable
+   * doit pouvoir se contester, donc s'expliquer ; une decision favorable n'a
+   * personne a qui rendre des comptes.
+   *
+   * Un motif reste accepte a la reactivation : s'il est fourni, il est
+   * enregistre et consigne.
+   */
+  const motifObligatoire = cible !== "approved";
+  if (motifObligatoire && motifNettoye === null) return { echec: "motif_manquant" };
+
+  partenaire.statut = cible;
+  partenaire.reviewedBy = administrateurId;
+  partenaire.reviewedAt = new Date(maintenant).toISOString();
+  partenaire.reviewReason = motifNettoye;
+
+  const verbes: Record<string, string> = {
+    suspended: "partner.suspended",
+    approved: "partner.reinstated",
+    closed: "partner.closed",
+  };
+
+  const entree = consignerAuJournal({
+    actorId: administrateurId,
+    action: verbes[cible] ?? `partner.${cible}`,
     entityType: "partner",
     entityId: partenaire.id,
     payload: {

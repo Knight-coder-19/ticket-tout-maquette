@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "verif:accents": "node outils/accents.cjs src",
     "test": "vitest run",
     "format": "prettier --write ."
   },

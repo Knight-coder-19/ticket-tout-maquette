@@ -9,7 +9,7 @@ import "@/styles/validations.css";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CarteDemande } from "./CarteDemande";
-import { DialogueRefus } from "./DialogueRefus";
+import { DialogueMotif } from "../DialogueMotif";
 import { JournalDecisions } from "./JournalDecisions";
 import {
   accepterDemande,
@@ -227,8 +227,11 @@ export function Validations() {
       </section>
 
       {refusPour !== null && (
-        <DialogueRefus
-          demande={refusPour}
+        <DialogueMotif
+          titre={`Refuser l'adhésion de ${refusPour.enseigne}`}
+          rappel="Le motif est obligatoire et sera enregistré avec la décision. Il est communiqué au commerçant : écrivez ce qu'il doit corriger."
+          libelleConfirmation="Confirmer le refus"
+          libelleEnCours="Enregistrement…"
           enCours={enCours === refusPour.id}
           erreur={erreurRefus}
           onAnnuler={() => {
