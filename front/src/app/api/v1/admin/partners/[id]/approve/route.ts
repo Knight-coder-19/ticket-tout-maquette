@@ -38,7 +38,7 @@ export async function POST(
   const maintenant = Date.now();
   const administrateurId = identite(requete, "X-Mock-Administrateur", "ADM-001");
   if (!trouverAdministrateur(administrateurId)) {
-    return erreur(401, "UNAUTHORIZED", "Session absente ou expiree.");
+    return erreur(401, "UNAUTHORIZED", "Session absente ou expirée.");
   }
 
   const { id } = await params;
@@ -54,7 +54,7 @@ export async function POST(
            (:635). Le detourner pour un partenaire serait mentir au front. */
         return erreur(404, "PARTNER_NOT_FOUND", "Cette demande est introuvable.");
       case "deja_tranchee":
-        return erreur(409, "PARTNER_ALREADY_REVIEWED", "Cette demande a deja ete tranchee.");
+        return erreur(409, "PARTNER_ALREADY_REVIEWED", "Cette demande a déjà été tranchée.");
       case "motif_manquant":
         /* Inatteignable pour une acceptation, mais l'union est exhaustive. */
         return erreur(422, "VALIDATION_FAILED", "Motif manquant.");

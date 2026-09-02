@@ -30,12 +30,22 @@ export function BandeauSimulation() {
       role="note"
       aria-label="Avertissement de simulation"
     >
+      {/*
+        Une ligne, sans rien perdre. Les trois choses que la mention doit dire
+        sont toutes la : c'est une simulation, rien de ce qui s'affiche ne
+        correspond a un compte reel, rien n'engage personne. Ce qui a saute,
+        c'est l'enumeration « les montants, les soldes et les operations » --
+        « aucun montant affiche » couvre le meme terrain en trois mots.
+
+        Rien n'est tronque : sur un conteneur etroit, le texte revient a la
+        ligne. Couper un avertissement obligatoire pour tenir sur une ligne
+        serait le vider.
+      */}
       <p className="bandeau-simulation__texte">
         <strong className="bandeau-simulation__mention">{MENTION_SIMULATION}</strong>
-        {" — "}
-        démonstrateur du dispositif CartePro. Les montants, les soldes et les
-        opérations affichés ne correspondent à aucun compte réel, ne
-        représentent aucune somme et n&apos;engagent personne.
+        {" · "}
+        Démonstrateur : aucun montant affiché ne correspond à un compte réel ni
+        n&apos;engage personne.
       </p>
     </aside>
   );

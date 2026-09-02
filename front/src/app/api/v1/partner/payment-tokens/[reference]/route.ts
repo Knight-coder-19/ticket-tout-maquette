@@ -50,10 +50,10 @@ export async function GET(
      (409) avant perime (410), parce qu'un jeton consomme puis expire reste
      avant tout un jeton deja encaisse. */
   if (jeton.statut === "consumed") {
-    return erreur(409, "TOKEN_ALREADY_USED", "Ce code a deja ete encaisse.");
+    return erreur(409, "TOKEN_ALREADY_USED", "Ce code a déjà été encaissé.");
   }
   if (jeton.statut === "expired" || jeton.statut === "cancelled") {
-    return erreur(410, "TOKEN_EXPIRED", "Ce code a expire.");
+    return erreur(410, "TOKEN_EXPIRED", "Ce code a expiré.");
   }
 
   const salarie = trouverSalarie(jeton.employeeId);

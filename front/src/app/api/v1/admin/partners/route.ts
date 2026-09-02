@@ -90,19 +90,19 @@ function apresLeCurseur(liste: PartenaireMagasin[], curseur: Curseur): number {
 export async function GET(requete: Request): Promise<Response> {
   const administrateurId = identite(requete, "X-Mock-Administrateur", "ADM-001");
   if (!trouverAdministrateur(administrateurId)) {
-    return erreur(401, "UNAUTHORIZED", "Session absente ou expiree.");
+    return erreur(401, "UNAUTHORIZED", "Session absente ou expirée.");
   }
 
   const parametres = new URL(requete.url).searchParams;
 
   const statutBrut = parametres.get("status") ?? "pending";
   if (!estStatut(statutBrut)) {
-    return erreur(422, "VALIDATION_FAILED", "Le parametre status n'est pas un statut connu.");
+    return erreur(422, "VALIDATION_FAILED", "Le paramètre status n'est pas un statut connu.");
   }
 
   const limite = lireLimite(parametres.get("limit"));
   if (limite === null) {
-    return erreur(422, "VALIDATION_FAILED", "Le parametre limit doit etre un entier positif.");
+    return erreur(422, "VALIDATION_FAILED", "Le paramètre limit doit être un entier positif.");
   }
 
   const liste = partenairesParStatut(statutBrut);

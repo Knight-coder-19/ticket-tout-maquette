@@ -84,11 +84,11 @@ export function DialogueRefus({
       }}
     >
       <h2 className="dialogue__titre" id="refus-titre">
-        Refuser l&apos;adhesion de {demande.enseigne}
+        Refuser l&apos;adhésion de {demande.enseigne}
       </h2>
       <p className="dialogue__rappel">
-        Le motif est obligatoire et sera enregistre avec la decision. Il est
-        communique au commercant : ecrivez ce qu&apos;il doit corriger.
+        Le motif est obligatoire et sera enregistré avec la décision. Il est
+        communiqué au commerçant : écrivez ce qu&apos;il doit corriger.
       </p>
 
       {erreur !== null && (
@@ -110,8 +110,8 @@ export function DialogueRefus({
       />
       <p className="dialogue__aide" id="motif-aide">
         {motifUtile === ""
-          ? "Sans motif, le refus ne peut pas etre enregistre."
-          : `${motifUtile.length} caracteres.`}
+          ? "Sans motif, le refus ne peut pas être enregistré."
+          : `${motifUtile.length} caractères.`}
       </p>
 
       <div className="actions">

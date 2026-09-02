@@ -37,7 +37,7 @@ export function joursEcoules(iso: string, maintenant = Date.now()): number {
  * plutot que « 0 jour » : l'agent lit une phrase, pas un compteur.
  */
 export function formaterAnciennete(jours: number): string {
-  if (jours <= 0) return "deposee aujourd'hui";
+  if (jours <= 0) return "déposée aujourd'hui";
   if (jours === 1) return "en attente depuis 1 jour";
   return `en attente depuis ${jours} jours`;
 }

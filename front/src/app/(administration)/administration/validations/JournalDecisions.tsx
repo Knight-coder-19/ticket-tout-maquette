@@ -18,7 +18,7 @@ export function JournalDecisions({ decisions }: { decisions: DecisionJournal[] }
   if (decisions.length === 0) {
     return (
       <p className="journal__vide">
-        Aucune decision enregistree pour le moment.
+        Aucune décision enregistrée pour le moment.
       </p>
     );
   }
@@ -38,9 +38,9 @@ export function JournalDecisions({ decisions }: { decisions: DecisionJournal[] }
               }
             >
               {decision.decision === "acceptee"
-                ? "Acceptee"
+                ? "Acceptée"
                 : decision.decision === "refusee"
-                  ? "Refusee"
+                  ? "Refusée"
                   : /* Verbe inconnu : on montre la chaine brute plutot que de
                        la perdre. C'est ce qui la fera remonter en revue. */
                     decision.action}

@@ -26,16 +26,16 @@ import type { DecisionJournal, DemandeAdhesion } from "@/types/domaine";
  * (`data-dictionary.md:626`).
  */
 const MESSAGES: Record<string, string> = {
-  reseau: "Le service est injoignable. Verifiez la connexion, puis reessayez.",
-  unauthorized: "Votre session a expire. Reconnectez-vous, puis reprenez.",
+  reseau: "Le service est injoignable. Vérifiez la connexion, puis réessayez.",
+  unauthorized: "Votre session a expiré. Reconnectez-vous, puis reprenez.",
   forbidden: "Votre compte n'a pas les droits d'administration.",
   partner_not_found: "Cette demande n'existe plus. Rechargez la liste.",
   partner_already_reviewed:
-    "Cette demande a deja ete tranchee, peut-etre par un collegue. Rechargez la liste.",
+    "Cette demande a déjà été tranchée, peut-être par un collègue. Rechargez la liste.",
   validation_failed:
-    "Le serveur a refuse la decision : le motif est obligatoire et ne peut pas etre vide.",
+    "Le serveur a refusé la décision : le motif est obligatoire et ne peut pas être vide.",
   reponse_illisible:
-    "Le serveur a repondu quelque chose d'illisible. Signalez-le, en indiquant l'heure.",
+    "Le serveur a répondu quelque chose d'illisible. Signalez-le, en indiquant l'heure.",
 };
 
 function messagePour(leve: unknown): string {
@@ -125,7 +125,7 @@ export function Validations() {
 
   return (
     <>
-      <h1>Validations d&apos;adhesion</h1>
+      <h1 className="validations__page-titre">Validations d&apos;adhésion</h1>
 
       <p
         className="journal__horodatage"
@@ -136,11 +136,14 @@ export function Validations() {
         {annonce ?? ""}
       </p>
 
-      <section className="validations__section" aria-labelledby="file-titre">
-        <h2 className="validations__titre" id="file-titre">
-          Demandes en attente
-        </h2>
-
+      {/*
+        Pas de titre de section ici : « Validations d'adhesion » en h1 dit deja
+        ce que la file contient. Deux titres qui disent la meme chose ne
+        hierarchisent rien -- ils ajoutent un niveau sans ajouter de sens.
+        La section reste, sans nom accessible : ce n'est donc pas un point de
+        repere de navigation, ce qu'elle n'avait pas vocation a etre.
+      */}
+      <section className="validations__section">
         {etat.phase === "chargement" && (
           <div className="etat etat--chargement" aria-busy="true" aria-live="polite">
             <p className="journal__vide">Chargement des demandes…</p>
@@ -154,14 +157,14 @@ export function Validations() {
 
         {etat.phase === "echec" && (
           <div className="etat etat--echec" role="alert">
-            <h3>La liste n&apos;a pas pu etre chargee</h3>
+            <h2>La liste n&apos;a pas pu être chargée</h2>
             <p>{etat.message}</p>
             <p>
               Les demandes ne sont pas perdues : elles sont chez le serveur, et
-              rien n&apos;a ete decide.
+              rien n&apos;a été décidé.
             </p>
             <button type="button" className="bouton bouton--discret" onClick={() => void charger()}>
-              Reessayer
+              Réessayer
             </button>
           </div>
         )}
@@ -170,9 +173,9 @@ export function Validations() {
           /* Liste vide : une bonne nouvelle. Ni `role="alert"`, ni rouge, ni
              point d'exclamation -- rien n'a echoue, tout a ete traite. */
           <div className="etat etat--vide">
-            <h3>Aucune demande en attente</h3>
+            <h2>Aucune demande en attente</h2>
             <p>
-              Tous les dossiers deposes ont ete tranches. Les decisions passees
+              Tous les dossiers déposés ont été tranchés. Les décisions passées
               restent consultables dans le journal ci-dessous.
             </p>
           </div>
@@ -182,8 +185,8 @@ export function Validations() {
           <>
             <p className="validations__compte">
               {enAttente === 1
-                ? "1 demande attend une decision, la plus ancienne en premier."
-                : `${enAttente} demandes attendent une decision, la plus ancienne en premier.`}
+                ? "1 demande attend une décision, la plus ancienne en premier."
+                : `${enAttente} demandes attendent une décision, la plus ancienne en premier.`}
             </p>
             <div className="file">
               <ul className="file__liste">
@@ -196,7 +199,7 @@ export function Validations() {
                         void decider(
                           demande,
                           () => accepterDemande(demande.id),
-                          `Adhesion de ${demande.enseigne} acceptee.`,
+                          `Adhésion de ${demande.enseigne} acceptée.`,
                         )
                       }
                       onRefuser={() => {
@@ -214,10 +217,10 @@ export function Validations() {
 
       <section className="validations__section" aria-labelledby="journal-titre">
         <h2 className="validations__titre" id="journal-titre">
-          Journal des decisions
+          Journal des décisions
         </h2>
         <p className="validations__compte">
-          Chaque decision y figure avec son auteur et son horodatage. Rien ne
+          Chaque décision y figure avec son auteur et son horodatage. Rien ne
           s&apos;y efface.
         </p>
         <JournalDecisions decisions={journal} />
@@ -239,7 +242,7 @@ export function Validations() {
             void decider(
               refusPour,
               () => refuserDemande(refusPour.id, motif),
-              `Adhesion de ${refusPour.enseigne} refusee.`,
+              `Adhésion de ${refusPour.enseigne} refusée.`,
             )
           }
         />

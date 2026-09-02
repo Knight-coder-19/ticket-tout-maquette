@@ -33,9 +33,9 @@ export function CarteDemande({
 
   return (
     <article className="demande" aria-labelledby={`demande-${demande.id}`}>
-      <h3 className="demande__enseigne" id={`demande-${demande.id}`}>
+      <h2 className="demande__enseigne" id={`demande-${demande.id}`}>
         {demande.enseigne}
-      </h3>
+      </h2>
       <p className="demande__raison-sociale">{demande.raisonSociale}</p>
 
       <dl className="demande__faits">
@@ -48,17 +48,17 @@ export function CarteDemande({
           )}
         </dd>
 
-        <dt>Categorie</dt>
+        <dt>Catégorie</dt>
         <dd className="demande__categorie">{demande.categorie}</dd>
 
         <dt>Ville</dt>
         <dd>
           {demande.ville === null
-            ? "Commerce en ligne, sans etablissement"
+            ? "Commerce en ligne, sans établissement"
             : `${demande.ville}${demande.departement === null ? "" : ` (${demande.departement})`}`}
         </dd>
 
-        <dt>Deposee le</dt>
+        <dt>Déposée le</dt>
         <dd>
           <time dateTime={demande.deposeeLe}>{formaterDate(demande.deposeeLe)}</time>
         </dd>
@@ -66,6 +66,18 @@ export function CarteDemande({
         <dt>Attente</dt>
         <dd className="demande__attente">{formaterAnciennete(jours)}</dd>
       </dl>
+
+      {/*
+        La note passe AVANT les boutons, et ce n'est pas un detail de mise en
+        page : elle conditionne la decision. Un agent qui lit « dossier
+        incomplet » apres avoir clique a lu trop tard.
+      */}
+      {dossierIncomplet && (
+        <p className="demande__note">
+          Le dossier ne porte pas d&apos;identifiant fiscal. Un refus doit le dire
+          dans son motif, pour que le commerçant sache quoi joindre.
+        </p>
+      )}
 
       <div className="actions">
         {/*
@@ -80,7 +92,7 @@ export function CarteDemande({
           onClick={onAccepter}
           disabled={enCours}
         >
-          {enCours ? "Decision en cours…" : "Accepter"}
+          {enCours ? "Décision en cours…" : "Accepter"}
         </button>
 
         {/*
@@ -99,12 +111,6 @@ export function CarteDemande({
         </button>
       </div>
 
-      {dossierIncomplet && (
-        <p className="dialogue__aide">
-          Le dossier ne porte pas d'identifiant fiscal. Un refus doit le dire
-          dans son motif, pour que le commercant sache quoi joindre.
-        </p>
-      )}
     </article>
   );
 }

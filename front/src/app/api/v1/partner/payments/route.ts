@@ -71,12 +71,12 @@ export async function POST(requete: Request): Promise<Response> {
   const partenaireId = identite(requete, "X-Mock-Partenaire", "PRT-001");
   const partenaire = trouverPartenaire(partenaireId);
   if (!partenaire) {
-    return erreur(401, "UNAUTHORIZED", "Session absente ou expiree.");
+    return erreur(401, "UNAUTHORIZED", "Session absente ou expirée.");
   }
   /* Le magasin porte desormais l'ENUM du back (`partner_status`) et non
      l'union francaise du domaine : `approved`, pas `valide`. */
   if (partenaire.statut !== "approved") {
-    return erreur(403, "PARTNER_NOT_APPROVED", "Cet etablissement n'est pas agree.");
+    return erreur(403, "PARTNER_NOT_APPROVED", "Cet établissement n'est pas agréé.");
   }
 
   const corps = lireCorps(await requete.json().catch(() => null));
@@ -102,7 +102,7 @@ export async function POST(requete: Request): Promise<Response> {
     const dejaEcrit = trouverPaiementParJti(corps.jti);
     if (dejaEcrit) {
       if (dejaEcrit.partenaireId !== partenaireId) {
-        return erreur(409, "TOKEN_ALREADY_USED", "Ce code a ete encaisse par un autre etablissement.");
+        return erreur(409, "TOKEN_ALREADY_USED", "Ce code a été encaissé par un autre établissement.");
       }
       /* Meme partenaire, meme jeton : on rend la transaction deja ecrite.
          Un succes, pas un conflit (:645). Aucun second debit. */
@@ -128,12 +128,12 @@ export async function POST(requete: Request): Promise<Response> {
     return erreur(404, "TOKEN_NOT_FOUND", "Ce code est introuvable.");
   }
   if (jeton.statut === "consumed") {
-    return erreur(409, "TOKEN_ALREADY_USED", "Ce code a deja ete encaisse.");
+    return erreur(409, "TOKEN_ALREADY_USED", "Ce code a déjà été encaissé.");
   }
   if (jeton.statut !== "active") {
     /* `expired` et `cancelled` : dans les deux cas le jeton ne vaut plus rien
        et les fonds sont deja retournes au disponible. */
-    return erreur(410, "TOKEN_EXPIRED", "Ce code a expire.");
+    return erreur(410, "TOKEN_EXPIRED", "Ce code a expiré.");
   }
 
   /* 4. ECRITURE. `libererJetonsExpires` a deja fait passer a `expired` tout

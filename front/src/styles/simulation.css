@@ -13,14 +13,22 @@
   color: var(--couleur-simulation-texte);
   border-block-end: 1px solid var(--couleur-simulation-filet);
   border-inline-start: var(--espace-1) solid var(--couleur-simulation-filet);
-  padding: var(--espace-3) var(--espace-4);
+  /* Une ligne : la hauteur vient de la police, l'espace vertical est reduit au
+     minimum lisible. Le bandeau est sur chaque ecran, il n'a pas a en prendre
+     le tiers. */
+  padding: var(--espace-2) var(--espace-4);
 }
 
 .bandeau-simulation__texte {
   margin: 0;
   font-size: var(--taille-sm);
-  line-height: 1.5;
-  max-width: var(--largeur-contenu);
+  line-height: 1.4;
+  /*
+   * PAS de `max-width` ici. C'est ce qui coutait trois lignes : la mesure de
+   * confort de lecture (`--largeur-contenu`, 72ch) est faite pour un
+   * paragraphe, pas pour une ligne d'avertissement qui doit tenir en largeur
+   * de page. Un bandeau n'est pas un texte courant.
+   */
 }
 
 .bandeau-simulation__mention {
