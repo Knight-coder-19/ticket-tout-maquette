@@ -32,7 +32,6 @@
 import type {
   Identifiant,
   MontantCentimes,
-  StatutPartenaire,
   StatutTransaction,
 } from "@/types/domaine";
 
@@ -51,11 +50,114 @@ export interface SalarieMagasin {
   soldeCentimes: MontantCentimes;
 }
 
+/**
+ * Une ville du referentiel. Table `cities` (`0001_schema.sql:18-22`),
+ * exposee sous la forme `CityRef { id, name, department }`
+ * (`data-dictionary.md:330`).
+ *
+ * ⚠ Incoherence preexistante du depot, signalee sans etre corrigee : la
+ * migration `0002_cities.sql` charge des communes francaises, tandis que le
+ * jeu de demonstration du front parle de Cotonou et Porto-Novo. On garde le
+ * second pour ne pas reecrire des donnees qui s'affichent en demonstration.
+ */
+export interface VilleMagasin {
+  id: Identifiant;
+  name: string;
+  department: string;
+}
+
+/**
+ * Les cinq etats d'un partenaire.
+ * ENUM `partner_status` (`0001_schema.sql:7`), repris tel quel — minuscules,
+ * en anglais, identiques des trois cotes (`data-dictionary.md:51,57`).
+ *
+ * ⚠ Ne pas confondre avec `StatutPartenaire` de `types/domaine.ts`, qui est
+ * l'union francaise du domaine du front (`en_attente | valide | refuse |
+ * suspendu`) et qui n'a pas d'equivalent pour `closed`.
+ */
+export type StatutPartenaire =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "suspended"
+  | "closed";
+
+/** ENUM `service_mode` (`0001_schema.sql:15`), amendement A1. */
+export type ModeService = "physical" | "online" | "both";
+
+/**
+ * Un partenaire, et donc une demande d'adhesion tant qu'il est `pending`.
+ * Colonnes de `partners` (`0001_schema.sql:98-124`).
+ *
+ * Deux contraintes de la base sont tenues ici :
+ *
+ *   `physical_needs_city` (:118) — un partenaire non exclusivement en ligne
+ *     a une ville. Le jeu de demonstration le respecte.
+ *   `reviewed_is_complete` (:119-123) — `reviewedBy` et `reviewedAt` sont
+ *     tous deux nuls, ou tous deux renseignes. Jamais l'un sans l'autre :
+ *     c'est ce qui garantit qu'une decision porte toujours son auteur ET son
+ *     horodatage.
+ */
 export interface PartenaireMagasin {
   id: Identifiant;
-  nom: string;
-  ville: string;
+  /** `users.email` du compte partenaire, joint par le DTO (`:502`). */
+  contactEmail: string;
+  legalName: string;
+  tradeName: string;
+  category: string;
+  /** Identifiant fiscal. `TEXT NULL` (:105) : un dossier peut etre incomplet. */
+  ifu: string | null;
+  serviceMode: ModeService;
+  websiteUrl: string | null;
+  /** `null` si et seulement si `serviceMode === "online"`. */
+  cityId: Identifiant | null;
+  district: string | null;
+  addressLine: string | null;
   statut: StatutPartenaire;
+  /** Date ISO 8601 du depot de la demande. */
+  submittedAt: string;
+  /** Auteur de la decision. `null` tant qu'elle n'est pas prise. */
+  reviewedBy: Identifiant | null;
+  /** Date ISO 8601 de la decision. */
+  reviewedAt: string | null;
+  /** Motif. Obligatoire au refus, facultatif a l'acceptation. */
+  reviewReason: string | null;
+}
+
+/**
+ * Un utilisateur de l'administration : l'auteur d'une decision.
+ * Sous-ensemble de `users` (`0001_schema.sql:26-35`).
+ */
+export interface AdministrateurMagasin {
+  id: Identifiant;
+  email: string;
+  nom: string;
+}
+
+/**
+ * Une entree du journal des decisions.
+ *
+ * C'est `audit_log` (`0001_schema.sql:265-274`), colonne pour colonne. Le
+ * journal EST le leur : `review.rs:1-2` impose que `approve` et `reject`
+ * ecrivent dedans, et `data-dictionary.md:300` le dit « consulte par
+ * l'administration ». Seule la ROUTE qui l'expose est de notre fait — voir
+ * `app/api/v1/admin/audit/route.ts`.
+ *
+ * En ajout seul (invariant I8, `data-model.md:132-140`) : les declencheurs
+ * `forbid_mutation()` refusent `UPDATE` et `DELETE` cote base. Ici, aucune
+ * fonction ne modifie ni ne retire une entree.
+ */
+export interface EntreeJournal {
+  id: Identifiant;
+  actorId: Identifiant | null;
+  /** Verbe libre, `TEXT NOT NULL`. Voir `consignerAuJournal`. */
+  action: string;
+  entityType: string;
+  entityId: Identifiant | null;
+  payload: Record<string, unknown> | null;
+  ipAddress: string | null;
+  /** Date ISO 8601. */
+  createdAt: string;
 }
 
 /**
@@ -115,7 +217,11 @@ export interface TransactionMagasin {
 
 export interface Magasin {
   salaries: SalarieMagasin[];
+  villes: VilleMagasin[];
+  administrateurs: AdministrateurMagasin[];
   partenaires: PartenaireMagasin[];
+  /** Le journal des decisions. En ajout seul. */
+  journal: EntreeJournal[];
   /** Indexes par `jti`. */
   jetons: Map<Identifiant, JetonMagasin>;
   paiements: PaiementMagasin[];
@@ -136,9 +242,192 @@ function donneesInitiales(): Magasin {
       { id: "SAL-002", nom: "Bastien Nkoue", employeur: "Mairie de Cotonou", statut: "actif", soldeCentimes: 350 },
       { id: "SAL-003", nom: "Clara Doumbia", employeur: "Office du tourisme", statut: "suspendu", soldeCentimes: 0 },
     ],
+    villes: [
+      { id: "VIL-COT", name: "Cotonou", department: "Littoral" },
+      { id: "VIL-PNO", name: "Porto-Novo", department: "Oueme" },
+      { id: "VIL-PAR", name: "Parakou", department: "Borgou" },
+      { id: "VIL-ABC", name: "Abomey-Calavi", department: "Atlantique" },
+      { id: "VIL-BOH", name: "Bohicon", department: "Zou" },
+    ],
+    administrateurs: [
+      { id: "ADM-001", email: "f.pontaillac@ministere.gouv", nom: "F. Pontaillac" },
+      { id: "ADM-002", email: "b.sellami@ministere.gouv", nom: "B. Sellami" },
+    ],
+    /*
+     * Sept demandes en attente, plus un partenaire deja agree.
+     *
+     * Le jeu est construit pour que la file de validation soit representative :
+     * six categories distinctes, cinq villes, un commerce exclusivement en
+     * ligne sans ville (contrainte `physical_needs_city`, :118), et des dates
+     * de depot echelonnees sur un mois pour que le tri par anciennete ait un
+     * sens.
+     *
+     * PRT-004 a `ifu: null` : c'est le dossier incomplet. Ce n'est pas un
+     * champ invente pour l'occasion — `partners.ifu` est `TEXT NULL` (:105) et
+     * le DTO l'expose `string | null` (`data-dictionary.md:496`). Aucun autre
+     * champ du schema ne marque l'incompletude d'un dossier, il n'y a donc rien
+     * de plus a en dire.
+     */
     partenaires: [
-      { id: "PRT-001", nom: "Boulangerie du Marche", ville: "Cotonou", statut: "valide" },
-      { id: "PRT-002", nom: "Librairie Les Palmiers", ville: "Porto-Novo", statut: "en_attente" },
+      {
+        id: "PRT-001",
+        contactEmail: "contact@boulangerie-du-marche.bj",
+        legalName: "SARL Boulangerie du Marche",
+        tradeName: "Boulangerie du Marche",
+        category: "alimentation",
+        ifu: "3201900112233",
+        serviceMode: "physical",
+        websiteUrl: null,
+        cityId: "VIL-COT",
+        district: "Ganhi",
+        addressLine: "12 rue des Cocotiers",
+        statut: "approved",
+        submittedAt: "2026-07-12T09:00:00.000Z",
+        reviewedBy: "ADM-001",
+        reviewedAt: "2026-07-15T10:30:00.000Z",
+        reviewReason: null,
+      },
+      {
+        id: "PRT-002",
+        contactEmail: "gerance@lespalmiers.bj",
+        legalName: "SARL Les Palmiers",
+        tradeName: "Librairie Les Palmiers",
+        category: "culture",
+        ifu: "3201900445566",
+        serviceMode: "physical",
+        websiteUrl: "https://lespalmiers.bj",
+        cityId: "VIL-PNO",
+        district: "Djegan Kpevi",
+        addressLine: "4 avenue de la Republique",
+        statut: "pending",
+        submittedAt: "2026-08-05T08:15:00.000Z",
+        reviewedBy: null,
+        reviewedAt: null,
+        reviewReason: null,
+      },
+      {
+        id: "PRT-003",
+        contactEmail: "sonagnon.epicerie@courriel.bj",
+        legalName: "Etablissement Sonagnon",
+        tradeName: "Epicerie Sonagnon",
+        category: "alimentation",
+        ifu: "3201900778899",
+        serviceMode: "physical",
+        websiteUrl: null,
+        cityId: "VIL-COT",
+        district: "Akpakpa",
+        addressLine: "77 rue du Port",
+        statut: "pending",
+        submittedAt: "2026-08-09T14:40:00.000Z",
+        reviewedBy: null,
+        reviewedAt: null,
+        reviewReason: null,
+      },
+      {
+        id: "PRT-004",
+        contactEmail: "lebaobab@courriel.bj",
+        legalName: "SARL Le Baobab",
+        tradeName: "Restaurant Le Baobab",
+        category: "restauration",
+        /* Dossier incomplet : l'identifiant fiscal manque. */
+        ifu: null,
+        serviceMode: "physical",
+        websiteUrl: null,
+        cityId: "VIL-ABC",
+        district: "Godomey",
+        addressLine: "Carrefour Toyota",
+        statut: "pending",
+        submittedAt: "2026-08-14T11:05:00.000Z",
+        reviewedBy: null,
+        reviewedAt: null,
+        reviewReason: null,
+      },
+      {
+        id: "PRT-005",
+        contactEmail: "pharmacie.sainte-rita@courriel.bj",
+        legalName: "Pharmacie Sainte-Rita",
+        tradeName: "Pharmacie Sainte-Rita",
+        category: "sante",
+        ifu: "3201901223344",
+        serviceMode: "both",
+        websiteUrl: "https://pharmacie-sainte-rita.bj",
+        cityId: "VIL-COT",
+        district: "Sainte-Rita",
+        addressLine: "3 boulevard Saint-Michel",
+        statut: "pending",
+        submittedAt: "2026-08-18T07:50:00.000Z",
+        reviewedBy: null,
+        reviewedAt: null,
+        reviewReason: null,
+      },
+      {
+        id: "PRT-006",
+        contactEmail: "cycles.du.zou@courriel.bj",
+        legalName: "Cycles du Zou",
+        tradeName: "Cycles du Zou",
+        category: "mobilite",
+        ifu: "3201901556677",
+        serviceMode: "physical",
+        websiteUrl: null,
+        cityId: "VIL-BOH",
+        district: null,
+        addressLine: "Marche Bohicon-centre",
+        statut: "pending",
+        submittedAt: "2026-08-22T16:20:00.000Z",
+        reviewedBy: null,
+        reviewedAt: null,
+        reviewReason: null,
+      },
+      {
+        id: "PRT-007",
+        contactEmail: "contact@kpanlingan.bj",
+        legalName: "Kpanlingan Numerique",
+        tradeName: "Librairie numerique Kpanlingan",
+        category: "culture",
+        ifu: "3201901889900",
+        /* Exclusivement en ligne : pas de ville, et c'est conforme
+           (`physical_needs_city`, :118). */
+        serviceMode: "online",
+        websiteUrl: "https://kpanlingan.bj",
+        cityId: null,
+        district: null,
+        addressLine: null,
+        statut: "pending",
+        submittedAt: "2026-08-27T10:00:00.000Z",
+        reviewedBy: null,
+        reviewedAt: null,
+        reviewReason: null,
+      },
+      {
+        id: "PRT-008",
+        contactEmail: "salle.tokpa@courriel.bj",
+        legalName: "Association Sportive Tokpa",
+        tradeName: "Salle de sport Tokpa",
+        category: "sport",
+        ifu: "3201902001122",
+        serviceMode: "physical",
+        websiteUrl: null,
+        cityId: "VIL-PAR",
+        district: "Zongo",
+        addressLine: "18 rue de l'Hippodrome",
+        statut: "pending",
+        submittedAt: "2026-09-01T09:30:00.000Z",
+        reviewedBy: null,
+        reviewedAt: null,
+        reviewReason: null,
+      },
+    ],
+    journal: [
+      {
+        id: "AUD-001",
+        actorId: "ADM-001",
+        action: "partner.approved",
+        entityType: "partner",
+        entityId: "PRT-001",
+        payload: { trade_name: "Boulangerie du Marche" },
+        ipAddress: null,
+        createdAt: "2026-07-15T10:30:00.000Z",
+      },
     ],
     jetons: new Map<Identifiant, JetonMagasin>(),
     paiements: [],
@@ -442,6 +731,146 @@ export function reglerJeton(
   };
   magasin.paiements.push(paiement);
   return paiement;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ADHESIONS PARTENAIRES
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+export function trouverVille(id: string): VilleMagasin | undefined {
+  return magasin.villes.find((ville) => ville.id === id);
+}
+
+export function trouverAdministrateur(id: string): AdministrateurMagasin | undefined {
+  return magasin.administrateurs.find((admin) => admin.id === id);
+}
+
+/**
+ * Les partenaires d'un statut donne, du plus ancien depot au plus recent.
+ *
+ * L'ordre est celui de la file d'attente : on traite d'abord ce qui attend
+ * depuis le plus longtemps. Le tri porte sur `(submittedAt, id)` — la paire
+ * que le curseur encapsule, pour que la pagination keyset soit stable meme si
+ * deux dossiers ont ete deposes a la meme seconde.
+ */
+export function partenairesParStatut(statut: StatutPartenaire): PartenaireMagasin[] {
+  return magasin.partenaires
+    .filter((partenaire) => partenaire.statut === statut)
+    .sort((a, b) =>
+      a.submittedAt === b.submittedAt
+        ? a.id.localeCompare(b.id)
+        : a.submittedAt.localeCompare(b.submittedAt),
+    );
+}
+
+export function trouverPartenaireParId(id: string): PartenaireMagasin | undefined {
+  return magasin.partenaires.find((partenaire) => partenaire.id === id);
+}
+
+/**
+ * Ajoute une entree au journal.
+ *
+ * En ajout seul : cette fonction est la SEULE a ecrire dans `magasin.journal`,
+ * et rien nulle part ne modifie ni ne retire une entree. C'est l'invariant I8
+ * (`data-model.md:132-140`), que la base tient par des declencheurs et que ce
+ * magasin tient par l'absence de code pour faire autrement.
+ *
+ * ⚠ Le vocabulaire des `action` est de NOTRE fait. La colonne est un `TEXT`
+ * libre (`0001_schema.sql:268`) et aucun document ne fixe les verbes. Retenu :
+ * `<entite>.<participe passe>`, soit `partner.approved` et `partner.rejected`.
+ */
+export function consignerAuJournal(entree: {
+  actorId: string | null;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  payload?: Record<string, unknown> | null;
+  quand: number;
+}): EntreeJournal {
+  const ligne: EntreeJournal = {
+    id: crypto.randomUUID(),
+    actorId: entree.actorId,
+    action: entree.action,
+    entityType: entree.entityType,
+    entityId: entree.entityId,
+    payload: entree.payload ?? null,
+    /* Les mocks n'ont pas de connexion reelle : pas d'adresse a consigner. */
+    ipAddress: null,
+    createdAt: new Date(entree.quand).toISOString(),
+  };
+  magasin.journal.push(ligne);
+  return ligne;
+}
+
+/** Le journal, du plus recent au plus ancien, filtre si demande. */
+export function lireJournal(filtre: {
+  entityType?: string;
+  entityId?: string;
+}): EntreeJournal[] {
+  return magasin.journal
+    .filter((ligne) => filtre.entityType === undefined || ligne.entityType === filtre.entityType)
+    .filter((ligne) => filtre.entityId === undefined || ligne.entityId === filtre.entityId)
+    .slice()
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export type EchecDecision = "introuvable" | "deja_tranchee" | "motif_manquant";
+
+/**
+ * Tranche une demande d'adhesion, et consigne la decision.
+ *
+ * `review.rs:1-2` : « approve(tx, admin, partner_id) et reject(tx, admin,
+ * partner_id, reason) : remplissent reviewed_by, reviewed_at et review_reason,
+ * et ecrivent dans audit_log ». Les trois champs et l'ecriture au journal sont
+ * donc solidaires — c'est une seule operation, pas deux.
+ *
+ * Deux refus que la route seule ne saurait pas porter :
+ *
+ *   - un dossier deja tranche ne se retranche pas. `reviewed_is_complete`
+ *     (:119-123) n'interdit pas la reecriture, mais l'invariant I9 le fait :
+ *     rien ne s'efface, une decision est un fait. La seconde decision est
+ *     refusee, pas empilee.
+ *   - un refus sans motif est refuse ICI, pas seulement a l'ecran. Le motif
+ *     est ce qui rend le refus opposable ; un refus sans motif n'en est pas un.
+ */
+export function trancherAdhesion(
+  partenaireId: string,
+  decision: "approved" | "rejected",
+  administrateurId: string,
+  motif: string | null,
+  maintenant: number,
+): { partenaire: PartenaireMagasin; entree: EntreeJournal } | { echec: EchecDecision } {
+  const partenaire = trouverPartenaireParId(partenaireId);
+  if (!partenaire) return { echec: "introuvable" };
+  if (partenaire.statut !== "pending") return { echec: "deja_tranchee" };
+
+  const motifNettoye = motif !== null && motif.trim() !== "" ? motif.trim() : null;
+  if (decision === "rejected" && motifNettoye === null) {
+    return { echec: "motif_manquant" };
+  }
+
+  /* `reviewed_by` et `reviewed_at` sont poses ensemble : c'est exactement ce
+     que verifie `reviewed_is_complete`. Une decision porte toujours son auteur
+     ET son horodatage. */
+  partenaire.statut = decision;
+  partenaire.reviewedBy = administrateurId;
+  partenaire.reviewedAt = new Date(maintenant).toISOString();
+  partenaire.reviewReason = motifNettoye;
+
+  const entree = consignerAuJournal({
+    actorId: administrateurId,
+    action: decision === "approved" ? "partner.approved" : "partner.rejected",
+    entityType: "partner",
+    entityId: partenaire.id,
+    payload: {
+      trade_name: partenaire.tradeName,
+      status: partenaire.statut,
+      reason: motifNettoye,
+    },
+    quand: maintenant,
+  });
+
+  return { partenaire, entree };
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

@@ -73,7 +73,9 @@ export async function POST(requete: Request): Promise<Response> {
   if (!partenaire) {
     return erreur(401, "UNAUTHORIZED", "Session absente ou expiree.");
   }
-  if (partenaire.statut !== "valide") {
+  /* Le magasin porte desormais l'ENUM du back (`partner_status`) et non
+     l'union francaise du domaine : `approved`, pas `valide`. */
+  if (partenaire.statut !== "approved") {
     return erreur(403, "PARTNER_NOT_APPROVED", "Cet etablissement n'est pas agree.");
   }
 
