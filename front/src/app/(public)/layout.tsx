@@ -1,3 +1,12 @@
+import { EnTetePublique } from "./EnTetePublique";
+import { PiedDePage } from "./PiedDePage";
+
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  return (
+    <>
+      <EnTetePublique />
+      <main>{children}</main>
+      <PiedDePage />
+    </>
+  );
 }

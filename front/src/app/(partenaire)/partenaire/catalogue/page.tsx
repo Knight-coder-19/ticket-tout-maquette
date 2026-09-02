@@ -1,6 +1,7 @@
-/**
- * Catalogue des autres partenaires.
- */
+import { CataloguePartenaire } from "./CataloguePartenaire";
+
+export const metadata = { title: "Catalogue" };
+
 export default function Page() {
-  return null;
+  return <CataloguePartenaire />;
 }

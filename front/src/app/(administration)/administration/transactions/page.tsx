@@ -1,6 +1,7 @@
-/**
- * Consultation et annulation par contre-ecriture. Jamais de suppression.
- */
+import { TransactionsNationales } from "./TransactionsNationales";
+
+export const metadata = { title: "Transactions" };
+
 export default function Page() {
-  return null;
+  return <TransactionsNationales />;
 }

@@ -1,6 +1,7 @@
-/**
- * Solde du salarie, formulation positive, mention de simulation.
- */
+import { Budget } from "./budget/Budget";
+
+export const metadata = { title: "Mon budget" };
+
 export default function Page() {
-  return null;
+  return <Budget />;
 }

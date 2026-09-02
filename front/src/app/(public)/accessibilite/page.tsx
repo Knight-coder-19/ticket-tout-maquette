@@ -1,6 +1,7 @@
-/**
- * Declaration d'accessibilite RGAA (F. Pontaillac).
- */
+import { Accessibilite } from "./Accessibilite";
+
+export const metadata = { title: "Accessibilité" };
+
 export default function Page() {
-  return null;
+  return <Accessibilite />;
 }

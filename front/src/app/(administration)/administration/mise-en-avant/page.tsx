@@ -1,6 +1,7 @@
-/**
- * Mise en avant de partenaires sur la page d'accueil.
- */
+import { MiseEnAvant } from "./MiseEnAvant";
+
+export const metadata = { title: "Sélection du Ministre" };
+
 export default function Page() {
-  return null;
+  return <MiseEnAvant />;
 }

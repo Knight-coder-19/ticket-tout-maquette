@@ -1,6 +1,7 @@
-/**
- * Creditation des comptes salaries par les employeurs.
- */
+import { Recharges } from "./Recharges";
+
+export const metadata = { title: "Rechargements" };
+
 export default function Page() {
-  return null;
+  return <Recharges />;
 }

@@ -1,6 +1,7 @@
-/**
- * Page d'accueil publique. Mise en avant decidee depuis l'espace administration.
- */
+import { Accueil } from "./accueil/Accueil";
+
+export const metadata = { title: "Accueil" };
+
 export default function Page() {
-  return null;
+  return <Accueil />;
 }

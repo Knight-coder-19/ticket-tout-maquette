@@ -1,8 +1,8 @@
-export default function NonTrouvee() {
-  // TODO: proposer un retour vers le catalogue des partenaires.
+export default function Introuvable() {
   return (
-    <main>
+    <section>
       <h1>Page introuvable</h1>
-    </main>
+      <p>Cette adresse ne correspond à aucun écran du dispositif.</p>
+    </section>
   );
 }

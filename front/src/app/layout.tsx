@@ -1,22 +1,15 @@
-import type { Metadata } from "next";
 import "@/styles/globals.css";
 
-/**
- * Le titre porte le nom affiche, jamais le nom de code interne.
- * Un nom de code dans un titre d'onglet est ce qui se retient d'un
- * passage televise (B. Sellami).
- */
-export const metadata: Metadata = {
-  title: "CartePro",
+export const metadata = {
+  title: {
+    default: "CartePro (simulation) — Ministère du Job et Bonheur",
+    template: "%s — CartePro (simulation)",
+  },
   description:
-    "Dispositif d'avantages salaries du Ministere du Job et Bonheur. Demonstrateur, simulation fonctionnelle.",
+    "Démonstrateur du dispositif CartePro. Simulation fonctionnelle : aucune valeur réelle ne circule.",
 };
 
-export default function RacineLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr">
       <body>{children}</body>

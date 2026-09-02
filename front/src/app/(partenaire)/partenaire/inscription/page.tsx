@@ -1,6 +1,7 @@
-/**
- * Inscription. SIREN et objet social obligatoires. Ecran de refus motive a prevoir.
- */
+import { InscriptionPartenaire } from "./InscriptionPartenaire";
+
+export const metadata = { title: "Demande d'adhésion" };
+
 export default function Page() {
-  return null;
+  return <InscriptionPartenaire />;
 }

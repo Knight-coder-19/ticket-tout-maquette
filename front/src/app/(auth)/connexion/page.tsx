@@ -1,6 +1,7 @@
-/**
- * Connexion. Trois roles : salarie, partenaire, administration.
- */
+import { Connexion } from "./Connexion";
+
+export const metadata = { title: "Connexion" };
+
 export default function Page() {
-  return null;
+  return <Connexion />;
 }

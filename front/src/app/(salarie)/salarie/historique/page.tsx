@@ -1,6 +1,7 @@
-/**
- * Historique des operations, avec les contre-ecritures visibles.
- */
+import { Historique } from "./Historique";
+
+export const metadata = { title: "Historique" };
+
 export default function Page() {
-  return null;
+  return <Historique />;
 }

@@ -1,6 +1,7 @@
-/**
- * Catalogue public, paginé, filtrable par categorie.
- */
+import { CataloguePublic } from "./CataloguePublic";
+
+export const metadata = { title: "Partenaires référencés" };
+
 export default function Page() {
-  return null;
+  return <CataloguePublic />;
 }

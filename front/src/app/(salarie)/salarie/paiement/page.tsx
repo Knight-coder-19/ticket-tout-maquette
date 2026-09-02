@@ -1,6 +1,7 @@
-/**
- * Code de paiement, compte a rebours, regeneration.
- */
+import { Paiement } from "./Paiement";
+
+export const metadata = { title: "Payer" };
+
 export default function Page() {
-  return null;
+  return <Paiement />;
 }

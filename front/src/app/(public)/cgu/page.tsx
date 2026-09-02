@@ -1,6 +1,7 @@
-/**
- * CGU. Doivent refleter le comportement reel du code.
- */
+import { ConditionsGenerales } from "./ConditionsGenerales";
+
+export const metadata = { title: "Conditions générales" };
+
 export default function Page() {
-  return null;
+  return <ConditionsGenerales />;
 }

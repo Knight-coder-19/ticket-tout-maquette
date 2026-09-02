@@ -1,6 +1,7 @@
-/**
- * Tableau de bord partenaire. Badge partenaire officiel.
- */
+import { TableauDeBordPartenaire } from "./tableau-de-bord/TableauDeBordPartenaire";
+
+export const metadata = { title: "Tableau de bord" };
+
 export default function Page() {
-  return null;
+  return <TableauDeBordPartenaire />;
 }

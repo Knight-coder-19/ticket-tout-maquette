@@ -1,11 +1,19 @@
 "use client";
 
-export default function Erreur({ reset }: { reset: () => void }) {
-  // TODO: message expliquant ce qui s'est passe et comment le corriger.
+export default function Erreur({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
   return (
-    <main>
+    <section role="alert">
       <h1>Une erreur est survenue</h1>
-      <button onClick={reset}>Reessayer</button>
-    </main>
+      <p>{error.message}</p>
+      <button type="button" onClick={reset}>
+        Réessayer
+      </button>
+    </section>
   );
 }

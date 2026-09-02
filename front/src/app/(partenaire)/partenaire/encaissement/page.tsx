@@ -1,6 +1,7 @@
-/**
- * Encaissement par scan ou saisie. Cle d'idempotence obligatoire.
- */
+import { Encaissement } from "./Encaissement";
+
+export const metadata = { title: "Encaisser" };
+
 export default function Page() {
-  return null;
+  return <Encaissement />;
 }

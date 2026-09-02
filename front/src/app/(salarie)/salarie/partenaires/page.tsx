@@ -1,6 +1,7 @@
-/**
- * Recherche de partenaires par categorie et localisation.
- */
+import { PartenairesSalarie } from "./PartenairesSalarie";
+
+export const metadata = { title: "Partenaires" };
+
 export default function Page() {
-  return null;
+  return <PartenairesSalarie />;
 }
