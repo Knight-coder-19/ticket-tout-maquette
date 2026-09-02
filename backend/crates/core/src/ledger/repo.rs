@@ -23,7 +23,6 @@ pub async fn advisory_chain_lock(conn: &mut PgConnection, key: i64) -> Result<()
         .await?;
     Ok(())
 }
-
 pub async fn find_account(
     conn: &mut PgConnection,
     id: AccountId,

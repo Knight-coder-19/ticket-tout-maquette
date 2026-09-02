@@ -1,0 +1,603 @@
+<title>The Eighteen Tables of CartePro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root {
+    --ground: #eef2f0;
+    --surface: #ffffff;
+    --ink: #121a17;
+    --ink-soft: #4c5c56;
+    --ink-faint: #7a8a84;
+    --rule: #d6dedb;
+    --rule-strong: #b9c5c0;
+    --accent: #1b5748;
+    --accent-soft: #dfeae6;
+    --seal: #6f5c2a;
+    --seal-soft: #f0e9d6;
+
+    --display: "Zilla Slab", Georgia, "Times New Roman", serif;
+    --body: "Source Sans 3", "Segoe UI", Helvetica, Arial, sans-serif;
+    --mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
+    --measure: 68ch;
+    --page: 1120px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0e1413;
+      --surface: #151d1b;
+      --ink: #e0e7e4;
+      --ink-soft: #9db0aa;
+      --ink-faint: #71827c;
+      --rule: #253230;
+      --rule-strong: #33443f;
+      --accent: #66b6a0;
+      --accent-soft: #172a25;
+      --seal: #c4a662;
+      --seal-soft: #2a2414;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #0e1413;
+    --surface: #151d1b;
+    --ink: #e0e7e4;
+    --ink-soft: #9db0aa;
+    --ink-faint: #71827c;
+    --rule: #253230;
+    --rule-strong: #33443f;
+    --accent: #66b6a0;
+    --accent-soft: #172a25;
+    --seal: #c4a662;
+    --seal-soft: #2a2414;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: var(--page);
+    margin: 0 auto;
+    padding: 56px 28px 96px;
+    display: flex;
+    flex-direction: column;
+    gap: 54px;
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0;
+  }
+
+  h1 {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: clamp(34px, 5.2vw, 52px);
+    line-height: 1.05;
+    letter-spacing: -0.015em;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  .masthead { display: flex; flex-direction: column; gap: 16px; }
+
+  .lede { max-width: var(--measure); font-size: 18px; color: var(--ink-soft); margin: 0; }
+  .lede strong { color: var(--ink); font-weight: 600; }
+
+  .counts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    margin-top: 6px;
+  }
+
+  .counts div {
+    padding: 14px 26px 14px 0;
+    margin-right: 26px;
+    border-right: 1px solid var(--rule);
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .counts div:last-child { border-right: none; margin-right: 0; padding-right: 0; }
+
+  .counts b {
+    font-family: var(--display);
+    font-size: 27px;
+    font-weight: 600;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .counts span { font-size: 13px; color: var(--ink-faint); }
+
+  section { display: flex; flex-direction: column; gap: 0; }
+
+  .section-head {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 18px;
+    border-bottom: 2px solid var(--rule-strong);
+  }
+
+  .section-head .path {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  .section-head h2 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 26px;
+    line-height: 1.15;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+
+  .section-head p { margin: 0; max-width: var(--measure); color: var(--ink-soft); font-size: 15.5px; }
+
+  figure {
+    margin: 30px 0 0;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 26px 26px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-x: auto;
+  }
+
+  figure svg { display: block; width: 100%; min-width: 620px; height: auto; color: var(--ink-soft); }
+
+  .fig text { font-family: var(--mono); fill: currentColor; }
+  .t-box { font-size: 13px; font-weight: 500; }
+  .t-sub { font-size: 10px; }
+  .t-edge { font-size: 10.5px; }
+  .t-note { font-size: 11px; font-family: var(--body); font-style: italic; }
+  .box { fill: none; stroke: currentColor; stroke-width: 1.2; }
+  .box-pivot { stroke: var(--accent); stroke-width: 2; }
+  .edge { stroke: currentColor; stroke-width: 1.2; fill: none; }
+  .edge-soft { stroke: currentColor; stroke-width: 1.2; fill: none; stroke-dasharray: 4 4; }
+  .accent-text { fill: var(--accent); }
+  .group { fill: none; stroke: currentColor; stroke-width: 1; stroke-dasharray: 3 4; }
+
+  figcaption { font-size: 14.5px; color: var(--ink-soft); max-width: var(--measure); }
+  figcaption strong { color: var(--ink); font-weight: 600; }
+
+  .figlegend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    font-size: 12.5px;
+    color: var(--ink-faint);
+    border-top: 1px solid var(--rule);
+    padding-top: 12px;
+  }
+
+  .figlegend span { display: inline-flex; align-items: center; gap: 7px; }
+
+  .swatch { width: 20px; height: 12px; border: 2px solid var(--accent); border-radius: 2px; }
+  .swatch.seal { border: 1.2px solid currentColor; box-shadow: inset 0 0 0 1px var(--surface), inset 0 0 0 2.2px currentColor; }
+  .swatch.dash { border: 1.2px dashed currentColor; }
+
+  .tables { display: flex; flex-direction: column; }
+
+  .row {
+    display: grid;
+    grid-template-columns: 210px 1fr;
+    gap: 6px 26px;
+    padding: 15px 0 16px;
+    border-bottom: 1px solid var(--rule);
+    align-items: baseline;
+  }
+
+  .row .tname { font-family: var(--mono); font-size: 13.5px; font-weight: 500; overflow-wrap: anywhere; }
+  .row p { margin: 0; font-size: 15.5px; color: var(--ink-soft); max-width: var(--measure); }
+  .row p em { color: var(--ink); font-style: italic; }
+  .row p + p { margin-top: 7px; }
+
+  .guard {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--seal);
+    background: var(--seal-soft);
+    padding: 2px 7px;
+    border-radius: 3px;
+    display: inline-block;
+  }
+
+  .subhead {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    padding: 28px 0 8px;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .note {
+    background: var(--accent-soft);
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px;
+    margin-top: 24px;
+    border-radius: 0 3px 3px 0;
+  }
+
+  .note p { margin: 0; font-size: 15px; color: var(--ink-soft); max-width: var(--measure); }
+  .note p + p { margin-top: 9px; }
+  .note strong { color: var(--ink); font-weight: 600; }
+
+  code { font-family: var(--mono); font-size: 0.86em; color: var(--ink); }
+
+  footer {
+    border-top: 1px solid var(--rule);
+    padding-top: 20px;
+    font-size: 14px;
+    color: var(--ink-faint);
+    max-width: var(--measure);
+  }
+
+  @media (max-width: 760px) {
+    .row { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="page">
+
+  <header class="masthead">
+    <p class="eyebrow">CartePro · migrations/0001_schema.sql · September 2026</p>
+    <h1>The Eighteen Tables of CartePro</h1>
+    <p class="lede">The schema does not describe tables, it lays down rules. This map shows <strong>how the tables hang off one another</strong> and, for each, the guarantee it carries — the one that would be lost if it were removed.</p>
+    <div class="counts">
+      <div><b>18</b><span>tables</span></div>
+      <div><b>13</b><span>enumerations</span></div>
+      <div><b>30</b><span>foreign keys</span></div>
+      <div><b>19</b><span>CHECK constraints</span></div>
+      <div><b>5</b><span>partial unique indexes</span></div>
+      <div><b>3</b><span>append-only tables</span></div>
+    </div>
+  </header>
+
+  <section>
+    <div class="section-head">
+      <p class="path">users · employees · employers · employment_links · partners → accounts</p>
+      <h2>First pivot: everyone ends up on an account</h2>
+      <p>Two paths lead to <code>accounts</code>, one per kind of actor, and they do not look alike. A merchant owns their account outright, from registration. A member of staff does not: it is their <em>employment link</em> that carries one, which is what allows it to be closed when they change employer without erasing their history.</p>
+    </div>
+
+    <figure>
+      <svg class="fig" viewBox="0 0 960 390" role="img" aria-label="Two paths lead to the accounts table: users to employees to employment_links to accounts, and users to partners directly to accounts. System accounts have no owner.">
+        <defs>
+          <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <polygon points="0,1 10,5 0,9" fill="currentColor"></polygon>
+          </marker>
+        </defs>
+
+        <rect class="box" x="20" y="40" width="170" height="50" rx="3"></rect>
+        <text class="t-box" x="105" y="63" text-anchor="middle">users</text>
+        <text class="t-sub" x="105" y="79" text-anchor="middle">email · role · status</text>
+
+        <rect class="box" x="270" y="40" width="170" height="50" rx="3"></rect>
+        <text class="t-box" x="355" y="63" text-anchor="middle">employees</text>
+        <text class="t-sub" x="355" y="79" text-anchor="middle">name · phone</text>
+
+        <rect class="box" x="20" y="160" width="170" height="50" rx="3"></rect>
+        <text class="t-box" x="105" y="183" text-anchor="middle">employers</text>
+        <text class="t-sub" x="105" y="199" text-anchor="middle">administrations</text>
+
+        <rect class="box" x="270" y="160" width="200" height="50" rx="3"></rect>
+        <text class="t-box" x="370" y="183" text-anchor="middle">employment_links</text>
+        <text class="t-sub" x="370" y="199" text-anchor="middle">staff number · one active</text>
+
+        <rect class="box" x="270" y="290" width="170" height="50" rx="3"></rect>
+        <text class="t-box" x="355" y="313" text-anchor="middle">partners</text>
+        <text class="t-sub" x="355" y="329" text-anchor="middle">status · town · mode</text>
+
+        <rect class="box box-pivot" x="700" y="160" width="190" height="50" rx="3"></rect>
+        <text class="t-box accent-text" x="795" y="183" text-anchor="middle">accounts</text>
+        <text class="t-sub accent-text" x="795" y="199" text-anchor="middle">settled · held · version</text>
+
+        <rect class="group" x="700" y="252" width="190" height="62" rx="3"></rect>
+        <text class="t-sub" x="795" y="272" text-anchor="middle">system accounts · owner_id NULL</text>
+        <text class="t-sub" x="795" y="288" text-anchor="middle">MINISTRY_ISSUANCE</text>
+        <text class="t-sub" x="795" y="303" text-anchor="middle">CLOSURE_FORFEIT</text>
+        <line class="edge-soft" x1="795" y1="210" x2="795" y2="252"></line>
+
+        <line class="edge" x1="190" y1="65" x2="262" y2="65" marker-end="url(#a1)"></line>
+        <text class="t-edge" x="226" y="57" text-anchor="middle">user_id</text>
+
+        <polyline class="edge" points="105,90 105,315 262,315" marker-end="url(#a1)"></polyline>
+        <text class="t-edge" x="184" y="307" text-anchor="middle">user_id</text>
+
+        <line class="edge" x1="355" y1="90" x2="355" y2="152" marker-end="url(#a1)"></line>
+        <text class="t-edge" x="365" y="125" text-anchor="start">employee_id</text>
+
+        <line class="edge" x1="190" y1="185" x2="262" y2="185" marker-end="url(#a1)"></line>
+        <text class="t-edge" x="226" y="177" text-anchor="middle">employer_id</text>
+
+        <line class="edge" x1="470" y1="185" x2="692" y2="185" marker-end="url(#a1)"></line>
+        <text class="t-edge" x="581" y="177" text-anchor="middle">account_id</text>
+
+        <polyline class="edge" points="440,315 600,315 600,200 692,200" marker-end="url(#a1)"></polyline>
+        <text class="t-edge" x="520" y="307" text-anchor="middle">account_id · unique</text>
+      </svg>
+      <figcaption>Each arrow starts at the table being cited and points at the one citing it; the label names the column carrying the link. <strong><code>accounts.owner_id</code> deliberately has no foreign key</strong>: the owner is sometimes a member of staff, sometimes a merchant, sometimes nobody. A foreign key would have required a single table of owners, and the two system accounts would have had no place in it.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <p class="path">ledger_operations · ledger_entries · payments · topups · compensations</p>
+      <h2>Second pivot: nothing moves without an operation</h2>
+      <p>Every sum that moves creates one row in <code>ledger_operations</code> and exactly two in <code>ledger_entries</code>. Everything else — a payment, a top-up, a reversal — is only a <em>supporting document</em> hung off that operation: it says who, why and under what circumstances, never how much.</p>
+    </div>
+
+    <figure>
+      <svg class="fig" viewBox="0 0 1040 480" role="img" aria-label="Ledger entries link an account to an operation. Payments, top-ups and compensations are supporting documents whose primary key is the operation identifier. A payment token links an account to a payment, and the uniqueness constraint on token_jti guarantees it is settled only once.">
+        <defs>
+          <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <polygon points="0,1 10,5 0,9" fill="currentColor"></polygon>
+          </marker>
+        </defs>
+
+        <rect class="box" x="20" y="70" width="180" height="54" rx="3"></rect>
+        <text class="t-box" x="110" y="94" text-anchor="middle">payment_tokens</text>
+        <text class="t-sub" x="110" y="111" text-anchor="middle">amount · code · expiry</text>
+
+        <rect class="box box-pivot" x="20" y="210" width="180" height="54" rx="3"></rect>
+        <text class="t-box accent-text" x="110" y="234" text-anchor="middle">accounts</text>
+        <text class="t-sub accent-text" x="110" y="251" text-anchor="middle">the balance, cached</text>
+
+        <rect class="box" x="280" y="210" width="210" height="54" rx="3"></rect>
+        <rect class="box" x="283.5" y="213.5" width="203" height="47" rx="2"></rect>
+        <text class="t-box" x="385" y="234" text-anchor="middle">ledger_entries</text>
+        <text class="t-sub" x="385" y="251" text-anchor="middle">2 per operation · chained</text>
+
+        <rect class="box box-pivot" x="580" y="210" width="210" height="54" rx="3"></rect>
+        <rect class="box box-pivot" x="583.5" y="213.5" width="203" height="47" rx="2"></rect>
+        <text class="t-box accent-text" x="685" y="234" text-anchor="middle">ledger_operations</text>
+        <text class="t-sub accent-text" x="685" y="251" text-anchor="middle">kind · amount · dates</text>
+
+        <rect class="group" x="840" y="55" width="185" height="345" rx="4"></rect>
+        <text class="t-sub" x="932" y="76" text-anchor="middle">supporting documents</text>
+        <text class="t-sub" x="932" y="391" text-anchor="middle">primary key = operation_id</text>
+
+        <rect class="box" x="857" y="92" width="152" height="48" rx="3"></rect>
+        <text class="t-box" x="933" y="114" text-anchor="middle">payments</text>
+        <text class="t-sub" x="933" y="130" text-anchor="middle">who took it in</text>
+
+        <rect class="box" x="857" y="213" width="152" height="48" rx="3"></rect>
+        <text class="t-box" x="933" y="235" text-anchor="middle">topups</text>
+        <text class="t-sub" x="933" y="251" text-anchor="middle">who funded it</text>
+
+        <rect class="box" x="857" y="330" width="152" height="48" rx="3"></rect>
+        <text class="t-box" x="933" y="352" text-anchor="middle">compensations</text>
+        <text class="t-sub" x="933" y="368" text-anchor="middle">which error undone</text>
+
+        <rect class="box" x="580" y="352" width="210" height="48" rx="3"></rect>
+        <text class="t-box" x="685" y="374" text-anchor="middle">topup_batches</text>
+        <text class="t-sub" x="685" y="390" text-anchor="middle">payroll file · digest</text>
+
+        <line class="edge" x1="272" y1="237" x2="208" y2="237" marker-end="url(#a2)"></line>
+        <text class="t-edge" x="240" y="228" text-anchor="middle">account_id</text>
+
+        <line class="edge" x1="498" y1="237" x2="572" y2="237" marker-end="url(#a2)"></line>
+        <text class="t-edge" x="535" y="228" text-anchor="middle">operation_id</text>
+
+        <line class="edge" x1="832" y1="237" x2="798" y2="237" marker-end="url(#a2)"></line>
+
+        <line class="edge" x1="110" y1="132" x2="110" y2="202" marker-end="url(#a2)"></line>
+        <text class="t-edge" x="120" y="171" text-anchor="start">account_id</text>
+
+        <polyline class="edge" points="933,84 933,30 110,30 110,62" marker-end="url(#a2)"></polyline>
+        <text class="t-edge" x="521" y="22" text-anchor="middle">token_jti · unique — a token is settled once and only once</text>
+
+        <polyline class="edge-soft" points="933,269 933,430 685,430 685,408" marker-end="url(#a2)"></polyline>
+        <text class="t-edge" x="810" y="444" text-anchor="middle">batch_id · optional</text>
+      </svg>
+      <div class="figlegend">
+        <span><i class="swatch"></i> pivot: every money write goes through it</span>
+        <span><i class="swatch seal"></i> double rule: append-only table, <code>UPDATE</code> and <code>DELETE</code> refused</span>
+        <span><i class="swatch dash"></i> dashed: optional link</span>
+      </div>
+      <figcaption><strong>A supporting document's primary key <em>is</em> its operation's identifier.</strong> That single choice buys two guarantees: a document cannot exist without the money movement that justifies it, and an operation cannot carry two. No code has to check either one.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <p class="path">ledger_entries.prev_hash · ledger_entries.hash</p>
+      <h2>What makes tampering detectable</h2>
+      <p>Entries are not merely forbidden to change: they seal one another. Each carries the digest of the one before it, and its own digest is computed over its fields <em>plus</em> that one.</p>
+    </div>
+
+    <figure>
+      <svg class="fig" viewBox="0 0 940 250" role="img" aria-label="Hash chain: each entry's digest feeds into the digest of the next. The first hangs off GENESIS_HASH. The debit and credit of one operation are chained to each other.">
+        <defs>
+          <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <polygon points="0,1 10,5 0,9" fill="currentColor"></polygon>
+          </marker>
+        </defs>
+
+        <polyline class="edge" points="180,52 180,38 635,38 635,52"></polyline>
+        <text class="t-note" x="407" y="28" text-anchor="middle">one operation · double entry</text>
+        <text class="t-note" x="775" y="28" text-anchor="middle">next operation</text>
+
+        <rect class="group" x="20" y="95" width="112" height="58" rx="3"></rect>
+        <text class="t-sub" x="76" y="120" text-anchor="middle">GENESIS_HASH</text>
+        <text class="t-sub" x="76" y="136" text-anchor="middle">32 zero bytes</text>
+
+        <rect class="box" x="180" y="60" width="210" height="120" rx="3"></rect>
+        <rect class="box" x="183.5" y="63.5" width="203" height="113" rx="2"></rect>
+        <text class="t-box" x="194" y="86">seq 1 · debit</text>
+        <text class="t-sub" x="194" y="103">staff account</text>
+        <line class="edge" x1="184" y1="117" x2="386" y2="117" stroke-opacity="0.35"></line>
+        <text class="t-sub" x="194" y="140">prev_hash</text>
+        <text class="t-sub" x="194" y="164">hash</text>
+
+        <rect class="box" x="425" y="60" width="210" height="120" rx="3"></rect>
+        <rect class="box" x="428.5" y="63.5" width="203" height="113" rx="2"></rect>
+        <text class="t-box" x="439" y="86">seq 2 · credit</text>
+        <text class="t-sub" x="439" y="103">merchant account</text>
+        <line class="edge" x1="429" y1="117" x2="631" y2="117" stroke-opacity="0.35"></line>
+        <text class="t-sub" x="439" y="140">prev_hash</text>
+        <text class="t-sub" x="439" y="164">hash</text>
+
+        <rect class="box" x="670" y="60" width="210" height="120" rx="3"></rect>
+        <rect class="box" x="673.5" y="63.5" width="203" height="113" rx="2"></rect>
+        <text class="t-box" x="684" y="86">seq 3 · debit</text>
+        <text class="t-sub" x="684" y="103">next account</text>
+        <line class="edge" x1="674" y1="117" x2="876" y2="117" stroke-opacity="0.35"></line>
+        <text class="t-sub" x="684" y="140">prev_hash</text>
+        <text class="t-sub" x="684" y="164">hash</text>
+
+        <line class="edge" x1="132" y1="124" x2="172" y2="136" marker-end="url(#a3)"></line>
+        <line class="edge" x1="392" y1="160" x2="417" y2="138" marker-end="url(#a3)"></line>
+        <line class="edge" x1="637" y1="160" x2="662" y2="138" marker-end="url(#a3)"></line>
+
+        <text class="t-note" x="470" y="215" text-anchor="middle">rewriting entry 1 forces 2 and then 3 to be recomputed — which the database triggers refuse</text>
+      </svg>
+      <figcaption>An entry's digest is a SHA-256 over its fields — sequence number, operation, account, direction, amount, recording instant — <strong>and over the preceding digest</strong>. The debit and credit of one operation are therefore chained to each other, not merely to what came before them. <code>verify_chain</code> replays that computation and returns the sequence number of the first row that no longer adds up.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <p class="path">the eighteen tables, by what they guarantee</p>
+      <h2>What each table carries</h2>
+      <p>Grouped not by feature but by regime: what may be modified freely, what may never be modified, and what gets marked instead of deleted.</p>
+    </div>
+
+    <p class="subhead">reference data and identity — modifiable, never deleted</p>
+    <div class="tables">
+      <div class="row">
+        <div class="tname">cities</div>
+        <p>The register of towns, populated by migration <code>0002</code>. Deliberately closed: if the town were free text, "Lyon" and "lyon" would be two towns and the catalogue filter would never return anything trustworthy.</p>
+      </div>
+      <div class="row">
+        <div class="tname">users</div>
+        <p>The sign-in account: email, password digest, role, status. The email is <code>CITEXT</code>, so unique regardless of case — otherwise two accounts could exist for the same person.</p>
+        <p><span class="guard">one role per user</span></p>
+      </div>
+      <div class="row">
+        <div class="tname">employers</div>
+        <p>The administrations that fund their staff's cards. Kept apart from users because an employer is not someone who signs in: it is a legal entity, and its access goes through <code>api_clients</code>.</p>
+      </div>
+      <div class="row">
+        <div class="tname">employees</div>
+        <p>The civil identity of a member of staff — surname, first name, phone. Distinct from <code>users</code> because that information outlives the sign-in account and must not be duplicated if someone changes email address.</p>
+      </div>
+      <div class="row">
+        <div class="tname">employment_links</div>
+        <p>The link between a member of staff and an administration: their staff number there, and the account that goes with it. This is where changing employer plays out — the old link moves to <code>ended</code>, a new one is born, and the history stays whole.</p>
+        <p><span class="guard">one active link per person</span> <span class="guard">staff number unique per employer, among active links</span></p>
+      </div>
+      <div class="row">
+        <div class="tname">partners</div>
+        <p>The merchant: legal name, trading name, category, review status, town and service mode. An online business has no town, a physical one must have one — otherwise it would appear in no filter and be invisible forever.</p>
+        <p><span class="guard">physical ⇒ town required</span> <span class="guard">reviewed ⇒ reviewer and date recorded</span></p>
+      </div>
+      <div class="row">
+        <div class="tname">partner_highlights</div>
+        <p>The features chosen by the ministry, with their placement and position. Removing one records <code>removed_at</code> and never deletes the row: who put which shop in the window, and when, is exactly what an audit can ask for.</p>
+        <p><span class="guard">one shop once per placement</span> <span class="guard">one position once per placement</span></p>
+      </div>
+      <div class="row">
+        <div class="tname">sessions</div>
+        <p>Open sessions. The token is <em>hashed</em> here; the clear value lives only in the browser cookie, so a stolen database opens nobody's session. Revocation records a date, it does not erase the row.</p>
+      </div>
+      <div class="row">
+        <div class="tname">api_clients</div>
+        <p>Machine credentials for the administrations' HR systems. Kept apart from human users because they authenticate differently — no cookie, a hashed secret — and are rate-limited differently.</p>
+      </div>
+    </div>
+
+    <p class="subhead">the money — the account, then the ledger</p>
+    <div class="tables">
+      <div class="row">
+        <div class="tname">accounts</div>
+        <p>The pivot of the system. <code>balance_settled</code> is the balance, <code>balance_held</code> is what tokens in circulation have reserved, and the available amount is the difference. The stored balance is a <em>cache</em>: the ledger remains the truth, and <code>recompute_balance</code> exists to prove the two agree.</p>
+        <p><span class="guard">balance ≥ 0 except system accounts</span> <span class="guard">held ≥ 0</span> <span class="guard">held ≤ balance</span></p>
+      </div>
+      <div class="row">
+        <div class="tname">ledger_operations</div>
+        <p>One movement of money: its kind, its amount, when it happened and when it was recorded. The two dates are distinct because a payment taken offline is scanned at one moment and transmitted at another.</p>
+        <p><span class="guard">amount strictly positive</span> <span class="guard">append-only</span></p>
+      </div>
+      <div class="row">
+        <div class="tname">ledger_entries</div>
+        <p>Two rows per operation, a debit and a credit of the same amount, chained by digest. This is the table that makes the system auditable: we do not ask the code to be honest, we prove it by replaying the chain.</p>
+        <p><span class="guard">digests exactly 32 bytes</span> <span class="guard">digest unique</span> <span class="guard">append-only</span></p>
+      </div>
+    </div>
+
+    <p class="subhead">the supporting documents — primary key = operation_id</p>
+    <div class="tables">
+      <div class="row">
+        <div class="tname">payment_tokens</div>
+        <p>The promise of payment, before it becomes an operation: amount, fallback short code, expiry, status. It is the only table that exists <em>between</em> the two moments of a payment, and it is its amount that <code>balance_held</code> immobilises meanwhile.</p>
+        <p><span class="guard">expiry after issue</span> <span class="guard">one active short code at a time</span> <span class="guard">resolved ⇒ resolution date</span></p>
+      </div>
+      <div class="row">
+        <div class="tname">payments</div>
+        <p>The settlement: which token, which merchant, which entry mode, when scanned and when synchronised. The uniqueness of <code>token_jti</code> <em>is</em> the protection against double settlement — and it holds even if two merchants scan the same QR code at the same instant.</p>
+        <p><span class="guard">a token settled only once</span></p>
+      </div>
+      <div class="row">
+        <div class="tname">topups</div>
+        <p>The top-up: which employer, which account credited, which payroll reference. The money comes from the <code>MINISTRY_ISSUANCE</code> system account, whose negative balance measures the total issued.</p>
+      </div>
+      <div class="row">
+        <div class="tname">topup_batches</div>
+        <p>The payroll file that was uploaded, with its digest. The digest is what refuses a duplicate upload of the same file — the most useful protection in a bulk import, because re-uploading a file by mistake is the easiest thing in the world to do.</p>
+        <p><span class="guard">one file once per employer</span></p>
+      </div>
+      <div class="row">
+        <div class="tname">compensations</div>
+        <p>The reversal: the operation that corrects another, with the reason and the administrator who approved it. In an immutable ledger you do not cancel an error, you post its inverse and keep both traces.</p>
+        <p><span class="guard">an operation cannot compensate itself</span></p>
+      </div>
+    </div>
+
+    <p class="subhead">the trail</p>
+    <div class="tables">
+      <div class="row">
+        <div class="tname">audit_log</div>
+        <p>Who did what, when, from which address. Append-only like the ledger: these are the two tables that cannot be rewritten, one for the money, one for administrative decisions.</p>
+        <p><span class="guard">append-only</span></p>
+      </div>
+    </div>
+
+    <div class="note">
+      <p><strong>Immutability is laid down in two layers, and that is deliberate.</strong> The application role <code>cartepro_app</code> is denied the <code>UPDATE</code>, <code>DELETE</code> and <code>TRUNCATE</code> privileges on the three append-only tables. The database owner, however, bypasses privileges — hence the second layer, the <code>forbid_mutation()</code> function and its triggers, which raise an exception whoever issued the statement.</p>
+      <p>That is what test I8 checks: it connects as the owner, attempts a direct <code>UPDATE</code>, and expects an error.</p>
+    </div>
+  </section>
+
+  <footer>
+    <p>Drawn from <code>backend/migrations/0001_schema.sql</code> and invariants I1 to I9 in <code>docs/data-model.md</code>. The constraints quoted are the ones actually present in the migration, not the ones planned.</p>
+  </footer>
+
+</div>
