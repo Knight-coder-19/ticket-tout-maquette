@@ -73,6 +73,21 @@
   --couleur-simulation-filet: var(--couleur-simulation);
 
   /* ── Dimensions de la coquille d'administration ────────────────────── */
+
+  /* -- Ecran de validation des adhesions ---------------------------------
+     Fonds nouveaux, contrastes mesures et notes en regard. */
+  --couleur-carte-fond: var(--couleur-fond);
+  --couleur-carte-bordure: var(--couleur-bordure);        /* filet decoratif, 1,39:1 -- voir validations.css */
+  --couleur-champ-bordure: #758498;                       /* 3,81:1 : bordure de CONTROLE, seuil 3:1 */
+
+  --couleur-action-texte: var(--couleur-fond);            /* 6,50:1 sur --couleur-action */
+  --couleur-alerte-fond: #fbeeea;                         /* 6,17:1 pour --couleur-alerte */
+  --couleur-succes-fond: #e8f3ef;                         /* 5,73:1 pour --couleur-succes */
+
+  /* Voile du dialogue modal. Teinte du bleu institutionnel, pas un noir pur :
+     un voile neutre sur une charte bleue vire au gris sale. */
+  --couleur-voile: rgb(18 41 76 / 55%);
+
   --largeur-rail: 17rem;
 
   --largeur-contenu: 72ch;

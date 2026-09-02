@@ -747,3 +747,39 @@ export type SirhBalance = {
   currency: string;
   as_of: string;
 };
+
+/* ===========================================================================
+ * 10. NOTRE PROPOSITION -- pas le contrat du back
+ * =========================================================================== */
+
+/**
+ * Une ligne du journal des decisions.
+ *
+ * ATTENTION : le back n'expose AUCUNE route de lecture d'`audit_log`. Le
+ * journal, lui, est bien le sien -- table `audit_log`
+ * (`0001_schema.sql:265-274`), alimentee par `review.rs:1-2`, et decrite
+ * « consultee par l'administration » (`data-dictionary.md:300`). Mais la
+ * section 4.7 n'en sert aucune ligne : la seule route d'audit du contrat est
+ * `GET /admin/audit/verify` (:575-580), qui rend une verification de chaine,
+ * pas un journal.
+ *
+ * Les champs ci-dessous sont donc les COLONNES de leur table, en snake_case
+ * (`data-dictionary.md:304`), servies par une route que nous proposons. A
+ * confirmer avec l'equipe back avant que quoi que ce soit s'y appuie
+ * durablement.
+ */
+export type LigneJournal = {
+  id: string;
+  actor_id: string | null;
+  /** Verbe libre. Le notre : `partner.approved`, `partner.rejected`. */
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  payload: Record<string, unknown> | null;
+  ip_address: string | null;
+  created_at: string;
+};
+
+/** Enveloppe de la meme route. `Paginated<T>` du contrat (:319-322). */
+export type JournalList = Paginated<LigneJournal>;
+

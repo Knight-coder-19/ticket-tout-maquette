@@ -35,19 +35,38 @@ import { ErreurService } from "@/types/erreurs";
  * appellera. Rendre `undefined` en silence serait précisément le « objet vide
  * sur un échec » qu'on refuse.
  */
-export async function appelApi<T>(
-  chemin: string,
-  options: RequestInit = {},
-): Promise<T> {
-  let reponse: Response;
+/** Le seul `fetch` du front. Tout échec de transport devient `"reseau"`. */
+async function joindre(chemin: string, options: RequestInit): Promise<Response> {
   try {
-    reponse = await fetch(`${env.baseApi}${chemin}`, options);
+    return await fetch(`${env.baseApi}${chemin}`, options);
   } catch {
     /* Le réseau a lâché. On ne sait pas si le serveur a écrit ou non : c'est
        précisément pourquoi la clé d'idempotence existe, et pourquoi elle ne
        doit pas changer si le caissier réessaie. */
     throw new ErreurService("reseau", "Le service est injoignable.");
   }
+}
+
+/**
+ * Construit l'erreur d'une réponse non-ok.
+ *
+ * La lecture des deux formes d'erreur du back vit dans les adaptateurs, et
+ * n'est pas réécrite ici. `depuisErreur` accepte `undefined` : un corps
+ * illisible donne alors le code « inconnu » et le message par défaut.
+ */
+async function erreurDe(reponse: Response): Promise<ErreurService> {
+  try {
+    return depuisErreur(await reponse.json(), reponse.status);
+  } catch {
+    return depuisErreur(undefined, reponse.status);
+  }
+}
+
+export async function appelApi<T>(
+  chemin: string,
+  options: RequestInit = {},
+): Promise<T> {
+  const reponse = await joindre(chemin, options);
 
   let corps: unknown;
   let corpsLisible = true;
@@ -60,10 +79,9 @@ export async function appelApi<T>(
   }
 
   if (!reponse.ok) {
-    /* La lecture des deux formes d'erreur du back vit dans les adaptateurs, et
-       n'est pas réécrite ici. `depuisErreur` accepte `undefined` : un corps
-       illisible donne alors le code « inconnu » et le message par défaut. */
-    throw depuisErreur(corpsLisible ? corps : undefined, reponse.status);
+    throw corpsLisible
+      ? depuisErreur(corps, reponse.status)
+      : depuisErreur(undefined, reponse.status);
   }
 
   if (!corpsLisible) {
@@ -84,4 +102,35 @@ export async function appelApi<T>(
    * celle-ci ne cache aucune vérification, elle en délègue une.
    */
   return corps as T;
+}
+
+/**
+ * Appelle une route qui ne rend PAS de corps, et ne rend rien.
+ *
+ * C'est la variante que le commentaire d'`appelApi` annonçait. Le contrat en
+ * prévoit plusieurs : `POST /auth/logout` (`data-dictionary.md:368`),
+ * `DELETE /me/payment-tokens/{jti}` (:412),
+ * `POST /admin/partners/{id}/approve` (:507), et toutes les routes annotées
+ * `→ 204`.
+ *
+ * `appelApi` traite un corps vide comme illisible — délibérément, pour ne
+ * jamais rendre un objet vide qu'on confondrait avec une réponse. Ici c'est
+ * l'inverse : l'absence de corps est le succès attendu, et il n'y a rien à
+ * désérialiser, donc rien à faire traverser. Le type de retour est `void` :
+ * aucun `as`, aucune valeur inventée.
+ *
+ * Le corps d'une réponse en ÉCHEC reste lu : c'est là que le code d'erreur se
+ * trouve.
+ */
+export async function appelApiSansContenu(
+  chemin: string,
+  options: RequestInit = {},
+): Promise<void> {
+  const reponse = await joindre(chemin, options);
+  if (!reponse.ok) {
+    throw await erreurDe(reponse);
+  }
+  /* Succès : on ne lit pas le corps. Un serveur qui en renverrait un malgré
+     tout ne serait pas en faute — c'est l'appelant qui a dit n'en attendre
+     aucun. */
 }

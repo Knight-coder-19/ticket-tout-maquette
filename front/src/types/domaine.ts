@@ -80,3 +80,49 @@ export interface ReponsePaginee<T> {
   taillePage: number;
   total: number;
 }
+
+
+/**
+ * Une demande d'adhesion, telle que l'ecran de validation la manipule.
+ *
+ * Distincte de `DemandePartenaire` ci-dessus, qui decrit un dossier deja
+ * tranche (motif, date de decision) et ne porte ni categorie, ni ville, ni
+ * date de depot. L'ecran de validation a besoin de ces trois-la et pas des
+ * autres : ce sont deux vues, pas une seule mal nommee.
+ */
+export interface DemandeAdhesion {
+  id: Identifiant;
+  /** Le nom qui engage : personne morale. */
+  raisonSociale: string;
+  /** Le nom affiche au public : enseigne. */
+  enseigne: string;
+  /** Libelle venu des donnees. Aucune liste de categories dans l'interface. */
+  categorie: string;
+  /** Identifiant fiscal. `null` = dossier incomplet. */
+  identifiantFiscal: string | null;
+  /** `null` pour un commerce exclusivement en ligne. */
+  ville: string | null;
+  departement: string | null;
+  estEnLigne: boolean;
+  siteWeb: string | null;
+  courrielContact: string;
+  /** Date ISO 8601 du depot. */
+  deposeeLe: string;
+}
+
+/** Ce qu'une entree du journal des decisions dit a l'agent. */
+export type SensDecision = "acceptee" | "refusee" | "autre";
+
+export interface DecisionJournal {
+  id: Identifiant;
+  demandeId: Identifiant | null;
+  /** Enseigne au moment de la decision, telle que le journal l'a figee. */
+  enseigne: string | null;
+  decision: SensDecision;
+  /** Le verbe brut du journal, conserve quand il n'est pas reconnu. */
+  action: string;
+  motif: string | null;
+  auteurId: Identifiant | null;
+  /** Date ISO 8601 de la decision. */
+  priseLe: string;
+}

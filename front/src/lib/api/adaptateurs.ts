@@ -40,6 +40,7 @@ import type {
   CatalogItem,
   EmployeeTransaction,
   IssuedTokenResponse,
+  LigneJournal,
   PartnerReviewItem,
   PaymentResponse,
   PublicPartner,
@@ -47,8 +48,11 @@ import type {
 } from "@/types/api";
 import type {
   CodePaiement,
+  DecisionJournal,
+  DemandeAdhesion,
   DemandePartenaire,
   Partenaire,
+  SensDecision,
   Solde,
   StatutPartenaire,
   StatutTransaction,
@@ -661,6 +665,90 @@ export function depuisDemandePartenaire(
     statut: statutDepuisPartnerStatus(brut.status),
     motifDecision: null,
     decideeLe: null,
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * 8 bis. FILE DE VALIDATION ET JOURNAL DES DÉCISIONS
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * `PartnerReviewItem` → `DemandeAdhesion`.
+ *
+ * Aucun complément : contrairement à `depuisDemandePartenaire()`, tout ce que
+ * `DemandeAdhesion` porte existe dans le DTO. C'est le bénéfice d'avoir taillé
+ * le type du domaine sur ce dont l'écran a besoin plutôt que l'inverse.
+ *
+ * `estEnLigne` est DÉDUIT, pas inventé : `service_mode === "online"`. La
+ * contrainte `physical_needs_city` (`0001_schema.sql:118`) garantit qu'un
+ * partenaire non exclusivement en ligne a une ville, donc les deux lectures
+ * concordent — mais on prend le champ, pas la conséquence.
+ *
+ * `ville` est aplati depuis `city.name`, et `departement` depuis
+ * `city.department` : l'écran affiche « Cotonou (Littoral) », il n'a que faire
+ * de l'identifiant de la ville.
+ */
+export function depuisDemandeAdhesion(brut: PartnerReviewItem): DemandeAdhesion {
+  return {
+    id: brut.id,
+    raisonSociale: brut.legal_name,
+    enseigne: brut.trade_name,
+    categorie: brut.category,
+    identifiantFiscal: brut.ifu,
+    ville: brut.city === null ? null : brut.city.name,
+    departement: brut.city === null ? null : brut.city.department,
+    estEnLigne: brut.service_mode === "online",
+    siteWeb: brut.website_url,
+    courrielContact: brut.contact_email,
+    deposeeLe: horodatageIso(brut.submitted_at, "submitted_at"),
+  };
+}
+
+/**
+ * Le verbe du journal → le sens de la décision.
+ *
+ * Les deux verbes reconnus sont les nôtres (`consignerAuJournal` dans le
+ * magasin) : la colonne `action` est un `TEXT` libre (`0001_schema.sql:268`) et
+ * aucun document ne fixe de vocabulaire. Tout autre verbe rend `"autre"` — et
+ * `action` conserve la chaîne brute, pour qu'un verbe inconnu apparaisse dans
+ * un rapport de bug au lieu de disparaître.
+ */
+function sensDepuisAction(action: string): SensDecision {
+  if (action === "partner.approved") return "acceptee";
+  if (action === "partner.rejected") return "refusee";
+  return "autre";
+}
+
+/** Lit une chaîne dans un `payload` JSONB, sans rien supposer de sa forme. */
+function chaineDuPayload(
+  payload: Record<string, unknown> | null,
+  champ: string,
+): string | null {
+  if (payload === null) return null;
+  const valeur = payload[champ];
+  return typeof valeur === "string" && valeur.trim() !== "" ? valeur : null;
+}
+
+/**
+ * `LigneJournal` → `DecisionJournal`.
+ *
+ * ⚠ Le type d'entrée vient d'une route que NOUS proposons, pas du contrat du
+ * back — voir `types/api.ts`. Cet adaptateur changera avec elle.
+ *
+ * `payload` est un `JSONB` : rien n'y est garanti, tout y est lu avec
+ * précaution. Une entrée dont le payload est vide reste affichable, avec des
+ * champs nuls, plutôt que de faire tomber la liste entière.
+ */
+export function depuisDecisionJournal(brut: LigneJournal): DecisionJournal {
+  return {
+    id: brut.id,
+    demandeId: brut.entity_id,
+    enseigne: chaineDuPayload(brut.payload, "trade_name"),
+    decision: sensDepuisAction(brut.action),
+    action: brut.action,
+    motif: chaineDuPayload(brut.payload, "reason"),
+    auteurId: brut.actor_id,
+    priseLe: horodatageIso(brut.created_at, "created_at"),
   };
 }
 
