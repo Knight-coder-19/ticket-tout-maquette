@@ -3,6 +3,35 @@
 [//]: # (This is a changelog file)
 [//]: # (Each time you make a minor or minor change in the project, repertoriate it here according to the following format. So each changes equals to an affectation of this file with all the sections.)
 
+## 1.4.0 03.09.2026
+
+### Added
+
+- `core/src/funding/topup.rs` : `topup`, le troisième et dernier segment du chemin monétaire.
+  Verrou de chaîne, contrôle d'idempotence sur la référence, lecture du compte
+  `MINISTRY_ISSUANCE`, verrou des deux comptes, opération de partie double, insertion dans
+  `topups`. La constante `ISSUANCE_ACCOUNT` vit dans ce fichier plutôt que dans `mod.rs`, pour
+  réduire d'autant ce que j'attends de Giscard.
+
+### Notes
+
+- **L'idempotence du rechargement ne repose pas sur un index unique.** Le schéma ne contraint
+  pas `(employer_id, reference)`, et je n'ai pas voulu modifier une migration déjà appliquée.
+  La protection tient au fait que `topup` prend `lock_chain` avant de chercher la référence :
+  tout chemin qui écrit dans le journal passe par ce verrou consultatif, donc deux
+  rechargements concurrents portant la même référence se sérialisent et le second lit la ligne
+  du premier. C'est correct tant que personne n'insère dans `topups` sans passer par cette
+  fonction.
+- `topup` reçoit un `AccountId` déjà résolu. C'est la route `POST /admin/topups` qui appellera
+  `directory::resolve_account_by_ref` pour traduire le matricule, et cette route appartient à
+  Giscard.
+- Le compte système est refusé au crédit d'un rechargement. `MINISTRY_ISSUANCE` se débite, il
+  ne se recharge pas, et `CLOSURE_FORFEIT` reçoit des soldes de clôture, pas de l'émission.
+- `funding` reste du code mort tant que Giscard n'a pas livré `funding/mod.rs`,
+  `funding/repo.rs` et la déclaration `pub mod funding;` — le détail du contrat est dans
+  `decisions.md` §19. J'ai vérifié `topup` en posant ces trois éléments localement, le temps de
+  faire tourner cinq tests contre un PostgreSQL réel, puis je les ai retirés.
+
 ## 1.3.0 02.09.2026
 
 ### Added
