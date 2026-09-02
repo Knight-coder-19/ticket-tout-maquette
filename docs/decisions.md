@@ -184,3 +184,245 @@ comporter des trous. Ce n'est pas un problème, parce que la continuité de la c
 par les condensats et non par la contiguïté des rangs. `verify_chain` lit les écritures dans
 l'ordre des `seq` et vérifie que chaque `prev_hash` est le condensat de la précédente ligne
 lue, sans jamais supposer que les rangs se suivent.
+
+---
+
+## Écarts par rapport au plan de construction
+
+`file-guide.md` et `TASK-DISTRIBUTION-BACKEND.md` ont été écrits avant la première ligne de code.
+Sur quinze points, ce que j'ai écrit s'en écarte. Je les consigne ici parce qu'un écart non
+justifié se lit comme une négligence, et parce que trois d'entre eux corrigent une erreur des
+documents eux-mêmes — un relecteur qui suivrait le plan à la lettre réintroduirait le bug.
+
+### 1. Dans `settle`, la libération de la réservation précède l'écriture
+
+**Le plan** (`TASK-DISTRIBUTION-BACKEND.md` §4.1) fait passer l'opération du ledger, puis libère
+la réservation :
+
+```
+post_operation(...)
+release_hold(...)      // « le hold devient réel »
+```
+
+**Ce que j'ai fait** : l'inverse.
+
+**Pourquoi** : la contrainte `held_within_settled` est vérifiée par PostgreSQL à *chaque
+instruction*, pas à la fin de la transaction. Sur un compte à `settled = 100, held = 100` — le cas
+d'un employé qui génère un jeton couvrant tout son solde — débiter avant de libérer donne
+transitoirement `settled = 0, held = 100`, et la base refuse l'`UPDATE`. Dans l'ordre du plan,
+tout encaissement portant sur la totalité du solde disponible échoue.
+
+C'est l'écart le plus important de cette liste : il ne se voit pas sur un jeton de 10 € tiré sur
+un solde de 100 €, seulement sur un jeton qui épuise le disponible.
+
+### 2. `Account.balance_settled` est un `i64`, pas un `Money`
+
+**Le plan** ne le dit pas explicitement, mais l'usage de `Money` partout ailleurs le suggère.
+
+**Ce que j'ai fait** : les deux soldes de `Account` sont des entiers de centimes signés.
+
+**Pourquoi** : `Money` refuse le négatif par construction, et `MINISTRY_ISSUANCE` est négatif par
+construction lui aussi — c'est l'amendement A5 et l'invariant I3. Porter un solde système dans un
+`Money` obligerait à fabriquer des valeurs qui violent l'invariant du type, c'est-à-dire à mentir
+au compilateur pour se rassurer. Les montants d'opération, eux, sont bien des `Money` : le schéma
+garantit qu'ils sont strictement positifs.
+
+`Account::available_cents()` et `Account::can_cover(Money)` encapsulent la seule arithmétique de
+solde exposée, pour que l'entier nu ne circule pas.
+
+### 3. `recompute_balance` renvoie un `i64`
+
+**Le plan** (`file-guide.md` §3.3) annonce `recompute_balance(conn, AccountId) -> Money`.
+
+**Ce que j'ai fait** : `-> Result<i64, sqlx::Error>`.
+
+**Pourquoi** : même raison qu'au point 2 — la fonction doit pouvoir rendre le solde du compte
+d'émission, qui est négatif. `recompute_held`, en revanche, rend bien un `Money` : une somme de
+jetons actifs est toujours positive.
+
+### 4. `verify_chain` renvoie un statut, pas un `Result<(), seq>`
+
+**Le plan** annonce `verify_chain(conn, from_seq) -> Result<(), u64>`, où l'erreur porte le
+premier rang incohérent.
+
+**Ce que j'ai fait** : `-> Result<ChainStatus, sqlx::Error>` avec
+`ChainStatus::{Intact, BrokenAt(i64)}`.
+
+**Pourquoi** : la signature du plan ne laisse pas de place à une panne de base. Or « la chaîne est
+rompue au rang 412 » et « la connexion a été coupée » sont deux échecs de nature opposée : le
+premier est une alerte de sécurité qui doit remonter jusqu'à un humain, le second une erreur
+d'exploitation. Les confondre dans un même `Err` obligerait l'appelant à les distinguer par
+inspection.
+
+### 5. Les requêtes sont vérifiées à l'exécution, pas à la compilation
+
+**Le plan** (`file-guide.md` §1) prévoit `.sqlx/` généré par `cargo sqlx prepare --workspace` et
+commité, « sinon la CI ne compile pas sans base ».
+
+**Ce que j'ai fait** : `sqlx::query_as` et `sqlx::query_scalar`, vérifiés à l'exécution. Le
+dossier `.sqlx/` reste vide.
+
+**Pourquoi** : les macros vérifiées à la compilation exigent une base joignable pendant le build,
+ou un cache régénéré après *chaque* modification de requête. À deux développeurs travaillant en
+parallèle, un cache oublié casse la compilation de l'autre sans message compréhensible. Le coût
+réel est faible : les erreurs de typage SQL apparaissent au premier test d'intégration, et ces
+tests tournent contre un vrai PostgreSQL.
+
+**Conséquence assumée** : une faute de frappe dans un nom de colonne ne se voit pas à la
+compilation. C'est ce qui rend les tests d'intégration non négociables.
+
+### 6. `CoreError` gagne une variante `Internal`
+
+**Le plan** liste les erreurs métier et leur correspondance HTTP dans `data-dictionary.md` §6.
+
+**Ce que j'ai fait** : ajout de `CoreError::Internal`.
+
+**Pourquoi** : `LedgerError` distingue deux familles. `InsufficientFunds` et `AccountInactive`
+sont des situations métier, que l'utilisateur doit comprendre. `SelfTransfer`,
+`NonPositiveAmount`, `CorruptedHash` et `AccountNotFound` sont des erreurs de programmation : si
+elles surviennent, l'appelant est fautif et aucun message ne doit fuiter vers le client. Sans
+variante dédiée, elles auraient dû être rangées sous `Db(_)`, ce qui aurait brouillé la seule
+règle claire de cette table — `Db(_)` devient 500 et ne dit rien.
+
+### 7. Le payload signé porte des entiers, pas des types du domaine
+
+**Le plan** (`file-guide.md` §3.2) donne `TokenPayload { jti, amt, exp, iss }` sans préciser les
+types.
+
+**Ce que j'ai fait** : `amt: i64` en centimes, `exp: i64` en secondes Unix.
+
+**Pourquoi** : `Money` possède une implémentation `Serialize` manuelle qui rend un flottant en
+euros décimaux, parce que c'est ce que le front attend. Un flottant n'a pas de forme textuelle
+garantie stable entre deux versions de `serde_json` : un jeton signé aujourd'hui pourrait cesser
+de se vérifier demain. Même raisonnement pour la date, dont la sérialisation textuelle admet
+plusieurs formes équivalentes.
+
+`TokenPayload::new` est le seul point de conversion, et `amount()` repasse par `Money::try_new` au
+retour — une signature valide prouve que le jeton vient de nous, pas que sa valeur est saine.
+
+### 8. `short_code` expose quatre fonctions au lieu d'une
+
+**Le plan** ne demande que `generate_short_code(&mut impl Rng) -> String` et mentionne le format
+d'affichage `XXXX-XXXX`.
+
+**Ce que j'ai fait** : `generate`, `format_for_display`, `normalize` et `is_valid`.
+
+**Pourquoi** : un code court existe sous trois formes — celle qui est stockée (`86RB57CT`), celle
+qui est affichée (`86RB-57CT`) et celle que le commerçant tape (`86rb 57ct`, avec ou sans tiret).
+Sans `normalize`, la recherche part sur la chaîne brute, aucune ligne ne correspond, et un
+paiement parfaitement valide est refusé comme jeton inconnu. C'est le bug qui coûte une
+démonstration.
+
+`is_valid` écarte les saisies absurdes avant de toucher à la base, pour que deviner des codes ne
+revienne pas à faire tourner PostgreSQL gratuitement. Elle valide la forme *stockée* : l'ordre
+d'appel est `normalize`, puis `is_valid`, puis la recherche.
+
+### 9. Le code court est tiré après vérification, pas réessayé après échec
+
+**Ce que j'avais annoncé** : une boucle de réessai sur violation d'unicité (`SQLSTATE 23505`),
+« cinq lignes ».
+
+**Ce que j'ai fait** : jusqu'à cinq tirages, chacun précédé d'un `SELECT` de disponibilité.
+
+**Pourquoi j'ai changé d'avis** : c'était faux. Une violation de contrainte avorte la transaction
+PostgreSQL entière — toute instruction suivante échoue jusqu'au `ROLLBACK`. Un réessai aurait
+exigé un `SAVEPOINT` autour de chaque insertion, soit une mécanique disproportionnée sur le
+chemin chaud pour une collision dont la probabilité est de l'ordre de 10⁻⁸ à 31⁸ combinaisons.
+
+La course résiduelle — deux `authorize` simultanés tirant le même code entre le `SELECT` et
+l'`INSERT` — reste rattrapée par l'index unique, et se manifeste alors comme une erreur 500. À
+cette probabilité-là, c'est un compromis que j'assume.
+
+### 10. La recherche par code court ignore le statut du jeton
+
+**Ce que j'ai fait** : `WHERE short_code = $1 ORDER BY issued_at DESC LIMIT 1`, sans filtre sur le
+statut.
+
+**Pourquoi** : l'index d'unicité `uq_active_short_code` ne couvre que les jetons actifs. Filtrer
+sur `status = 'active'` aurait donc cassé l'idempotence : un commerçant qui rejoue un
+encaissement par code court après consommation n'aurait rien trouvé et aurait reçu `UnknownToken`
+au lieu de son paiement. Or c'est exactement ce que fait une file d'attente hors ligne.
+
+### 11. `settle` relit le paiement quand le jeton est déjà consommé
+
+**Le plan** (§4.1) place le contrôle d'idempotence en tête, avant les verrous, et refuse ensuite
+tout jeton dont le statut n'est pas `active`.
+
+**Ce que j'ai fait** : quand le jeton est trouvé en `consumed` *après* les verrous, `settle`
+relit le paiement associé et le renvoie s'il appartient au commerçant qui demande.
+
+**Pourquoi** : le contrôle en tête s'exécute avant `lock_chain`. Deux requêtes simultanées du même
+commerçant peuvent donc le franchir toutes les deux, se sérialiser ensuite sur le verrou, et la
+seconde recevoir `TokenAlreadyUsed` alors qu'elle vient d'être réglée. Pour une file d'attente qui
+rejoue jusqu'au succès, c'est une boucle infinie.
+
+**Limite connue** : cette branche n'est atteignable que sous une vraie course. Je peux tester
+celle qui refuse, pas celle qui rend le paiement ; un test de concurrence réelle relève de
+`payments_flow.rs`.
+
+### 12. `payments` expose `cancel` et `expire_stale_tokens` prend une limite
+
+**Le plan** ne prévoit `cancel_token` qu'au niveau des requêtes, et annonce
+`expire_stale_tokens(pool, clock) -> Result<u64>`.
+
+**Ce que j'ai fait** : une fonction métier `cancel(tx, clock, account_id, jti)` qui vérifie que le
+jeton appartient bien au compte avant de l'annuler et de libérer la réservation, et
+`expire_stale_tokens(pool, clock, limit)`.
+
+**Pourquoi** : `DELETE /me/payment-tokens/{jti}` a besoin d'un point d'entrée qui fasse les deux
+choses ensemble ; les laisser au handler reviendrait à mettre une règle métier dans la couche
+HTTP. Le paramètre `limit` évite qu'un balayage sur une base ancienne ne charge cent mille lignes
+d'un coup — et l'annulation d'un jeton déjà annulé rend `Ok(())`, pour la même raison
+d'idempotence qu'au point 11.
+
+### 13. Les erreurs de paiement sont plus fines que la liste du plan
+
+**Ce que j'ai ajouté** : `TokenCancelled`, `PartnerNotApproved` et `ShortCodeUnavailable`.
+
+**Pourquoi** : les deux premières sont des situations que le commerçant doit distinguer d'un jeton
+déjà encaissé — un jeton annulé par l'employé et un compte de commerçant non validé n'appellent
+pas la même réaction au comptoir. `ShortCodeUnavailable` signale l'épuisement des cinq tirages du
+point 9 ; elle ne devrait jamais survenir, et c'est précisément pour ça qu'elle doit être
+nommée plutôt que noyée dans un 500.
+
+### 14. Les tests I6 et I7 vérifient une propriété de données, pas un comportement
+
+**Le plan** décrit I6 comme « deux `settle` → un seul paiement » et I7 comme un encaissement
+refusé après expiration.
+
+**Ce que j'ai fait** : au moment d'écrire `invariants.rs`, `settle` n'existait pas. Les deux tests
+vérifient donc les propriétés au niveau de la base — l'unicité de `payments.token_jti`, la
+cohérence entre le statut d'un jeton et l'existence de son paiement, et la requête qui détecte un
+règlement postérieur à l'expiration.
+
+**Ce qu'il reste à faire** : maintenant que `settle` existe, les versions comportementales
+appartiennent à `payments_flow.rs` et `degraded_mode.rs`. Les tests d'invariants restent utiles
+tels quels : ils vérifient l'état de la base, indépendamment du chemin de code qui l'a produit.
+
+### 15. Le bouchon d'`approved_account` n'a pas été posé
+
+**Le plan** (§3) prévoit que je bouchonne `partners::repo::approved_account` avec un compte en dur
+dès la première heure, pour ne pas être bloqué sur `settle`.
+
+**Ce que j'ai fait** : rien de tel. `settle` appelle la fonction telle que le contrat la définit,
+et `payments` reste du code mort tant que Giscard ne l'a pas écrite.
+
+**Pourquoi** : le bouchon aurait vécu dans un fichier qui ne m'appartient pas. La règle de
+coexistence prime, et Giscard tient ses fichiers. Pour vérifier mon propre travail, je pose la
+fonction et les deux `pub mod` manquants localement, je fais tourner les tests, puis je les
+retire — rien n'entre dans son périmètre.
+
+**Ce qu'il doit fournir**, exactement :
+
+```rust
+// crates/core/src/lib.rs
+pub mod partners;
+pub mod payments;
+
+// crates/core/src/partners/repo.rs
+pub async fn approved_account(tx: &mut PgTransaction<'_>, id: PartnerId)
+    -> Result<AccountId, PartnerError>;
+```
+
+Le filtre `status = 'approved'` doit vivre dans sa requête, pas chez l'appelant : c'est elle qui
+porte la règle « un commerçant non validé ne reçoit pas d'argent public ».

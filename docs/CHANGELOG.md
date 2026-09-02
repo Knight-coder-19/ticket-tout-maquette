@@ -3,6 +3,48 @@
 [//]: # (This is a changelog file)
 [//]: # (Each time you make a minor or minor change in the project, repertoriate it here according to the following format. So each changes equals to an affectation of this file with all the sections.)
 
+## 1.3.0 02.09.2026
+
+### Added
+
+- `core/src/payments/mod.rs` : `TokenStatus`, `EntryMode`, `PaymentToken`, `Payment`, `TokenRef`
+  et `PaymentError`. Les erreurs `UnknownToken`, `TokenExpired`, `TokenAlreadyUsed`,
+  `TokenCancelled`, `PartnerNotApproved` et `ResyncTooLate` restent distinctes : c'est de cette
+  distinction que dépend la file d'attente du commerçant hors ligne.
+- `core/src/payments/repo.rs` : les requêtes sur les jetons et les paiements, dont
+  `lock_token`, `consume_token`, `insert_payment` et le balayage des jetons échus.
+- `core/src/payments/authorize.rs` : émission d'un jeton — verrou de compte, réservation des
+  fonds, tirage d'un code court disponible, insertion, signature du QR.
+- `core/src/payments/settle.rs` : encaissement dans l'ordre imposé — idempotence, fenêtre de
+  resynchronisation, verrous, contrôles, écriture. Plus `cancel`, l'annulation d'un jeton par
+  l'employé, qui libère la réservation.
+- `core/src/payments/expire.rs` : `expire_stale_tokens`, une transaction par jeton, pour que
+  l'échec d'une ligne n'empêche pas les suivantes.
+
+### Fixed
+
+- **`release_hold` doit précéder `post_operation` dans `settle`.** L'ordre inscrit dans
+  `TASK-DISTRIBUTION-BACKEND.md` §4.1 débitait le solde avant de libérer la réservation, ce qui
+  laisse transitoirement `balance_held > balance_settled` — état que la contrainte
+  `held_within_settled` refuse à chaque instruction. L'encaissement aurait échoué sur tout jeton
+  couvrant la totalité du solde.
+- **Idempotence sous concurrence.** Le contrôle de rejeu en tête de `settle` peut être franchi
+  par deux requêtes simultanées du même commerçant. La seconde trouve désormais le jeton en
+  `consumed` et relit le paiement associé au lieu de renvoyer `TokenAlreadyUsed` à quelqu'un qui
+  a bel et bien été réglé.
+
+### Notes
+
+- La recherche par code court ignore volontairement le statut du jeton et prend le plus récent
+  portant ce code. L'index unique ne couvrant que les jetons actifs, filtrer sur `active` aurait
+  cassé l'idempotence : un rejeu après consommation n'aurait rien trouvé.
+- `authorize` tire jusqu'à cinq codes courts en vérifiant leur disponibilité par un `SELECT`
+  avant d'insérer. Un réessai après violation d'unicité aurait exigé un `SAVEPOINT`, une erreur
+  d'insertion avortant la transaction entière.
+- `payments` reste du code mort tant que `lib.rs` ne déclare pas `pub mod payments;` et
+  `pub mod partners;`, et tant que `partners/repo.rs::approved_account` n'existe pas. Les trois
+  éléments appartiennent à Giscard.
+
 ## 1.2.0 02.09.2026
 
 ### Added
