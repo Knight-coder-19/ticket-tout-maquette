@@ -1,3 +1,11 @@
-// Implement list_cities(conn). Read-only, also served on the unauthenticated public surface (A3).
-// Open question 1 must be settled first: which city reference table is loaded by migration 0003.
-// Priority: P1
+use super::{City, DirectoryError};
+use sqlx::PgConnection;
+
+pub async fn list_cities(conn: &mut PgConnection) -> Result<Vec<City>, DirectoryError> {
+    let cities = sqlx::query_as::<_, City>(
+        "SELECT id, name, department FROM cities ORDER BY name, department",
+    )
+    .fetch_all(conn)
+    .await?;
+    Ok(cities)
+}
