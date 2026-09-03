@@ -38,6 +38,8 @@
 import type {
   BalanceResponse,
   CatalogItem,
+  CategoryItem,
+  CityRef,
   EmployeeTransaction,
   IssuedTokenResponse,
   ChainVerification,
@@ -53,24 +55,29 @@ import type {
   PaymentResponse,
   PublicPartner,
   ResolvedTokenItem,
+  ServiceMode,
   SirhBalance,
 } from "@/types/api";
 import type {
+  CategorieCatalogue,
   CodePaiement,
   ComptePartenaire,
   DecisionJournal,
-  EcritureRegistre,
   DemandeAdhesion,
   DemandePartenaire,
+  EcritureRegistre,
+  FicheCatalogue,
+  ModeDeService,
   MonCompte,
-  Partenaire,
   NatureEcriture,
+  Partenaire,
   SensDecision,
   Solde,
   StatutPartenaire,
   StatutTransaction,
-  VerificationIntegrite,
   Transaction,
+  VerificationIntegrite,
+  VilleCatalogue,
 } from "@/types/domaine";
 import type {
   EncaissementAccepte,
@@ -920,6 +927,10 @@ export function depuisMonCompte(brut: PartnerAccountStatus): MonCompte {
   return {
     id: brut.id,
     enseigne: brut.trade_name,
+    raisonSociale: brut.legal_name,
+    identifiantFiscal: brut.ifu,
+    categorie: brut.category,
+    modeService: modeDeService(brut.service_mode),
     statut: statutDepuisPartnerStatus(brut.status),
     motif: brut.review_reason,
     decideeLe:
@@ -1018,6 +1029,72 @@ export function depuisLigneEncaissement(brut: PartnerTransactionItem): LigneEnca
     etat,
     motifAnnulation: brut.compensation_reason,
   };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * 8 octies. CATALOGUE DU RÉSEAU
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/** `ServiceMode` → le mode de service, en français. La seule traduction. */
+function modeDeService(mode: ServiceMode): ModeDeService {
+  switch (mode) {
+    case "physical":
+      return "physique";
+    case "online":
+      return "en_ligne";
+    case "both":
+      return "les_deux";
+    default:
+      throw new ErreurService(
+        "reponse_illisible",
+        `Réponse du serveur illisible : mode de service inconnu (${String(mode)}).`,
+        { champ: "service_mode" },
+      );
+  }
+}
+
+/**
+ * `CatalogItem` → `FicheCatalogue`.
+ *
+ * ✅ Le type d'entrée est celui du CONTRAT (`data-dictionary.md:470-480`), les
+ * neuf champs.
+ *
+ * Aucun complément : tout ce que la fiche porte existe dans le DTO. C'est le
+ * bénéfice d'avoir taillé le type du domaine sur ce que la route donne, plutôt
+ * que sur ce qu'on aurait aimé qu'elle donne.
+ */
+export function depuisFicheCatalogue(brut: CatalogItem): FicheCatalogue {
+  return {
+    id: brut.id,
+    enseigne: brut.trade_name,
+    categorie: brut.category,
+    ville: brut.city === null ? null : brut.city.name,
+    departement: brut.city === null ? null : brut.city.department,
+    quartier: brut.district,
+    adresse: brut.address_line,
+    siteWeb: brut.website_url,
+    modeService: modeDeService(brut.service_mode),
+    estOfficiel: brut.is_official_partner,
+  };
+}
+
+/**
+ * `CategoryItem` → `CategorieCatalogue`.
+ *
+ * ⚠ Le type d'entrée vient d'une route que NOUS proposons — le contrat n'a pas
+ * de référentiel de catégories. Voir `types/api.ts`.
+ */
+export function depuisCategorieCatalogue(brut: CategoryItem): CategorieCatalogue {
+  return { nom: brut.name, nombreDePartenaires: brut.partner_count };
+}
+
+/**
+ * `CityRef` → `VilleCatalogue`.
+ *
+ * ✅ Route du CONTRAT, `GET /api/v1/cities` (:483-484).
+ */
+export function depuisVilleCatalogue(brut: CityRef): VilleCatalogue {
+  return { id: brut.id, nom: brut.name, departement: brut.department };
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

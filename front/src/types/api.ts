@@ -851,7 +851,33 @@ export type LedgerEntryList = Paginated<LedgerEntryItem>;
  */
 export type PartnerAccountStatus = {
   id: string;
+  /** Le nom affiché. 🌐 en section 3.6 : rien de sensible. */
   trade_name: string;
+  /**
+   * La raison sociale et l'identifiant fiscal.
+   *
+   * ⚠️ en section 3.6 — « exposé uniquement à l'administration ». Ce marqueur
+   * dit qu'ils ne vont pas au CATALOGUE : la section 4.6 les interdit
+   * nommément sur la surface publique (:356), aux côtés des montants et des
+   * contacts. Il protège un commerçant des autres, pas de lui-même.
+   *
+   * Ici le lecteur EST le titulaire : ce sont les valeurs qu'il a lui-même
+   * déclarées à l'adhésion, et que `PartnerReviewItem` (:492-496) sert déjà
+   * telles quelles à l'agent qui instruit son dossier. Les lui cacher sur sa
+   * propre fiche ne protégerait personne, et l'empêcherait de voir qu'une
+   * coquille s'est glissée dans son identifiant fiscal.
+   */
+  legal_name: string;
+  /** `TEXT NULL` (:105) : un dossier peut avoir été accepté sans. */
+  ifu: string | null;
+  /** Libellé venu des données, jamais d'une liste écrite dans l'interface. */
+  category: string;
+  /**
+   * 🌐 en section 3.6 — rien de sensible. Sans lui, la fiche ne saurait pas
+   * distinguer une ville MANQUANTE d'une ville qui n'a pas lieu d'être : un
+   * commerce en ligne n'en a aucune, par contrainte (`physical_needs_city`).
+   */
+  service_mode: ServiceMode;
   status: PartnerStatus;
   review_reason: string | null;
   reviewed_at: string | null;
@@ -949,4 +975,24 @@ export type PartnerTransactionItem = {
  * confirmer avec l'équipe back.
  */
 export type PartnerTransactionList = Paginated<PartnerTransactionItem>;
+
+/**
+ * Une catégorie du référentiel.
+ *
+ * ⚠ NOTRE PROPOSITION, servie par `GET /api/v1/categories`. Le contrat a
+ * `GET /api/v1/cities` pour les villes (:483-484) mais rien pour les
+ * catégories, et le schéma n'a pas de table : `partners.category` est un texte
+ * libre (`0001_schema.sql:104`).
+ *
+ * Sans elle, un filtre de catégories ne peut qu'être écrit en dur — ce que la
+ * règle de B. Sellami interdit — ou dérivé d'une page partielle, ce qui le
+ * ferait changer à chaque pagination.
+ */
+export type CategoryItem = {
+  name: string;
+  /** Nombre de partenaires agréés dans cette catégorie. */
+  partner_count: number;
+};
+
+export type CategoryList = CategoryItem[];
 

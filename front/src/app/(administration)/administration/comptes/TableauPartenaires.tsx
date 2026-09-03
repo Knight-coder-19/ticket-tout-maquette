@@ -2,34 +2,8 @@
 
 import { formaterCentimes } from "@/lib/montant";
 import { formaterDate } from "@/lib/utils/date";
-import type { ComptePartenaire, StatutPartenaire } from "@/types/domaine";
-
-/**
- * Le libellé de chaque statut, en toutes lettres.
- *
- * Ce n'est PAS une liste de catégories : les catégories viennent des données et
- * ne sont jamais écrites ici. Les statuts, eux, sont une énumération fermée du
- * contrat (`partner_status`, `0001_schema.sql:7`) — cinq valeurs, un changement
- * cassant si elle bouge. Les traduire est le travail de l'interface.
- */
-const LIBELLES: Record<StatutPartenaire, string> = {
-  en_attente: "En attente",
-  agree: "Agréé",
-  refuse: "Refusé",
-  suspendu: "Suspendu",
-  ferme: "Fermé",
-};
-
-/**
- * La pastille de statut.
- *
- * Le texte porte l'information, la couleur ne fait que la répéter. Un agent qui
- * ne perçoit pas les teintes, ou qui imprime en noir et blanc, lit exactement
- * la même chose.
- */
-function Statut({ statut }: { statut: StatutPartenaire }) {
-  return <span className={`statut statut--${statut}`}>{LIBELLES[statut]}</span>;
-}
+import { PastilleStatut } from "@/components/partenaires/PastilleStatut";
+import type { ComptePartenaire } from "@/types/domaine";
 
 /**
  * Le tableau du registre.
@@ -129,7 +103,7 @@ export function TableauPartenaires({
                 </td>
 
                 <td>
-                  <Statut statut={compte.statut} />
+                  <PastilleStatut statut={compte.statut} />
                   {compte.decideeLe !== null && (
                     <span className="registre__secondaire">
                       <br />

@@ -1,0 +1,159 @@
+/*
+ * Le catalogue du reseau.
+ *
+ * La barre de filtres, les etats et les boutons viennent de `primitives.css`,
+ * partages avec les registres de l'administration et le journal du commercant.
+ * Ce fichier ne porte que la liste de fiches.
+ *
+ * Container queries, pas media queries. Le conteneur s'appelle `registre` :
+ * c'est le nom que les regles partagees attendent. Deux seuils, ecrits en dur
+ * -- une condition `@container` n'accepte pas `var(--...)` :
+ *   36rem  deux fiches par rangee ;
+ *   64rem  trois.
+ *
+ * Toutes les couleurs viennent de tokens.css. Aucun fond nouveau.
+ */
+
+.catalogue {
+  container-type: inline-size;
+  container-name: registre;
+}
+
+.catalogue__titre {
+  font-size: var(--taille-3xl);
+  margin-block: 0 var(--espace-2);
+}
+
+.catalogue__intro {
+  margin-block: 0 var(--espace-6);
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-sm);
+  max-width: var(--largeur-contenu);
+}
+
+/* L'exception A1, dite sous les filtres quand une ville est choisie. */
+.catalogue__note {
+  color: var(--couleur-texte-secondaire);
+}
+
+.catalogue__compte {
+  margin-block: var(--espace-4) var(--espace-3);
+  font-size: var(--taille-sm);
+  color: var(--couleur-texte-secondaire);
+}
+
+/* == La liste de fiches ==================================================== */
+
+.catalogue__liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--espace-4);
+  grid-template-columns: minmax(0, 1fr);
+  /* Les fiches d'une meme rangee prennent la meme hauteur : sans cela, une
+     fiche sans adresse laisserait un trou sous elle. */
+  align-items: stretch;
+}
+
+@container registre (min-width: 36rem) {
+  .catalogue__liste { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@container registre (min-width: 64rem) {
+  .catalogue__liste { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+.fiche {
+  display: flex;
+  background: var(--couleur-carte-fond);
+  border: 1px solid var(--couleur-carte-bordure);
+  border-radius: var(--rayon-md);
+  /* Une enseigne ou une adresse sans espace ne doit pas pousser la fiche
+     au-dela de son filet. */
+  overflow-wrap: anywhere;
+}
+
+.fiche > article {
+  flex: 1;
+  padding: var(--espace-4);
+}
+
+/*
+ * SA PROPRE FICHE.
+ *
+ * Le filet lateral et le fond la distinguent d'un coup d'oeil, mais ils ne
+ * portent PAS l'information : le marqueur « Votre etablissement » la porte, en
+ * toutes lettres. Une capture en noir et blanc reste exacte, et un agent qui ne
+ * percoit pas les teintes lit la meme chose que les autres.
+ */
+.fiche--mienne {
+  background: var(--couleur-rail-survol-fond);
+  border-color: var(--couleur-primaire);
+  border-inline-start: var(--espace-1) solid var(--couleur-primaire);
+}
+
+.fiche__tete {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+  align-items: baseline;
+  margin-block-end: var(--espace-1);
+}
+
+.fiche__enseigne {
+  margin: 0;
+  font-size: var(--taille-lg);
+}
+
+/*
+ * Le marqueur « Votre etablissement ».
+ *
+ * Un APLAT du bleu institutionnel, la ou les pastilles de statut utilisent un
+ * fond clair avec du texte colore. La difference est voulue : les statuts sont
+ * plusieurs valeurs a distinguer entre elles, celui-ci est binaire -- c'est ma
+ * fiche ou ce ne l'est pas -- et il doit sauter aux yeux dans une grille de
+ * fiches semblables.
+ *
+ * La regle de la charte porte sur les BOUTONS (`tokens.css` : « ne sert jamais
+ * de fond de bouton »). Une etiquette n'en est pas un, et elle ne se clique
+ * pas. Contraste mesure : 11,27:1.
+ */
+.fiche__marqueur {
+  background: var(--couleur-primaire);
+  color: var(--couleur-fond);
+}
+
+/* La categorie vient des donnees : on la met en forme, on ne la traduit pas. */
+.fiche__categorie {
+  margin-block: 0 var(--espace-3);
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-sm);
+  text-transform: capitalize;
+}
+
+.fiche__faits {
+  display: grid;
+  gap: var(--espace-1) var(--espace-3);
+  grid-template-columns: max-content minmax(0, 1fr);
+  margin: 0;
+  font-size: var(--taille-sm);
+  min-width: 0;
+}
+
+.fiche__faits dt {
+  color: var(--couleur-texte-secondaire);
+}
+
+.fiche__faits dd {
+  margin: 0;
+}
+
+.fiche__note {
+  margin-block: var(--espace-3) 0;
+  padding: var(--espace-2) var(--espace-3);
+  background: var(--couleur-fond);
+  border-radius: var(--rayon-sm);
+  font-size: var(--taille-xs);
+  color: var(--couleur-texte);
+}

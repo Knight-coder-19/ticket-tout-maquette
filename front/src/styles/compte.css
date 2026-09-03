@@ -1,0 +1,241 @@
+/*
+ * L'espace du commercant sur son propre compte.
+ *
+ * Trois blocs sans rapport de forme : une fiche en lecture, une carte a
+ * imprimer, un etat de service. Ils ne partagent que la colonne.
+ */
+
+/* L'ecran est son propre conteneur.
+ *
+ * Sans `container-name`, `@container` viserait l'ancetre le plus proche --
+ * `.espace` (espace.css:27), la coquille ENTIERE, rail de 17rem compris. La
+ * fiche passerait a deux colonnes en croyant disposer d'une largeur qu'elle
+ * n'a pas. Chaque ecran du projet nomme le sien ; celui-ci ne fait pas
+ * exception. */
+.compte {
+  container-type: inline-size;
+  container-name: compte;
+}
+
+.compte__intro {
+  max-inline-size: var(--largeur-contenu);
+  margin-block-end: var(--espace-8);
+  color: var(--couleur-texte-secondaire);
+}
+
+/* == La fiche d'etablissement ============================================
+ *
+ * Une liste de definitions, pas un tableau : ce sont des paires
+ * intitule/valeur d'un seul objet, et `<dl>` dit exactement cela a un lecteur
+ * d'ecran. Un tableau annoncerait des lignes a comparer entre elles.
+ * ======================================================================== */
+
+.fiche {
+  max-inline-size: var(--largeur-contenu);
+  margin-block-end: var(--espace-12);
+  padding: var(--espace-6);
+  background: var(--couleur-carte-fond);
+  border: 1px solid var(--couleur-carte-bordure);
+  border-radius: var(--rayon-md);
+}
+
+.fiche__titre {
+  margin-block: 0 var(--espace-2);
+  font-family: var(--police-titre);
+  font-size: var(--taille-xl);
+}
+
+.fiche__liste {
+  margin: 0;
+  display: grid;
+  gap: 0;
+}
+
+/* Deux colonnes des que la place existe. Sous ce seuil, l'intitule se pose
+   au-dessus de sa valeur. Le seuil est en dur : une condition `@container`
+   n'accepte pas une `var()`. */
+@container compte (min-width: 32rem) {
+  .fiche__liste {
+    grid-template-columns: minmax(12rem, auto) 1fr;
+  }
+}
+
+.fiche__intitule {
+  padding-block: var(--espace-3);
+  color: var(--couleur-texte-secondaire);
+  font-family: var(--police-titre);
+  font-size: var(--taille-sm);
+  border-block-start: 1px solid var(--couleur-carte-bordure);
+}
+
+.fiche__valeur {
+  margin: 0;
+  padding-block: var(--espace-3);
+  border-block-start: 1px solid var(--couleur-carte-bordure);
+}
+
+/* La premiere paire n'a pas de filet au-dessus : il doublerait la bordure de
+   la carte. En une colonne, seul le tout premier intitule est concerne. */
+.fiche__liste > .fiche__intitule:first-of-type,
+.fiche__liste > .fiche__intitule:first-of-type + .fiche__valeur {
+  border-block-start: 0;
+}
+
+/* Une valeur que le dispositif ne detient pas. Le mot porte l'information ;
+   la nuance de gris ne fait que l'accompagner. */
+.fiche__absente {
+  color: var(--couleur-texte-secondaire);
+  font-style: italic;
+}
+
+/* == La carte a imprimer =================================================
+ *
+ * Le bleu institutionnel encadre, il ne remplit pas : la charte reserve
+ * l'aplat a la marque, jamais a un fond de bouton (`tokens.css:13`). Ici il
+ * est un FILET, ce que la carte peut porter.
+ *
+ * ⚠ Aucun fond ne porte d'information dans cette carte. Les navigateurs
+ * suppriment les couleurs de fond a l'impression sauf reglage explicite du
+ * lecteur : une carte qui reposerait sur un aplat sortirait blanche. Tout ce
+ * qui doit se lire sur le papier est donc du TEXTE et des FILETS.
+ * ======================================================================== */
+
+.sceau {
+  max-inline-size: 34rem;
+  margin-block-end: var(--espace-6);
+  border: 2px solid var(--couleur-primaire);
+  border-radius: var(--rayon-md);
+  background: var(--couleur-fond);
+  text-align: center;
+}
+
+/* La bande de specimen, en tete et non en pied.
+ *
+ * C'est la premiere chose lue, et elle ne peut pas etre prise pour une
+ * mention legale de bas de page. Un badge de demonstration qui pourrait
+ * passer pour un vrai est exactement ce que le cahier des charges interdit :
+ * la mention est donc dans la carte, en tete, et elle survit a l'impression
+ * par son filet. */
+.sceau__specimen {
+  margin: 0;
+  padding: var(--espace-2) var(--espace-4);
+  background: var(--couleur-simulation-fond);
+  color: var(--couleur-simulation-texte);
+  border-block-end: 1px solid var(--couleur-simulation-filet);
+  font-family: var(--police-titre);
+  font-size: var(--taille-sm);
+}
+
+.sceau__specimen strong {
+  letter-spacing: 0.08em;
+}
+
+.sceau__corps {
+  padding: var(--espace-8) var(--espace-6);
+}
+
+/* Le bloc-marque : le ministere, puis le dispositif. Typographique et rien
+   d'autre -- aucune reproduction d'embleme, qui est precisement ce qui
+   ferait passer une demonstration pour une piece officielle. */
+.sceau__marque {
+  margin-block-end: var(--espace-6);
+  padding-block-end: var(--espace-4);
+  border-block-end: 1px solid var(--couleur-carte-bordure);
+}
+
+.sceau__ministere {
+  margin: 0;
+  color: var(--couleur-primaire);
+  font-family: var(--police-titre);
+  font-size: var(--taille-sm);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sceau__dispositif {
+  margin: var(--espace-1) 0 0;
+  color: var(--couleur-primaire);
+  font-family: var(--police-titre);
+  font-size: var(--taille-2xl);
+  font-weight: 700;
+}
+
+.sceau__qualite {
+  margin: 0 0 var(--espace-4);
+  display: inline-block;
+  padding: var(--espace-1) var(--espace-4);
+  color: var(--couleur-succes);
+  border: 1px solid var(--couleur-succes);
+  border-radius: var(--rayon-sm);
+  font-family: var(--police-titre);
+  font-size: var(--taille-base);
+}
+
+.sceau__enseigne {
+  margin: 0;
+  font-family: var(--police-titre);
+  font-size: var(--taille-2xl);
+  line-height: 1.2;
+}
+
+.sceau__lieu {
+  margin: var(--espace-2) 0 0;
+  color: var(--couleur-texte-secondaire);
+}
+
+.sceau__pied {
+  margin: var(--espace-6) 0 0;
+  padding-block-start: var(--espace-4);
+  border-block-start: 1px solid var(--couleur-carte-bordure);
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-sm);
+}
+
+/* == La feuille d'impression =============================================
+ *
+ * La SEULE `@media (width)` du projet serait injustifiee ; celle-ci n'en est
+ * pas une. Une imprimante n'est pas un conteneur : aucune `@container` ne
+ * peut decrire une feuille de papier, et c'est bien le media qui change.
+ *
+ * ─── Pourquoi masquer par defaut plutot qu'enumerer ───
+ *
+ * Tout est masque, puis la carte seule est rendue visible. L'inverse --
+ * `display: none` sur le rail, le bandeau, les boutons -- obligerait a
+ * completer cette liste chaque fois qu'un bloc s'ajoute a l'ecran, et le jour
+ * ou quelqu'un oublierait, un bouton sortirait sur le papier sans que rien ne
+ * proteste. Ici, ce qui est nouveau est masque tant qu'on ne l'a pas voulu.
+ *
+ * `visibility` et non `display` : le premier laisse les elements dans le flux
+ * sans les peindre, ce qui evite de recalculer une mise en page qu'on ne
+ * regarde pas.
+ * ======================================================================== */
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .sceau,
+  .sceau * {
+    visibility: visible;
+  }
+
+  .sceau {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    max-inline-size: 100%;
+    margin: 0;
+    /* Le filet du specimen ne depend d'aucun fond : voir plus haut. */
+    border: 2px solid var(--couleur-primaire);
+  }
+
+  .sceau__specimen {
+    border: 1px solid var(--couleur-simulation-filet);
+  }
+
+  /* Une carte ne se coupe pas en deux entre deux feuilles. */
+  .sceau {
+    break-inside: avoid;
+  }
+}

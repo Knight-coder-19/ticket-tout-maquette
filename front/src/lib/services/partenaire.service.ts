@@ -17,18 +17,29 @@
 
 import { appelApi } from "@/lib/api/client";
 import {
+  depuisCategorieCatalogue,
+  depuisFicheCatalogue,
   depuisJourneeRecettes,
   depuisLigneEncaissement,
   depuisMonCompte,
   depuisResumeActivite,
+  depuisVilleCatalogue,
 } from "@/lib/api/adaptateurs";
 import type {
+  CatalogList,
+  CategoryList,
+  CityList,
   DailyRevenueList,
   PartnerAccountStatus,
   PartnerTransactionList,
   PartnerSummary,
 } from "@/types/api";
-import type { MonCompte } from "@/types/domaine";
+import type {
+  CategorieCatalogue,
+  FicheCatalogue,
+  MonCompte,
+  VilleCatalogue,
+} from "@/types/domaine";
 import type {
   JourneeRecettes,
   LigneEncaissement,
@@ -142,4 +153,79 @@ export async function listerEncaissements(
     lignes: brut.items.map(depuisLigneEncaissement),
     curseurSuivant: brut.next_cursor,
   };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * CATALOGUE DU RÉSEAU
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+export interface FiltresCatalogue {
+  /** Nom de ville. ⚠ Un commerce en ligne remonte quand même (A1). */
+  ville?: string;
+  /** `physical`, `online` ou `both`. */
+  modeService?: string;
+  /** Recherche libre sur l'enseigne et la ville. */
+  recherche?: string;
+  /** ⚠ NOTRE AJOUT : le contrat ne filtre pas par catégorie. */
+  categorie?: string;
+}
+
+export interface PageCatalogue {
+  fiches: FicheCatalogue[];
+  curseurSuivant: string | null;
+}
+
+/**
+ * Le réseau des partenaires agréés.
+ *
+ * ✅ Route du CONTRAT, `GET /api/v1/catalog`
+ * (`data-dictionary.md:469-481`). Elle ne sert QUE des agréés
+ * (`catalog.rs:1`) : le catalogue n'est pas une liste de tous les dossiers.
+ */
+export async function listerCatalogue(
+  filtres: FiltresCatalogue = {},
+  curseur?: string,
+): Promise<PageCatalogue> {
+  const parametres = new URLSearchParams();
+  if (filtres.ville !== undefined && filtres.ville !== "") parametres.set("city", filtres.ville);
+  if (filtres.modeService !== undefined && filtres.modeService !== "") parametres.set("service_mode", filtres.modeService);
+  if (filtres.recherche !== undefined && filtres.recherche.trim() !== "") parametres.set("q", filtres.recherche.trim());
+  if (filtres.categorie !== undefined && filtres.categorie !== "") parametres.set("category", filtres.categorie);
+  if (curseur !== undefined && curseur !== "") parametres.set("cursor", curseur);
+
+  const requete = parametres.toString();
+  const brut = await appelApi<CatalogList>(
+    `/v1/catalog${requete === "" ? "" : `?${requete}`}`,
+    { cache: "no-store" },
+  );
+
+  return {
+    fiches: brut.items.map(depuisFicheCatalogue),
+    curseurSuivant: brut.next_cursor,
+  };
+}
+
+/**
+ * Le référentiel des villes.
+ *
+ * ✅ Route du CONTRAT, `GET /api/v1/cities` (:483-484).
+ */
+export async function listerVilles(): Promise<VilleCatalogue[]> {
+  const brut = await appelApi<CityList>("/v1/cities", { cache: "no-store" });
+  return brut.map(depuisVilleCatalogue);
+}
+
+/**
+ * Le référentiel des catégories.
+ *
+ * ⚠ S'appuie sur une route que NOUS proposons : le contrat n'a pas
+ * d'équivalent de `/cities` pour les catégories, et le schéma n'a pas de table.
+ * Voir `types/api.ts`, type `CategoryItem`.
+ *
+ * C'est elle qui permet à la règle de B. Sellami de tenir : les catégories du
+ * filtre viennent des données, complètes, et ne changent pas quand on pagine.
+ */
+export async function listerCategories(): Promise<CategorieCatalogue[]> {
+  const brut = await appelApi<CategoryList>("/v1/categories", { cache: "no-store" });
+  return brut.map(depuisCategorieCatalogue);
 }
