@@ -57,6 +57,17 @@
   border-color: var(--couleur-alerte);
 }
 
+/* Ce qui vient de reussir, dit une fois.
+ *
+ * Distinct de `--echec` et de `--vide` : les trois se ressemblent de forme et
+ * doivent se distinguer d'un coup d'oeil. Le texte porte l'information ; la
+ * teinte ne fait que la repeter, et le bloc reste lisible en noir et blanc. */
+.etat--succes {
+  background: var(--couleur-succes-fond);
+  border-inline-start: var(--espace-1) solid var(--couleur-succes);
+}
+
+
 .etat--echec :is(h2, h3) {
   margin-block: 0 var(--espace-2);
   color: var(--couleur-alerte);
@@ -188,6 +199,47 @@
   margin: 0;
   font-size: var(--taille-sm);
 }
+
+/* == Les raccourcis de periode ============================================
+ *
+ * ⚠ REMONTE depuis `transactions.css`. `FiltrePeriode` a ete ecrit pour le
+ * journal du commercant, puis la vue nationale des transactions en a eu
+ * besoin a l'identique : le composant vit dans `components/filtres/`, sa
+ * forme ici.
+ * ========================================================================= */
+
+/* Meme forme que le `label` des autres champs, mais ce n'en est pas un : ces
+   boutons ne pilotent aucun champ unique, ils en remplissent deux. D'ou un
+   `span` nomme par `aria-labelledby`, et non un `label`. */
+.filtres__intitule {
+  font-family: var(--police-titre);
+  font-size: var(--taille-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--couleur-texte-secondaire);
+}
+
+.filtres__raccourcis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+}
+
+.filtres__raccourcis .bouton {
+  font-size: var(--taille-xs);
+  padding: var(--espace-1) var(--espace-2);
+}
+
+
+/* L'aide sous un champ de filtre : ce qu'on attend, et sous quelle forme.
+   Rattachee par `aria-describedby`, donc lue apres l'intitule. */
+.filtres__aide {
+  display: block;
+  margin-block-start: var(--espace-1);
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-xs);
+}
+
 
 .filtres__actif {
   font-weight: 700;
@@ -381,3 +433,37 @@
   background: var(--couleur-neutre-fond);
   color: var(--couleur-texte);
 }
+
+/* Les natures d'operation.
+ *
+ * ⚠ REMONTE depuis `registre.css`, qui n'etait chargee que par un ecran alors
+ * que quatre s'en servaient. Le texte dit la nature ; la couleur ne fait que
+ * la repeter, et une capture en noir et blanc reste exacte. */
+.nature--rechargement {
+  background: var(--couleur-succes-fond);
+  color: var(--couleur-succes);
+}
+
+.nature--paiement {
+  background: var(--couleur-neutre-fond);
+  color: var(--couleur-texte);
+}
+
+.nature--annulation {
+  background: var(--couleur-attente-fond);
+  color: var(--couleur-attente-texte);
+}
+
+.nature--decheance {
+  background: var(--couleur-alerte-fond);
+  color: var(--couleur-alerte);
+}
+
+/* ⚠ Notre ajout a `operation_kind` : voir `mocks/registre.ts`. Teinte
+   distincte des quatre autres -- une correction administrative ne doit pas
+   se confondre avec un rechargement dans un relevé. */
+.nature--regularisation {
+  background: var(--couleur-rail-survol-fond);
+  color: var(--couleur-primaire);
+}
+

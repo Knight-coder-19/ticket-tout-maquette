@@ -114,7 +114,12 @@ export async function GET(requete: Request): Promise<Response> {
   const filtre: FiltreRegistre = {
     ...(texte("from") !== undefined ? { depuis: texte("from") as string } : {}),
     ...(texte("to") !== undefined ? { jusqua: texte("to") as string } : {}),
-    ...(texte("partner") !== undefined ? { partenaireId: texte("partner") as string } : {}),
+    /* `partner` et `employee` designent le meme filtre : le TITULAIRE du
+       compte. Deux noms de parametre parce qu'un agent qui cherche les
+       ecritures d'un salarie ne pense pas « partner », un seul filtre parce
+       que le registre ne connait qu'un compte et son proprietaire. */
+    ...(texte("partner") !== undefined ? { titulaireId: texte("partner") as string } : {}),
+    ...(texte("employee") !== undefined ? { titulaireId: texte("employee") as string } : {}),
     ...(kind !== null && kind !== "" && estNature(kind) ? { kind } : {}),
   };
 

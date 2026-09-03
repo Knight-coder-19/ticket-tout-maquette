@@ -30,7 +30,7 @@
 
 import { erreur, euros, identite, succes } from "@/mocks/enveloppe";
 import { decoderCurseur, encoderCurseur, lireLimite } from "@/mocks/curseur";
-import { trouverPartenaire, trouverSalarie } from "@/mocks/magasin";
+import { initialesDe, trouverPartenaire, trouverSalarie } from "@/mocks/magasin";
 import { compensationDe, ecrituresDe, idCompte, registre, trouverOperation } from "@/mocks/registre";
 
 export const dynamic = "force-dynamic";
@@ -106,7 +106,7 @@ export async function GET(requete: Request): Promise<Response> {
       const initiales =
         salarie === undefined
           ? "—"
-          : salarie.nom.split(/\s+/).map((mot) => `${mot.charAt(0).toUpperCase()}.`).join(" ");
+          : initialesDe(salarie);
 
       return {
         id: ecriture.operationId,

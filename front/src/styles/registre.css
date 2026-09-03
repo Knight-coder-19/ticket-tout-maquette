@@ -196,23 +196,13 @@
   outline-offset: -3px;
 }
 
-/* Les natures. Le texte dit la nature ; la couleur ne fait que le répéter. */
-.nature--rechargement {
-  background: var(--couleur-succes-fond);
-  color: var(--couleur-succes);
-}
+/* == Les natures ONT REMONTE =============================================
+ *
+ * `.nature--*` est dans `primitives.css`. QUATRE ecrans s'en servaient alors
+ * que cette feuille n'est chargee que par le registre : le journal du
+ * commercant, le catalogue du reseau, la vue nationale et la fiche d'un
+ * beneficiaire rendaient donc des pastilles SANS AUCUN STYLE. Un defaut
+ * qu'aucun compilateur ne voit -- une classe absente ne fait pas d'erreur,
+ * elle ne fait rien.
+ * ========================================================================= */
 
-.nature--paiement {
-  background: var(--couleur-neutre-fond);
-  color: var(--couleur-texte);
-}
-
-.nature--annulation {
-  background: var(--couleur-attente-fond);
-  color: var(--couleur-attente-texte);
-}
-
-.nature--decheance {
-  background: var(--couleur-alerte-fond);
-  color: var(--couleur-alerte);
-}

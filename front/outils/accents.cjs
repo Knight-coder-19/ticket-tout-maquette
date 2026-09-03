@@ -93,9 +93,22 @@ const path = require("node:path");
  * correct, et `inverse?e?` attrape « inverse », qui l'est aussi. Quand la forme
  * courte est un mot valide sans accent, exigez la forme longue —
  * `retirees?`, `inversees?` — ou renoncez à l'entrée.
+ *
+ * ─── LE MÊME PIÈGE, AU PRÉSENT ───
+ *
+ * Sept entrées ont été retirées pour cette raison : « accepte », « refuse »,
+ * « expire », « marche », « decide », « libere », « precede ». Toutes sont des
+ * formes verbales JUSTES sans accent — « il n'accepte plus », « le code
+ * expire », « il refuse ». Elles avaient été ajoutées pour attraper les
+ * participes (« accepté », « refusé ») ; elles attrapaient surtout des phrases
+ * correctes.
+ *
+ * On perd la détection de « accepte » écrit pour « accepté ». C'est le bon
+ * échange : un contrôle qui crie sur du texte juste finit par n'être plus lu,
+ * et alors il ne détecte plus rien du tout.
  */
 const MOTS =
-  /(?:^|[^a-zà-ÿ])(adhesion|decisions?|categories?|deposees?|reelles?|sante|mobilite|numerique|epicerie|republique|oueme|expiree?|deja|ete|etre|reessayer|caracteres|commercant|etablissements?|agree|parametres?|tranchees?|enregistrees?|repondu|collegue|passees|chargee|decide|verifiez|amelie|marche|reel|apres|tres|donnees|systeme|controle|precedent|premiere|derniere|refuse|accepte|expire|encaisse|cree|verifie|reussi|echoue|demonstrateur|affichees?|affiches?|beneficiaires?|operations?|numero|reglement|emission|securisee?|necessaires?|evenement|resultat|selectionnee?|reserve|libere|horodatee?|chaine|integre|integrite|verifiees?|ecritures?|references?|decheance|salaries?|precede|retirees?|annulees?|inversees?|entete)(?![a-zà-ÿ])/i;
+  /(?:^|[^a-zà-ÿ])(adhesion|decisions?|categories?|deposees?|reelles?|sante|mobilite|numerique|epicerie|republique|oueme|expiree?|deja|ete|etre|reessayer|caracteres|commercant|etablissements?|agree|parametres?|tranchees?|enregistrees?|repondu|collegue|passees|chargee|verifiez|amelie|reel|apres|tres|donnees|systeme|controle|precedent|premiere|derniere|encaisse|cree|verifie|reussi|echoue|demonstrateur|affichees?|affiches?|beneficiaires?|operations?|numero|reglement|emission|securisee?|necessaires?|evenement|resultat|selectionnee?|reserve|horodatee?|chaine|integre|integrite|verifiees?|ecritures?|references?|decheance|salaries?|retirees?|annulees?|inversees?|entete)(?![a-zà-ÿ])/i;
 
 /** Chemins, courriels, identifiants composés : jamais du texte affiché. */
 const NON_AFFICHE = /[@/]|^[a-z0-9]+(?:[_.:-]+[a-z0-9_-]+)+$/;

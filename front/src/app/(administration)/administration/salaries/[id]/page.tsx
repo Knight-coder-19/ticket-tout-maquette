@@ -1,7 +1,8 @@
 import { FicheSalarie } from "./FicheSalarie";
 
-export const metadata = { title: "Fiche salarié" };
+export const metadata = { title: "Fiche bénéficiaire" };
 
-export default function Page() {
-  return <FicheSalarie />;
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return <FicheSalarie id={id} />;
 }

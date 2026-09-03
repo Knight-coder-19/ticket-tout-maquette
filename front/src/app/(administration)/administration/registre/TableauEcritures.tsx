@@ -1,5 +1,7 @@
 "use client";
 
+import { LegendeCompletude } from "@/components/tableaux/LegendeCompletude";
+import { TableauDefilant } from "@/components/tableaux/TableauDefilant";
 import { formaterCentimes } from "@/lib/montant";
 import { formaterDate } from "@/lib/utils/date";
 import type { EcritureRegistre, NatureEcriture } from "@/types/domaine";
@@ -17,6 +19,7 @@ const NATURES: Record<NatureEcriture, string> = {
   paiement: "Paiement",
   annulation: "Annulation",
   decheance: "Déchéance",
+  regularisation: "Régularisation",
 };
 
 /** Le titulaire, dit en français plutôt qu'en identifiant de colonne. */
@@ -73,19 +76,16 @@ export function TableauEcritures({
   };
 
   return (
-    <div
-      className="tableau-defilant"
-      tabIndex={0}
-      role="region"
-      aria-label="Registre des écritures, défilement horizontal"
-    >
+    <TableauDefilant etiquette="Registre des écritures">
       <table className="registre">
-        <caption>
-          {ecritures.length === 1 ? "1 écriture" : `${ecritures.length} écritures`}
-          {resteAVenir ? " affichées, d'autres restent à charger" : " au total"}, la
-          plus récente d&apos;abord. L&apos;ordre est celui du journal, celui que la
-          chaîne de hachage fige.
-        </caption>
+        <LegendeCompletude
+          nombre={ecritures.length}
+          resteAVenir={resteAVenir}
+          singulier="écriture"
+          pluriel="écritures"
+          feminin
+          suite="la plus récente d'abord. L'ordre est celui du journal, celui que la chaîne de hachage fige."
+        />
         <thead>
           <tr>
             <th scope="col">Date</th>
@@ -212,6 +212,6 @@ export function TableauEcritures({
           })}
         </tbody>
       </table>
-    </div>
+    </TableauDefilant>
   );
 }

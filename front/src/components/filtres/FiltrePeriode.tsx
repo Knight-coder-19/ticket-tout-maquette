@@ -3,12 +3,21 @@
 /**
  * Le filtre de période.
  *
- * Deux dates, et trois raccourcis pour les périodes qu'un commerçant demande
- * vraiment : ce mois, le mois dernier, les trente derniers jours. Taper deux
- * dates pour voir « ce mois-ci » est un travail qu'on peut lui épargner.
+ * Deux dates, et trois raccourcis pour les périodes qu'on demande vraiment :
+ * ce mois, le mois dernier, les trente derniers jours. Taper deux dates pour
+ * voir « ce mois-ci » est un travail qu'on peut épargner à qui consulte.
  *
- * L'état du filtre est TOUJOURS affiché, même quand rien n'est filtré : un
- * journal filtré qui ne dit pas qu'il l'est laisse croire qu'on voit tout.
+ * L'état du filtre est TOUJOURS affiché, même quand rien n'est filtré : une
+ * liste filtrée qui ne dit pas qu'elle l'est laisse croire qu'on voit tout.
+ *
+ * ─── Pourquoi il a remonté ───
+ *
+ * Il a été écrit pour le journal du commerçant, puis la vue nationale des
+ * transactions en a eu besoin à l'identique. Deux espaces : il vit donc dans
+ * `src/components/`. Rien n'a changé de son fonctionnement — une seule phrase
+ * l'attachait au partenaire, « tous VOS encaissements sont affichés », et
+ * elle est devenue un paramètre. C'était le seul mot qui l'empêchait de
+ * servir ailleurs.
  */
 
 export interface Periode {
@@ -31,9 +40,15 @@ function finDuMoisPrecedent(quand: number): string {
 export function FiltrePeriode({
   periode,
   onChanger,
+  sansFiltre,
 }: {
   periode: Periode;
   onChanger: (periode: Periode) => void;
+  /**
+   * Ce qui s'affiche quand aucune borne n'est posée. Chaque écran nomme ce
+   * qu'il montre : « tous vos encaissements », « toutes les transactions ».
+   */
+  sansFiltre: string;
 }) {
   const maintenant = Date.now();
   const aujourdhui = new Date(maintenant).toISOString().slice(0, 10);
@@ -122,7 +137,7 @@ export function FiltrePeriode({
             </button>
           </>
         ) : (
-          <>Aucun filtre : tous vos encaissements sont affichés.</>
+          <>Aucun filtre : {sansFiltre}</>
         )}
       </p>
     </div>

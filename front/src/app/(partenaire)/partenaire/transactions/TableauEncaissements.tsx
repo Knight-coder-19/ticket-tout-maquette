@@ -1,5 +1,7 @@
 "use client";
 
+import { LegendeCompletude } from "@/components/tableaux/LegendeCompletude";
+import { TableauDefilant } from "@/components/tableaux/TableauDefilant";
 import { formaterCentimes } from "@/lib/montant";
 import type { LigneEncaissement } from "@/types/encaissement";
 
@@ -42,18 +44,15 @@ export function TableauEncaissements({
     }).format(Date.parse(iso));
 
   return (
-    <div
-      className="tableau-defilant"
-      tabIndex={0}
-      role="region"
-      aria-label="Journal des encaissements, défilement horizontal"
-    >
+    <TableauDefilant etiquette="Journal des encaissements">
       <table className="registre">
-        <caption>
-          {lignes.length === 1 ? "1 encaissement" : `${lignes.length} encaissements`}
-          {resteAVenir ? " affichés, d'autres restent à charger" : " au total"}, le
-          plus récent d&apos;abord.
-        </caption>
+        <LegendeCompletude
+          nombre={lignes.length}
+          resteAVenir={resteAVenir}
+          singulier="encaissement"
+          pluriel="encaissements"
+          suite="le plus récent d'abord."
+        />
         <thead>
           <tr>
             <th scope="col">Date</th>
@@ -108,6 +107,6 @@ export function TableauEncaissements({
           ))}
         </tbody>
       </table>
-    </div>
+    </TableauDefilant>
   );
 }

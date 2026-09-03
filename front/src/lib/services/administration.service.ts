@@ -27,11 +27,22 @@ import {
   depuisDecisionJournal,
   depuisDemandeAdhesion,
   depuisEcritureRegistre,
+  depuisEmployeur,
+  depuisFicheBeneficiaire,
+  depuisLigneRepertoire,
+  depuisRegularisation,
+  depuisTotauxTransactions,
+  depuisTransactionNationale,
   depuisVerification,
 } from "@/lib/api/adaptateurs";
 import type {
   ChainVerification,
   JournalList,
+  AdjustmentResult,
+  AdminTransactionList,
+  EmployeeDetail,
+  EmployeeDirectoryList,
+  EmployerItem,
   LedgerEntryList,
   Paginated,
   PartnerAccountList,
@@ -43,6 +54,14 @@ import type {
   DemandeAdhesion,
   EcritureRegistre,
   VerificationIntegrite,
+  TotauxTransactions,
+  TransactionNationale,
+  EmployeurRepertoire,
+  FicheBeneficiaire,
+  LigneRepertoire,
+  Regularisation,
+  SensRegularisation,
+  StatutBeneficiaire,
 } from "@/types/domaine";
 
 /** Une page de la file de validation, dans le vocabulaire du domaine. */
@@ -212,7 +231,16 @@ export interface FiltresRegistre {
   /** Date ISO 8601 incluse, comparée à la date du fait. */
   depuis?: string;
   jusqua?: string;
-  partenaireId?: string;
+  /**
+   * Le TITULAIRE du compte, salarié comme partenaire.
+   *
+   * Il s'appelait `partenaireId` tant que le registre de l'administration
+   * était seul à s'en servir. La fiche d'un bénéficiaire en a eu besoin pour
+   * un salarié : le registre ne connaît qu'un compte et son propriétaire, et
+   * un nom qui ne désigne qu'une moitié de ses usages finit par faire croire
+   * qu'il ne sert qu'à celle-là.
+   */
+  titulaireId?: string;
   /** Nature côté back : `topup`, `payment`, `compensation`, `closure_forfeit`. */
   nature?: string;
 }
@@ -235,7 +263,7 @@ export async function listerEcritures(
   const parametres = new URLSearchParams();
   if (filtres.depuis !== undefined && filtres.depuis !== "") parametres.set("from", filtres.depuis);
   if (filtres.jusqua !== undefined && filtres.jusqua !== "") parametres.set("to", filtres.jusqua);
-  if (filtres.partenaireId !== undefined && filtres.partenaireId !== "") parametres.set("partner", filtres.partenaireId);
+  if (filtres.titulaireId !== undefined && filtres.titulaireId !== "") parametres.set("partner", filtres.titulaireId);
   if (filtres.nature !== undefined && filtres.nature !== "") parametres.set("kind", filtres.nature);
   if (curseur !== undefined && curseur !== "") parametres.set("cursor", curseur);
 
@@ -283,4 +311,184 @@ export async function annulerOperation(operationId: string, motif: string): Prom
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ original_operation_id: operationId, reason: motif }),
   });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * VUE NATIONALE DES TRANSACTIONS
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/** Les quatre filtres de la vue nationale. Tous facultatifs, tous combinables. */
+export interface FiltresTransactionsNationales {
+  /** Date ISO 8601 incluse, sur la date du fait. */
+  depuis?: string;
+  jusqua?: string;
+  partenaireId?: string;
+  /** Identifiant de ville, ou `en-ligne` pour les commerces sans ville. */
+  villeId?: string;
+  categorie?: string;
+}
+
+export interface PageTransactionsNationales {
+  transactions: TransactionNationale[];
+  /** Sur l'ensemble filtré, jamais sur cette page. */
+  totaux: TotauxTransactions;
+  curseurSuivant: string | null;
+}
+
+/**
+ * L'activité nationale : qui a encaissé, où, combien, dans quelle catégorie.
+ *
+ * ⚠ Route que NOUS proposons, `GET /api/v1/admin/transactions`. Le contrat
+ * n'expose côté administration que le tableau de bord agrégé
+ * (`data-dictionary.md:561-573`) : un volume et une ventilation par ville,
+ * aucune ligne. Voir l'en-tête de la route pour le détail.
+ *
+ * Les totaux viennent de la réponse et ne sont jamais recalculés depuis
+ * `transactions` : celles-ci ne sont qu'une page.
+ */
+export async function listerTransactionsNationales(
+  filtres: FiltresTransactionsNationales = {},
+  curseur?: string,
+): Promise<PageTransactionsNationales> {
+  const parametres = new URLSearchParams();
+  const poser = (nom: string, valeur: string | undefined): void => {
+    if (valeur !== undefined && valeur !== "") parametres.set(nom, valeur);
+  };
+  poser("from", filtres.depuis);
+  poser("to", filtres.jusqua);
+  poser("partner", filtres.partenaireId);
+  poser("city", filtres.villeId);
+  poser("category", filtres.categorie);
+  poser("cursor", curseur);
+
+  const requete = parametres.toString();
+  const brut = await appelApi<AdminTransactionList>(
+    `/v1/admin/transactions${requete === "" ? "" : `?${requete}`}`,
+    { cache: "no-store" },
+  );
+
+  return {
+    transactions: brut.items.map(depuisTransactionNationale),
+    totaux: depuisTotauxTransactions(brut.totals),
+    curseurSuivant: brut.next_cursor,
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * LE RÉPERTOIRE DES BÉNÉFICIAIRES
+ *
+ * ⚠ Toutes les routes de cette section sont de NOTRE FAIT. Le répertoire
+ * existe en base et dans `core/src/directory/` ; la section 4 du contrat ne
+ * l'expose nulle part.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+export interface FiltresRepertoire {
+  /** Nom, prénom ou matricule. Accents et casse indifférents. */
+  recherche?: string;
+  statut?: StatutBeneficiaire;
+  employeurId?: string;
+}
+
+export interface PageRepertoire {
+  lignes: LigneRepertoire[];
+  curseurSuivant: string | null;
+}
+
+export async function listerBeneficiaires(
+  filtres: FiltresRepertoire = {},
+  curseur?: string,
+): Promise<PageRepertoire> {
+  const parametres = new URLSearchParams();
+  const poser = (nom: string, valeur: string | undefined): void => {
+    if (valeur !== undefined && valeur !== "") parametres.set(nom, valeur);
+  };
+  poser("q", filtres.recherche);
+  poser("status", filtres.statut);
+  poser("employer", filtres.employeurId);
+  poser("cursor", curseur);
+
+  const requete = parametres.toString();
+  const brut = await appelApi<EmployeeDirectoryList>(
+    `/v1/admin/employees${requete === "" ? "" : `?${requete}`}`,
+    { cache: "no-store" },
+  );
+  return {
+    lignes: brut.items.map(depuisLigneRepertoire),
+    curseurSuivant: brut.next_cursor,
+  };
+}
+
+/** Le référentiel des employeurs, pour le filtre. Jamais une liste écrite. */
+export async function listerEmployeurs(): Promise<EmployeurRepertoire[]> {
+  const brut = await appelApi<EmployerItem[]>("/v1/admin/employers", { cache: "no-store" });
+  return brut.map(depuisEmployeur);
+}
+
+export async function lireBeneficiaire(id: string): Promise<FicheBeneficiaire> {
+  const brut = await appelApi<EmployeeDetail>(
+    `/v1/admin/employees/${encodeURIComponent(id)}`,
+    { cache: "no-store" },
+  );
+  return depuisFicheBeneficiaire(brut);
+}
+
+/**
+ * Régularise le solde d'un bénéficiaire.
+ *
+ * ═══ RÈGLE R1 ═══
+ *
+ * Cette fonction n'envoie AUCUN solde. Elle envoie un sens, un montant et un
+ * motif ; le serveur ajoute une écriture au registre et rend le solde qui en
+ * découle, accompagné de l'écriture elle-même. À aucun moment le front ne dit
+ * au serveur combien le compte doit valoir — il dit ce qu'il faut inscrire.
+ *
+ * C'est pourquoi le retour porte les deux : après une régularisation, l'écran
+ * montre le nouveau solde ET la ligne qui l'explique.
+ */
+export async function regulariserSolde(
+  id: string,
+  sens: SensRegularisation,
+  montantCentimes: number,
+  motif: string,
+): Promise<Regularisation> {
+  const brut = await appelApi<AdjustmentResult>(
+    `/v1/admin/employees/${encodeURIComponent(id)}/adjustments`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      /* Euros décimaux sur le fil (`money.rs:145`, A5) ; le domaine reste en
+         centimes entiers de bout en bout. */
+      body: JSON.stringify({
+        direction: sens,
+        amount: montantCentimes / 100,
+        reason: motif,
+      }),
+    },
+  );
+  return depuisRegularisation(brut);
+}
+
+/** Suspend un bénéficiaire. Le motif est obligatoire, côté serveur aussi. */
+export async function suspendreBeneficiaire(id: string, motif: string): Promise<void> {
+  await appelApiSansContenu(
+    `/v1/admin/employees/${encodeURIComponent(id)}/suspend`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: motif }),
+    },
+  );
+}
+
+/**
+ * Réactive un bénéficiaire. AUCUN motif, et aucun corps.
+ *
+ * Exiger une justification pour rendre ses droits à quelqu'un lui ferait
+ * porter la charge d'une suspension qui n'aurait peut-être pas dû avoir lieu.
+ */
+export async function reactiverBeneficiaire(id: string): Promise<void> {
+  await appelApiSansContenu(
+    `/v1/admin/employees/${encodeURIComponent(id)}/reinstate`,
+    { method: "POST" },
+  );
 }

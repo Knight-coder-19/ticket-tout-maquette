@@ -28,6 +28,7 @@ import { decoderCurseur, encoderCurseur, lireLimite } from "@/mocks/curseur";
 import {
   comparerParEnseigne,
   comptesPartenaires,
+  sansAccent,
   trouverPartenaire,
   trouverVille,
   type ModeService,
@@ -108,8 +109,6 @@ export async function GET(requete: Request): Promise<Response> {
    */
   const ville = texte("city");
   if (ville !== undefined) {
-    const sansAccent = (t: string): string =>
-      t.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
     liste = liste.filter((partenaire) => {
       if (partenaire.serviceMode === "online") return true;
       const nom = partenaire.cityId === null ? null : trouverVille(partenaire.cityId)?.name;

@@ -25,6 +25,7 @@ import {
   libererJetonsExpires,
   trouverJetonParReference,
   trouverSalarie,
+  initialesDe,
 } from "@/mocks/magasin";
 
 export const dynamic = "force-dynamic";
@@ -66,10 +67,7 @@ export async function GET(
    * nom complet (data-dictionary.md:434). Le partenaire n'a pas a connaitre
    * l'identite du salarie, meme au comptoir.
    */
-  const initiales = salarie.nom
-    .split(/\s+/)
-    .map((mot) => `${mot.charAt(0).toUpperCase()}.`)
-    .join(" ");
+  const initiales = initialesDe(salarie);
 
   return succes({
     jti: jeton.jti,

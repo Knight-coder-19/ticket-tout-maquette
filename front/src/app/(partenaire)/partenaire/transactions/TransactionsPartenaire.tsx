@@ -14,7 +14,7 @@ import "@/styles/transactions.css";
 import { useCallback, useEffect, useState } from "react";
 
 import { ExportCsv } from "./ExportCsv";
-import { FiltrePeriode, type Periode } from "./FiltrePeriode";
+import { FiltrePeriode, type Periode } from "@/components/filtres/FiltrePeriode";
 import { TableauEncaissements } from "./TableauEncaissements";
 import {
   listerEncaissements,
@@ -112,7 +112,11 @@ export function TransactionsPartenaire() {
         journal, marqué comme tel.
       </p>
 
-      <FiltrePeriode periode={periode} onChanger={setPeriode} />
+      <FiltrePeriode
+        periode={periode}
+        onChanger={setPeriode}
+        sansFiltre="tous vos encaissements sont affichés."
+      />
 
       {etat.phase === "chargement" && (
         <div className="etat etat--chargement" aria-busy="true" aria-live="polite">

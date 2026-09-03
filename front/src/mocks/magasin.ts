@@ -31,7 +31,9 @@
 
 import {
   idCompte,
+  compenser,
   posterOperation,
+  type OperationRegistre,
   registre,
   soldeDuCompte,
   trouverOperation,
@@ -46,12 +48,69 @@ import type {
 export const TTL_JETON = 5 * 60 * 1000;
 
 /** Un salarie suspendu conserve son solde mais ne peut plus emettre. */
-export type StatutSalarie = "actif" | "suspendu";
+/**
+ * L'etat du compte d'un salarie.
+ *
+ * Les TROIS valeurs de `user_status` (`0001_schema.sql:5`), pas deux. La forme
+ * precedente n'en portait que deux, et c'est la meme faute qui avait ete
+ * corrigee sur les partenaires : deux unions pour un concept, c'est la
+ * certitude qu'un jour un compte ferme sera traite comme autre chose sans que
+ * rien ne proteste. Un ecran qui ne traite legitimement que certains statuts
+ * FILTRE ; il ne redeclare pas un type plus etroit.
+ *
+ * ⚠ Le schema porte en realite DEUX statuts pour un salarie : `users.status`
+ * (l'acces de la personne) et `accounts.status` (le compte d'argent). Le mock
+ * n'a qu'une ligne par salarie et n'en porte donc qu'un ; c'est `users.status`
+ * qui est modelise, et le back devra tenir les deux en phase --
+ * `directory/employment.rs:1` ferme d'ailleurs le lien PUIS le compte, dans
+ * cet ordre.
+ */
+export type StatutSalarie = "actif" | "suspendu" | "ferme";
 
+/**
+ * Un salarie du repertoire.
+ *
+ * Les champs suivent les tables plutot que l'ecran : `employees`
+ * (`0001_schema.sql:71-78`) porte le nom en DEUX colonnes et un telephone,
+ * `users` porte le statut, et c'est `employment_links` (`:80-96`) qui porte le
+ * matricule et l'employeur -- pas la fiche du salarie.
+ *
+ * ⚠ Le compte non plus n'appartient pas au salarie : `employment_links`
+ * porte `account_id`. Un salarie qui change d'employeur change de compte. Le
+ * mock garde un compte par salarie (`ACC-SAL-00x`), ce qui suffit tant qu'un
+ * salarie n'a qu'un lien -- l'index `uq_active_employment` (`:95`) garantit
+ * qu'il n'en a qu'un ACTIF a la fois.
+ */
 export interface SalarieMagasin {
   id: Identifiant;
+  /** `employees.last_name`. */
   nom: string;
-  employeur: string;
+  /** `employees.first_name`. */
+  prenom: string;
+  /** `employees.phone`, `TEXT NULL`. */
+  telephone: string | null;
+  /** `employment_links.employer_id` du lien ACTIF. */
+  employeurId: Identifiant;
+  /** `employment_links.employer_ref` : le matricule (decision 12). */
+  matricule: string;
+  /** `employment_links.started_at`, date ISO 8601. */
+  entreLe: string;
+  /** `users.status`. */
+  statut: StatutSalarie;
+}
+
+/**
+ * Un employeur. Table `employers` (`0001_schema.sql:37-45`).
+ *
+ * Il n'existait pas dans le magasin : le salarie portait le nom de son
+ * employeur en clair, ce qui rendait impossible un filtre par employeur qui ne
+ * soit pas une comparaison de chaines.
+ */
+export interface EmployeurMagasin {
+  id: Identifiant;
+  legalName: string;
+  ifu: string | null;
+  contactEmail: string | null;
   statut: StatutSalarie;
 }
 
@@ -237,6 +296,7 @@ export interface TransactionMagasin {
 
 export interface Magasin {
   salaries: SalarieMagasin[];
+  employeurs: EmployeurMagasin[];
   villes: VilleMagasin[];
   administrateurs: AdministrateurMagasin[];
   partenaires: PartenaireMagasin[];
@@ -257,10 +317,29 @@ export interface Magasin {
  */
 function donneesInitiales(): Magasin {
   return {
+    /* Le repertoire. Chaque salarie rend une situation atteignable depuis
+       l'interface : solde confortable, solde faible, compte suspendu, fonds
+       reserves par un jeton en cours, et un compte ferme -- sans quoi la
+       troisieme valeur de `user_status` ne serait jamais montree. */
     salaries: [
-      { id: "SAL-001", nom: "Amélie Roussel", employeur: "Mairie de Cotonou", statut: "actif" },
-      { id: "SAL-002", nom: "Bastien Nkoue", employeur: "Mairie de Cotonou", statut: "actif" },
-      { id: "SAL-003", nom: "Clara Doumbia", employeur: "Office du tourisme", statut: "suspendu" },
+      { id: "SAL-001", nom: "Roussel", prenom: "Amélie", telephone: "+229 97 12 34 56",
+        employeurId: "EMP-001", matricule: "MC-4471", entreLe: "2024-03-04", statut: "actif" },
+      { id: "SAL-002", nom: "Nkoue", prenom: "Bastien", telephone: null,
+        employeurId: "EMP-001", matricule: "MC-5108", entreLe: "2025-09-15", statut: "actif" },
+      { id: "SAL-003", nom: "Doumbia", prenom: "Clara", telephone: "+229 95 88 21 07",
+        employeurId: "EMP-002", matricule: "OT-0233", entreLe: "2023-11-20", statut: "suspendu" },
+      { id: "SAL-004", nom: "Agossou", prenom: "Delphine", telephone: "+229 96 40 55 12",
+        employeurId: "EMP-002", matricule: "OT-0341", entreLe: "2025-01-08", statut: "actif" },
+      { id: "SAL-005", nom: "Bakary", prenom: "Émile", telephone: null,
+        employeurId: "EMP-003", matricule: "HP-7702", entreLe: "2022-06-01", statut: "ferme" },
+    ],
+    employeurs: [
+      { id: "EMP-001", legalName: "Mairie de Cotonou", ifu: "3201800045566",
+        contactEmail: "paie@cotonou.bj", statut: "actif" },
+      { id: "EMP-002", legalName: "Office du tourisme", ifu: "3201900077889",
+        contactEmail: "rh@tourisme.bj", statut: "actif" },
+      { id: "EMP-003", legalName: "Hôpital de la Paix", ifu: null,
+        contactEmail: null, statut: "actif" },
     ],
     villes: [
       { id: "VIL-COT", name: "Cotonou", department: "Littoral" },
@@ -775,38 +854,106 @@ function amorcerRegistre(): void {
     });
   };
 
-  reprise("SAL-001", 162_50, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
-  reprise("SAL-002", 8_30, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
+  reprise("SAL-001", 213_30, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
+  reprise("SAL-002", 64_40, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
+  reprise("SAL-004", 80_00, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
+  reprise("SAL-005", 21_60, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
   reprise("PRT-001", 468_70, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
-  reprise("PRT-009", 1_284_50, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
-  reprise("PRT-010", 312_75, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
-  reprise("PRT-011", 47_20, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
+  reprise("PRT-009", 1_229_90, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
+  reprise("PRT-010", 291_85, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
+  reprise("PRT-011", 32_20, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
   reprise("PRT-012", 803_10, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
   reprise("PRT-013", 18_00, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
   reprise("PRT-015", 259_40, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
-  reprise("PRT-016", 94_80, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
+  reprise("PRT-016", 78_40, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
 
-  for (const [salarie, montant, quand] of [
-    ["SAL-001", 12_50, "2026-08-28T09:14:00.000Z"],
-    ["SAL-002", 4_80, "2026-08-30T12:02:00.000Z"],
-  ] as const) {
+  /* Les reglements, repartis sur PLUSIEURS partenaires, villes et categories.
+     Un seul commercant ne suffisait pas : la vue nationale des transactions
+     montre qui a encaisse, ou et dans quelle categorie, et deux reglements du
+     meme etablissement ne demontraient aucun de ses filtres. Les reprises
+     ci-dessus sont ajustees en consequence -- chaque salarie recoit ce qu'il
+     depense en plus, chaque partenaire recoit d'autant moins a l'ouverture --
+     de sorte que TOUS LES SOLDES DE DEMONSTRATION SONT INCHANGES. */
+  const regler = (
+    salarie: string,
+    partenaire: string,
+    montant: MontantCentimes,
+    quand: string,
+  ): OperationRegistre =>
     posterOperation({
       kind: "payment",
       amountCentimes: montant,
       debiter: idCompte(salarie),
-      crediter: idCompte("PRT-001"),
+      crediter: idCompte(partenaire),
       memo: "Règlement au comptoir",
       occurredAt: quand,
       quand: t(quand),
     });
+
+  for (const [salarie, partenaire, montant, quand] of [
+    ["SAL-001", "PRT-001", 12_50, "2026-08-28T09:14:00.000Z"],
+    ["SAL-002", "PRT-001", 4_80, "2026-08-30T12:02:00.000Z"],
+    /* Cotonou, alimentation */
+    ["SAL-001", "PRT-009", 23_40, "2026-09-03T11:20:00.000Z"],
+    ["SAL-002", "PRT-009", 31_20, "2026-09-18T17:45:00.000Z"],
+    /* Parakou, restauration */
+    ["SAL-001", "PRT-010", 8_90, "2026-09-08T12:35:00.000Z"],
+    ["SAL-001", "PRT-010", 12_00, "2026-09-22T13:10:00.000Z"],
+    /* Porto-Novo, culture */
+    ["SAL-002", "PRT-011", 15_00, "2026-09-11T10:05:00.000Z"],
+    /* Sans ville : le bloc `online_partners` du tableau de bord (A1) */
+    ["SAL-001", "PRT-016", 6_50, "2026-09-15T20:12:00.000Z"],
+    ["SAL-002", "PRT-016", 9_90, "2026-09-23T08:40:00.000Z"],
+  ] as const) {
+    regler(salarie, partenaire, montant, quand);
   }
+
+  /* Un reglement ANNULE, pour que l'ecart entre le nombre d'operations et le
+     volume net soit demontrable et non seulement decrit. Le paiement et son
+     inverse se compensent : le solde de PRT-011 est le meme qu'avant. */
+  const aAnnuler = regler("SAL-001", "PRT-011", 45_00, "2026-09-19T14:30:00.000Z");
+  compenser(
+    aAnnuler.id,
+    "ADM-001",
+    "Double encaissement signalé par le commerçant.",
+    t("2026-09-20T09:00:00.000Z"),
+  );
 }
 
 amorcerRegistre();
 
+
 /* ═══════════════════════════════════════════════════════════════════════════
  * REFERENTIEL
  * ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * Les initiales d'un salarie : « A. R. », jamais le nom complet.
+ *
+ * Le contrat l'impose pour `customer_label` (`data-dictionary.md:434`) : un
+ * commercant n'a pas a connaitre l'identite de ses clients, meme au comptoir.
+ *
+ * ⚠ Ecrite ici, et une seule fois. Le calcul etait recopie dans deux routes,
+ * chacune decoupant `nom` sur les espaces. Cela fonctionnait tant que `nom`
+ * portait le nom COMPLET ; depuis que la fiche suit la table -- `last_name` et
+ * `first_name` en deux colonnes (`0001_schema.sql:74-75`) -- ce decoupage ne
+ * rendait plus qu'une initiale. Un seul endroit, plus de derive possible.
+ */
+export function initialesDe(salarie: SalarieMagasin): string {
+  return [salarie.prenom, salarie.nom]
+    .filter((partie) => partie.trim() !== "")
+    .map((partie) => `${partie.trim().charAt(0).toUpperCase()}.`)
+    .join(" ");
+}
+
+/** Le nom affiche : « Amelie Roussel ». */
+export function nomComplet(salarie: SalarieMagasin): string {
+  return `${salarie.prenom} ${salarie.nom}`.trim();
+}
+
+export function trouverEmployeur(id: string): EmployeurMagasin | undefined {
+  return magasin.employeurs.find((employeur) => employeur.id === id);
+}
 
 export function trouverSalarie(id: string): SalarieMagasin | undefined {
   return magasin.salaries.find((salarie) => salarie.id === id);
@@ -943,6 +1090,134 @@ export function soldeDe(employeeId: string, maintenant: number): SoldeMagasin | 
     heldCentimes,
     disponibleCentimes: settledCentimes - heldCentimes,
   };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * REGULARISATION
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+export type SensRegularisation = "credit" | "debit";
+
+export type EchecRegularisation =
+  | "introuvable"
+  | "motif_manquant"
+  | "montant_invalide"
+  | "compte_ferme"
+  | "solde_insuffisant";
+
+/**
+ * Corrige le solde d'un salarie EN AJOUTANT UNE ECRITURE.
+ *
+ * ═══ REGLE R1 ═══
+ *
+ * Cette fonction n'ecrit AUCUN solde. Elle ne touche ni `settledCentimes`, ni
+ * un champ « solde » quelconque : elle appelle `posterOperation`, seul point
+ * d'ecriture du journal, et le solde en decoule. C'est la meme mecanique que
+ * l'annulation.
+ *
+ * La preuve en est la forme du code : il n'y a ici aucune affectation. Si l'on
+ * se surprend a ecrire `compte.soldeCentimes = ...`, on a pris le mauvais
+ * chemin -- et de toute facon `posterOperation` est le seul a le faire, et les
+ * ecritures sont gelees.
+ *
+ * ═══ LA CONTREPARTIE ═══
+ *
+ * Une ecriture a deux cotes. Une regularisation au CREDIT debite le compte
+ * d'emission (`MINISTRY_ISSUANCE`), exactement comme un rechargement : c'est
+ * de la monnaie qui entre dans le dispositif. Au DEBIT, elle y retourne. Sans
+ * contrepartie, l'operation serait desequilibree et l'invariant I1 tomberait.
+ *
+ * ═══ REGLE R2 : le solde ne devient jamais negatif ═══
+ *
+ * Ce n'est pas une precaution d'interface, c'est une contrainte du schema :
+ * `settled_never_negative` (`0001_schema.sql:57`) l'interdit en base pour tout
+ * compte non systeme.
+ *
+ * ⚠ MAIS LA BORNE N'EST PAS `settled`, C'EST `disponible`. Une seconde
+ * contrainte, `held_within_settled` (`:59`), impose `balance_held <=
+ * balance_settled`. Un salarie qui possede 30 EUR dont 25 sont reserves par un
+ * jeton en cours ne peut donc etre debite que de 5 : au-dela, `settled`
+ * passerait sous `held` et la base refuserait l'ecriture. Borner sur `settled`
+ * aurait laisse passer une regularisation que le back rejette.
+ */
+export function regulariser(
+  employeeId: string,
+  sens: SensRegularisation,
+  montantCentimes: MontantCentimes,
+  motif: string | null,
+  administrateurId: string,
+  maintenant: number,
+): { operation: OperationRegistre; solde: SoldeMagasin } | { echec: EchecRegularisation } {
+  const salarie = trouverSalarie(employeeId);
+  if (!salarie) return { echec: "introuvable" };
+  if (salarie.statut === "ferme") return { echec: "compte_ferme" };
+
+  const motifNettoye = motif !== null && motif.trim() !== "" ? motif.trim() : null;
+  if (motifNettoye === null) return { echec: "motif_manquant" };
+
+  if (!Number.isInteger(montantCentimes) || montantCentimes <= 0) {
+    return { echec: "montant_invalide" };
+  }
+
+  const avant = soldeDe(employeeId, maintenant);
+  if (avant === undefined) return { echec: "introuvable" };
+
+  /* R2, bornee sur le DISPONIBLE et non sur le regle -- voir l'en-tete. */
+  if (sens === "debit" && montantCentimes > avant.disponibleCentimes) {
+    return { echec: "solde_insuffisant" };
+  }
+
+  const compte = idCompte(employeeId);
+  const emission = "ACC-MINISTRY_ISSUANCE";
+
+  const operation = posterOperation({
+    kind: "regularisation",
+    amountCentimes: montantCentimes,
+    debiter: sens === "credit" ? emission : compte,
+    crediter: sens === "credit" ? compte : emission,
+    memo: motifNettoye,
+    createdBy: administrateurId,
+    occurredAt: new Date(maintenant).toISOString(),
+    quand: maintenant,
+  });
+
+  /* Le solde APRES est relu depuis le journal, jamais deduit de l'operation :
+     c'est ce qui prouve, a l'ecran, que le nombre vient des ecritures. */
+  const apres = soldeDe(employeeId, maintenant);
+  if (apres === undefined) return { echec: "introuvable" };
+  return { operation, solde: apres };
+}
+
+/**
+ * Suspend ou reactive un salarie.
+ *
+ * Motif OBLIGATOIRE pour suspendre, aucun pour reactiver -- le meme
+ * raisonnement que pour les partenaires : on doit pouvoir dire pourquoi on
+ * prive quelqu'un de ses droits ; les lui rendre ne se justifie pas.
+ *
+ * ⚠ Elle ne FERME pas. `directory/employment.rs:1` decrit la fermeture comme
+ * la fin du lien d'emploi, suivie de la cloture du compte, puis d'une
+ * operation `closure_forfeit` si un reliquat subsiste, « honouring
+ * closure_grace ». Ce delai de grace n'est expose nulle part dans le contrat :
+ * l'implementer reviendrait a l'inventer. La fermeture est donc signalee
+ * comme manquante, pas simulee.
+ */
+export function changerStatutSalarie(
+  employeeId: string,
+  vers: "actif" | "suspendu",
+  motif: string | null,
+): { salarie: SalarieMagasin } | { echec: "introuvable" | "motif_manquant" | "compte_ferme" } {
+  const salarie = trouverSalarie(employeeId);
+  if (!salarie) return { echec: "introuvable" };
+  if (salarie.statut === "ferme") return { echec: "compte_ferme" };
+
+  if (vers === "suspendu") {
+    const motifNettoye = motif !== null && motif.trim() !== "" ? motif.trim() : null;
+    if (motifNettoye === null) return { echec: "motif_manquant" };
+  }
+
+  salarie.statut = vers;
+  return { salarie };
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1316,7 +1591,16 @@ export function activiteDe(partenaireId: string): ActivitePartenaire {
 }
 
 /** Enleve les diacritiques : « Épicerie » se trouve en tapant « epicerie ». */
-function sansAccent(texte: string): string {
+/**
+ * Replie les accents et la casse, pour une recherche indulgente.
+ *
+ * ⚠ Exportee : elle etait ecrite ici en prive ET recopiee dans la route du
+ * catalogue. Un troisieme usage -- le repertoire des beneficiaires, ou l'on
+ * doit trouver « Emile » en tapant « emile » -- en aurait fait une troisieme
+ * copie. Deux recherches qui replient les accents differemment, c'est un
+ * ecran qui trouve ce que l'autre ne trouve pas.
+ */
+export function sansAccent(texte: string): string {
   return texte.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 }
 
@@ -1484,3 +1768,35 @@ export function changerStatutPartenaire(
 
   return { partenaire, entree };
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * AMORCE DIFFEREE
+ *
+ * ⚠ EN FIN DE MODULE, ET C'EST OBLIGATOIRE. `emettreJeton` s'appuie sur
+ * `ALPHABET_CODE`, un `const` declare plus bas dans ce fichier : appeler
+ * l'amorce plus haut la ferait tomber dans la zone morte temporelle, et le
+ * module entier echouerait au chargement. Les declarations de fonction sont
+ * hissees, pas les `const`.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * Un jeton en cours, pour que « reserve » ne vaille pas toujours zero.
+ *
+ * Sans lui, `held` est nul partout et les trois soldes de la fiche affichent
+ * le meme nombre : la distinction que l'ecran doit faire -- un salarie dont
+ * 25 EUR sont reserves n'a pas perdu 25 EUR -- serait indemontrable.
+ *
+ * ⚠ IL EXPIRE, et c'est voulu. Un jeton vit cinq minutes (`QR_TTL_MAX_SECONDES`,
+ * T. Vignal) ; passe ce delai `libererJetonsExpires` le retire et les fonds
+ * reviennent au disponible. La reservation est transitoire par nature, et un
+ * jeu de demonstration qui la figerait mentirait sur ce qu'elle est. Il passe
+ * par `emettreJeton`, le point d'emission ordinaire : rien n'est fabrique a
+ * cote.
+ */
+function amorcerJetonEnCours(): void {
+  if (magasin.jetons.size > 0) return;
+  emettreJeton("SAL-004", 25_00, Date.now());
+}
+
+amorcerJetonEnCours();

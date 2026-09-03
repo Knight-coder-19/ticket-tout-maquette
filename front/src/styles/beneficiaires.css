@@ -1,0 +1,149 @@
+/*
+ * Le repertoire des beneficiaires et la fiche de l'un d'eux.
+ *
+ * N'apporte que trois choses : la colonne de l'ecran, le bloc des trois
+ * soldes, et les quelques champs propres au dialogue de regularisation. Le
+ * tableau, les filtres, les etats, la fiche en liste de definitions et les
+ * pastilles viennent de `primitives.css` et de `compte.css`, partages.
+ */
+
+.beneficiaires {
+  container-type: inline-size;
+  container-name: beneficiaires;
+}
+
+.beneficiaires__fil {
+  margin-block: 0 var(--espace-2);
+  font-size: var(--taille-sm);
+}
+
+.beneficiaires__titre {
+  margin-block: 0 var(--espace-2);
+  font-family: var(--police-titre);
+  font-size: var(--taille-2xl);
+}
+
+.beneficiaires__intro {
+  max-inline-size: var(--largeur-contenu);
+  margin-block-end: var(--espace-6);
+  color: var(--couleur-texte-secondaire);
+}
+
+/* == Les trois soldes =====================================================
+ *
+ * Encadre et non rempli : le bleu institutionnel ne sert jamais d'aplat de
+ * bouton (`tokens.css:13`), et un bandeau colore attirerait l'oeil sur le
+ * contenant plutot que sur les chiffres.
+ * ========================================================================= */
+
+.soldes {
+  margin-block-end: var(--espace-8);
+  padding: var(--espace-4) var(--espace-6);
+  background: var(--couleur-fond-secondaire);
+  border-inline-start: var(--espace-1) solid var(--couleur-primaire);
+  border-radius: var(--rayon-sm);
+}
+
+.soldes__titre {
+  margin-block: 0 var(--espace-3);
+  font-family: var(--police-titre);
+  font-size: var(--taille-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--couleur-texte-secondaire);
+}
+
+.soldes__liste {
+  margin: 0;
+  display: grid;
+  gap: var(--espace-4);
+}
+
+/* Trois colonnes des que la place existe. Le seuil est en dur : une condition
+   `@container` n'accepte pas une `var()`. */
+@container beneficiaires (min-width: 40rem) {
+  .soldes__liste {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.soldes__bloc dt {
+  font-family: var(--police-titre);
+  font-size: var(--taille-sm);
+  color: var(--couleur-texte-secondaire);
+}
+
+.soldes__valeur {
+  margin: var(--espace-1) 0 0;
+  font-family: var(--police-titre);
+  font-size: var(--taille-lg);
+  /* Les chiffres s'alignent d'une ligne a l'autre : trois nombres de largeurs
+     differentes qui dansent se comparent mal. */
+  font-variant-numeric: tabular-nums;
+}
+
+/* Le disponible est en grand : c'est CE nombre qu'on affiche en grand
+   (`data-dictionary.md:378`). Les deux autres l'expliquent, en retrait. */
+.soldes__valeur--grande {
+  font-size: var(--taille-3xl);
+  line-height: 1.1;
+}
+
+.soldes__relation {
+  margin-block: var(--espace-4) 0;
+  color: var(--couleur-texte-secondaire);
+  font-family: var(--police-titre);
+  font-size: var(--taille-sm);
+}
+
+/* La phrase que l'agent repetera au beneficiaire qui appelle. Elle n'apparait
+   que lorsqu'une part est reservee : une explication permanente pour un cas
+   qui n'a pas lieu apprend a ne plus lire les explications. */
+.soldes__explication {
+  margin-block: var(--espace-3) 0;
+  max-inline-size: var(--largeur-contenu);
+  padding: var(--espace-3) var(--espace-4);
+  background: var(--couleur-fond);
+  border-radius: var(--rayon-sm);
+  font-size: var(--taille-sm);
+}
+
+.soldes__mention {
+  margin-block: var(--espace-4) 0;
+  color: var(--couleur-simulation-texte);
+  font-size: var(--taille-xs);
+}
+
+/* == Le dialogue de regularisation ======================================== */
+
+.dialogue__sens {
+  margin-block: var(--espace-4);
+  padding: var(--espace-3) var(--espace-4);
+  border: 1px solid var(--couleur-champ-bordure);
+  border-radius: var(--rayon-sm);
+}
+
+.dialogue__sens legend {
+  padding-inline: var(--espace-2);
+  font-family: var(--police-titre);
+  font-size: var(--taille-sm);
+}
+
+.dialogue__sens label {
+  display: block;
+  margin-block: var(--espace-2);
+}
+
+/* Le plafond, annonce AVANT la saisie et non apres le refus : un agent qui
+   apprend la regle par un message d'erreur l'apprend une fois de trop. */
+.dialogue__plafond {
+  margin-block: var(--espace-2) 0;
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-sm);
+}
+
+.dialogue__aide {
+  margin-block: var(--espace-1) var(--espace-4);
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-xs);
+}

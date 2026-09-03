@@ -187,7 +187,9 @@ export type NatureEcriture =
   | "rechargement"
   | "paiement"
   | "annulation"
-  | "decheance";
+  | "decheance"
+  /** ⚠ Notre ajout à `operation_kind` — voir `mocks/registre.ts`. */
+  | "regularisation";
 
 /**
  * Une écriture du registre, telle que l'écran la manipule.
@@ -320,3 +322,144 @@ export interface VilleCatalogue {
   departement: string;
 }
 
+
+/**
+ * Une transaction de la vue nationale.
+ *
+ * Le MÊME fait qu'une `EcritureRegistre`, vu autrement. Le registre en montre
+ * la comptabilité : deux écritures, un débit, un crédit, une empreinte et un
+ * rang dans la chaîne. Celle-ci en montre l'activité : une ligne par paiement,
+ * avec le commerçant, sa ville et sa catégorie — que le registre ignore, un
+ * compte n'y portant qu'un propriétaire.
+ *
+ * Deux types plutôt qu'un parce que ce sont deux questions. Les fondre
+ * obligerait chaque écran à ignorer la moitié des champs, et le jour où l'un
+ * des deux gagnerait une colonne, l'autre la porterait sans l'utiliser.
+ */
+export interface TransactionNationale {
+  /** L'identifiant de l'opération, celui du registre. */
+  id: Identifiant;
+  /** Date ISO 8601 du FAIT, pas de l'enregistrement. */
+  survenueLe: string;
+  montant: MontantCentimes;
+  partenaireId: Identifiant;
+  /** `null` si la fiche du partenaire est introuvable. */
+  enseigne: string | null;
+  categorie: string | null;
+  /** `null` pour un commerce exclusivement en ligne. */
+  ville: string | null;
+  departement: string | null;
+  /** ⚠ Notre ajout : le contrat ne porte aucun état sur une transaction. */
+  annulee: boolean;
+  motifAnnulation: string | null;
+}
+
+/**
+ * Les totaux d'un ensemble filtré de transactions.
+ *
+ * ⚠ Ils portent sur TOUT l'ensemble qui répond au filtre, jamais sur la page
+ * affichée. Un total calculé sur vingt lignes et présenté comme national
+ * serait faux, et il le serait avec assurance.
+ */
+export interface TotauxTransactions {
+  /** Toutes les opérations retenues, annulations comprises. */
+  nombre: number;
+  /** Combien, parmi elles, ont été annulées. */
+  nombreAnnulees: number;
+  /** Cumul NET : une opération annulée n'y figure pas. */
+  volume: MontantCentimes;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * LE RÉPERTOIRE DES BÉNÉFICIAIRES
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * L'état du compte d'un bénéficiaire.
+ *
+ * Les TROIS valeurs de `user_status` (`0001_schema.sql:5`). Un écran qui ne
+ * traite légitimement que certains statuts filtre ; il ne redéclare pas un
+ * type plus étroit.
+ */
+export type StatutBeneficiaire = "actif" | "suspendu" | "ferme";
+
+/** Une ligne du répertoire. Le solde y est le seul disponible. */
+export interface LigneRepertoire {
+  id: Identifiant;
+  nom: string;
+  prenom: string;
+  /** « Amélie Roussel ». */
+  nomAffiche: string;
+  employeur: string | null;
+  employeurId: Identifiant | null;
+  /** Le matricule, `employment_links.employer_ref`. */
+  matricule: string;
+  statut: StatutBeneficiaire;
+  disponible: MontantCentimes;
+}
+
+/**
+ * Les trois soldes d'un bénéficiaire, en centimes entiers.
+ *
+ * ⚠ Ils ne sont PAS interchangeables, et l'écran doit le dire. `reserve` n'est
+ * pas de l'argent perdu : c'est une somme immobilisée par un paiement en cours
+ * qui revient au disponible si le jeton expire. Afficher le seul `disponible`
+ * ferait croire à une perte ; afficher le seul `regle` ferait croire à une
+ * disponibilité qui n'existe pas.
+ */
+export interface TroisSoldes {
+  /** `balance_settled` : le total possédé. */
+  regle: MontantCentimes;
+  /** `balance_held` : immobilisé par les jetons en cours. */
+  reserve: MontantCentimes;
+  /** `regle - reserve`. C'est ce nombre qu'on affiche en grand. */
+  disponible: MontantCentimes;
+}
+
+/** La fiche complète d'un bénéficiaire. */
+export interface FicheBeneficiaire {
+  id: Identifiant;
+  nom: string;
+  prenom: string;
+  nomAffiche: string;
+  telephone: string | null;
+  statut: StatutBeneficiaire;
+  employeur: string | null;
+  employeurId: Identifiant | null;
+  ifuEmployeur: string | null;
+  matricule: string;
+  /** Date ISO 8601 (une DATE, sans heure) d'entrée dans le dispositif. */
+  entreLe: string;
+  soldes: TroisSoldes;
+  /** Nombre de paiements en cours — ce qui explique la part réservée. */
+  jetonsEnCours: number;
+}
+
+/** Un employeur du référentiel, avec son effectif venu des données. */
+export interface EmployeurRepertoire {
+  id: Identifiant;
+  raisonSociale: string;
+  nombreDeBeneficiaires: number;
+}
+
+/** Le sens d'une régularisation. */
+export type SensRegularisation = "credit" | "debit";
+
+/**
+ * Ce que rend une régularisation : le solde APRÈS et l'écriture qui l'explique.
+ *
+ * Les deux ensemble. C'est la forme même de la règle R1 : le solde n'est
+ * jamais une valeur qu'on pose, toujours une conséquence qu'on peut remonter.
+ */
+export interface Regularisation {
+  soldes: TroisSoldes;
+  ecriture: {
+    operationId: Identifiant;
+    sens: SensRegularisation;
+    montant: MontantCentimes;
+    motif: string | null;
+    /** Date ISO 8601 du fait. */
+    survenueLe: string;
+    auteur: Identifiant | null;
+  };
+}

@@ -82,11 +82,23 @@ export type PartnerStatus =
 export type AccountOwner = "employee" | "partner" | "system";
 export type AccountStatus = "active" | "suspended" | "closed";
 export type TokenStatus = "active" | "consumed" | "expired" | "cancelled";
+/**
+ * `operation_kind` (`0001_schema.sql:11`) — les quatre valeurs du schéma.
+ *
+ * ⚠ `regularisation` EST NOTRE AJOUT. Aucune des quatre ne décrit une
+ * correction administrative : `topup` est un financement adressé par matricule
+ * (`funding/topup.rs:1`), `compensation` reverse une opération connue et exige
+ * un `original_operation_id` NOT NULL (`corrections/mod.rs:1`). Le détail du
+ * raisonnement est dans `mocks/registre.ts`.
+ *
+ * Si le back refuse cet ajout, c'est ici et dans l'ENUM que cela se voit.
+ */
 export type OperationKind =
   | "topup"
   | "payment"
   | "compensation"
-  | "closure_forfeit";
+  | "closure_forfeit"
+  | "regularisation";
 export type EntryDirection = "debit" | "credit";
 export type EntryMode = "qr_scan" | "short_code";
 export type BatchStatus = "draft" | "validated" | "rejected";
@@ -996,3 +1008,138 @@ export type CategoryItem = {
 
 export type CategoryList = CategoryItem[];
 
+
+/**
+ * Une transaction de la vue nationale.
+ *
+ * ⚠ NOTRE PROPOSITION, servie par `GET /api/v1/admin/transactions`. Le contrat
+ * n'expose côté administration que des AGRÉGATS — `GET /admin/dashboard`
+ * (:561-573) rend un volume, un décompte et une ventilation par ville, mais
+ * aucune ligne. Un tableau de bord dit « combien », jamais « lesquelles ».
+ */
+export type AdminTransactionItem = {
+  id: string;
+  occurred_at: string;
+  amount: number;
+  partner: {
+    id: string;
+    /** `null` si la fiche est introuvable — le registre survit au référentiel. */
+    trade_name: string | null;
+    category: string | null;
+    /** `null` pour un commerce exclusivement en ligne (contrainte A1). */
+    city: CityRef | null;
+  };
+  /** ⚠ Notre ajout : aucun état sur une transaction dans le contrat. */
+  status: "settled" | "cancelled";
+  compensation_reason: string | null;
+};
+
+/**
+ * L'enveloppe de la même route.
+ *
+ * ⚠ `Paginated<T>` (:319-322) ne porte que `items` et `next_cursor` ; `totals`
+ * est notre ajout. Le total en tête de l'écran doit valoir pour le filtre
+ * courant : le calculer depuis `items` donnerait le total d'une page présenté
+ * comme un total national, et une seconde route diverger dès qu'un filtre
+ * serait transmis à l'une et pas à l'autre.
+ *
+ * Les noms `total_volume` et `transaction_count` sont ceux de leur `Dashboard`
+ * (:562-563) — même grandeur, même nom. `cancelled_count` est notre ajout.
+ */
+export type AdminTransactionList = Paginated<AdminTransactionItem> & {
+  totals: {
+    transaction_count: number;
+    cancelled_count: number;
+    /** NET : une opération annulée n'y figure pas. */
+    total_volume: number;
+  };
+};
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * RÉPERTOIRE DES BÉNÉFICIAIRES — ⚠ ROUTES DE NOTRE FAIT
+ *
+ * Le répertoire existe en base (`employees`, `employers`, `employment_links`)
+ * et dans `core/src/directory/`, mais la section 4 du contrat ne le lit nulle
+ * part : les seules lectures d'un salarié sont `/me/*` (lui-même) et
+ * `/integration/.../balance` (le SIRH de son employeur, un solde et rien
+ * d'autre). Voir les en-têtes des routes sous `app/api/v1/admin/employees/`.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/** `user_status` (`0001_schema.sql:5`) — les trois valeurs, pas deux. */
+export type EmployeeStatus = "actif" | "suspendu" | "ferme";
+
+/** Une ligne du répertoire. Le solde y est le seul `available`. */
+export type EmployeeDirectoryItem = {
+  id: string;
+  last_name: string;
+  first_name: string;
+  display_name: string;
+  /** `null` si le lien d'emploi ne résout aucun employeur. */
+  employer: { id: string; legal_name: string } | null;
+  /** `employment_links.employer_ref` : le matricule (décision 12). */
+  employer_ref: string;
+  status: EmployeeStatus;
+  /** Euros décimaux sur le fil, comme tout montant du contrat. */
+  available: number;
+};
+
+export type EmployeeDirectoryList = Paginated<EmployeeDirectoryItem>;
+
+/**
+ * Les trois soldes.
+ *
+ * Mêmes noms que leur `BalanceResponse` (`data-dictionary.md:374-380`), et
+ * servis ensemble : ils ne sont pas interchangeables.
+ */
+export type EmployeeBalance = {
+  settled: number;
+  held: number;
+  /** `settled - held`. C'est ce nombre qu'on affiche en grand (:378). */
+  available: number;
+};
+
+export type EmployeeDetail = {
+  id: string;
+  last_name: string;
+  first_name: string;
+  display_name: string;
+  phone: string | null;
+  status: EmployeeStatus;
+  employer: { id: string; legal_name: string; ifu: string | null } | null;
+  employer_ref: string;
+  /** `employment_links.started_at`, une DATE et non un instant. */
+  started_at: string;
+  balance: EmployeeBalance;
+  /** Ce qui explique la part réservée. */
+  active_tokens: number;
+};
+
+/** Un employeur du référentiel. `employee_count` est notre ajout. */
+export type EmployerItem = {
+  id: string;
+  legal_name: string;
+  ifu: string | null;
+  contact_email: string | null;
+  status: EmployeeStatus;
+  employee_count: number;
+};
+
+/**
+ * Ce que rend une régularisation : le nouveau solde ET l'écriture.
+ *
+ * Les deux ensemble, jamais l'un sans l'autre. Rendre le seul solde laisserait
+ * un instant où le nombre a changé sans que rien ne dise pourquoi — ce que la
+ * règle R1 cherche précisément à rendre impossible.
+ */
+export type AdjustmentResult = {
+  balance: EmployeeBalance;
+  entry: {
+    operation_id: string;
+    kind: OperationKind;
+    direction: EntryDirection;
+    amount: number;
+    memo: string | null;
+    occurred_at: string;
+    created_by: string | null;
+  };
+};

@@ -36,11 +36,19 @@
  */
 
 import type {
+  AdjustmentResult,
+  AdminTransactionItem,
+  AdminTransactionList,
   BalanceResponse,
   CatalogItem,
   CategoryItem,
   CityRef,
+  EmployeeBalance,
+  EmployeeDetail,
+  EmployeeDirectoryItem,
+  EmployeeStatus,
   EmployeeTransaction,
+  EmployerItem,
   IssuedTokenResponse,
   ChainVerification,
   DailyRevenueItem,
@@ -66,14 +74,22 @@ import type {
   DemandeAdhesion,
   DemandePartenaire,
   EcritureRegistre,
+  EmployeurRepertoire,
+  FicheBeneficiaire,
   FicheCatalogue,
+  LigneRepertoire,
   ModeDeService,
   MonCompte,
   NatureEcriture,
   Partenaire,
   SensDecision,
+  Regularisation,
   Solde,
+  StatutBeneficiaire,
   StatutPartenaire,
+  TotauxTransactions,
+  TransactionNationale,
+  TroisSoldes,
   StatutTransaction,
   Transaction,
   VerificationIntegrite,
@@ -842,6 +858,10 @@ function natureDepuisKind(kind: LedgerEntryItem["kind"]): NatureEcriture {
       return "annulation";
     case "closure_forfeit":
       return "decheance";
+    /* ⚠ Notre ajout à `operation_kind` : aucune des quatre valeurs du schéma
+       ne décrit une correction administrative. Voir `mocks/registre.ts`. */
+    case "regularisation":
+      return "regularisation";
     default:
       throw new ErreurService(
         "reponse_illisible",
@@ -1189,3 +1209,153 @@ export function depuisEncaissement(
  *                      l'unité, c'est se tromper d'un facteur cent une fois
  *                      sur deux. Ambiguïté A1 de l'audit.
  */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * 8 nonies. VUE NATIONALE DES TRANSACTIONS — ADMINISTRATION
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * `AdminTransactionItem` → `TransactionNationale`.
+ *
+ * Le montant passe par `centimesDepuisEuros` : le back sérialise des euros
+ * décimaux (`money.rs:145`, amendement A5), le domaine ne manipule que des
+ * centimes entiers. La conversion lève si la valeur est illisible plutôt que
+ * de laisser passer un montant faux.
+ */
+export function depuisTransactionNationale(
+  brut: AdminTransactionItem,
+): TransactionNationale {
+  return {
+    id: brut.id,
+    survenueLe: horodatageIso(brut.occurred_at, "occurred_at"),
+    montant: centimesDepuisEuros(brut.amount, "amount"),
+    partenaireId: brut.partner.id,
+    enseigne: brut.partner.trade_name,
+    categorie: brut.partner.category,
+    ville: brut.partner.city === null ? null : brut.partner.city.name,
+    departement: brut.partner.city === null ? null : brut.partner.city.department,
+    annulee: brut.status === "cancelled",
+    motifAnnulation: brut.compensation_reason,
+  };
+}
+
+/**
+ * Les totaux de l'ensemble filtré.
+ *
+ * Ils viennent du serveur et ne sont JAMAIS recalculés depuis les lignes
+ * reçues : celles-ci ne sont qu'une page. C'est toute la raison d'être du
+ * champ.
+ */
+export function depuisTotauxTransactions(
+  brut: AdminTransactionList["totals"],
+): TotauxTransactions {
+  return {
+    nombre: brut.transaction_count,
+    nombreAnnulees: brut.cancelled_count,
+    volume: centimesDepuisEuros(brut.total_volume, "total_volume"),
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * 8 decies. RÉPERTOIRE DES BÉNÉFICIAIRES — ADMINISTRATION
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * `EmployeeStatus` → `StatutBeneficiaire`.
+ *
+ * Les valeurs du mock sont déjà en français ; la fonction existe pour LEVER
+ * sur une valeur inconnue plutôt que de laisser passer un statut que l'écran
+ * traiterait comme un autre. Le jour où le back sérialisera `active` /
+ * `suspended` / `closed`, c'est le seul endroit à changer.
+ */
+function statutDepuisEmployeeStatus(brut: EmployeeStatus): StatutBeneficiaire {
+  switch (brut) {
+    case "actif":
+    case "suspendu":
+    case "ferme":
+      return brut;
+    default:
+      throw new ErreurService(
+        "reponse_illisible",
+        `Réponse du serveur illisible : statut de bénéficiaire inconnu (${String(brut)}).`,
+        { champ: "status" },
+      );
+  }
+}
+
+/** `EmployeeDirectoryItem` → `LigneRepertoire`. */
+export function depuisLigneRepertoire(brut: EmployeeDirectoryItem): LigneRepertoire {
+  return {
+    id: brut.id,
+    nom: brut.last_name,
+    prenom: brut.first_name,
+    nomAffiche: brut.display_name,
+    employeur: brut.employer === null ? null : brut.employer.legal_name,
+    employeurId: brut.employer === null ? null : brut.employer.id,
+    matricule: brut.employer_ref,
+    statut: statutDepuisEmployeeStatus(brut.status),
+    disponible: centimesDepuisEuros(brut.available, "available"),
+  };
+}
+
+/**
+ * `EmployeeBalance` → `TroisSoldes`.
+ *
+ * ⚠ `disponible` est repris du serveur, PAS recalculé en `regle - reserve`.
+ * Le contrat sert le champ (`:378`) ; le recalculer masquerait une incohérence
+ * du back au lieu de la faire apparaître, et l'écran afficherait un nombre que
+ * personne n'a servi.
+ */
+function depuisSoldes(brut: EmployeeBalance): TroisSoldes {
+  return {
+    regle: centimesDepuisEuros(brut.settled, "settled"),
+    reserve: centimesDepuisEuros(brut.held, "held"),
+    disponible: centimesDepuisEuros(brut.available, "available"),
+  };
+}
+
+/** `EmployeeDetail` → `FicheBeneficiaire`. */
+export function depuisFicheBeneficiaire(brut: EmployeeDetail): FicheBeneficiaire {
+  return {
+    id: brut.id,
+    nom: brut.last_name,
+    prenom: brut.first_name,
+    nomAffiche: brut.display_name,
+    telephone: brut.phone,
+    statut: statutDepuisEmployeeStatus(brut.status),
+    employeur: brut.employer === null ? null : brut.employer.legal_name,
+    employeurId: brut.employer === null ? null : brut.employer.id,
+    ifuEmployeur: brut.employer === null ? null : brut.employer.ifu,
+    matricule: brut.employer_ref,
+    /* `started_at` est une DATE (`DATE` en SQL), pas un instant : elle passe
+       telle quelle et n'est jamais convertie en millisecondes, ce qui la
+       décalerait d'un fuseau. */
+    entreLe: brut.started_at,
+    soldes: depuisSoldes(brut.balance),
+    jetonsEnCours: brut.active_tokens,
+  };
+}
+
+/** `EmployerItem` → `EmployeurRepertoire`. */
+export function depuisEmployeur(brut: EmployerItem): EmployeurRepertoire {
+  return {
+    id: brut.id,
+    raisonSociale: brut.legal_name,
+    nombreDeBeneficiaires: brut.employee_count,
+  };
+}
+
+/** `AdjustmentResult` → `Regularisation`. */
+export function depuisRegularisation(brut: AdjustmentResult): Regularisation {
+  return {
+    soldes: depuisSoldes(brut.balance),
+    ecriture: {
+      operationId: brut.entry.operation_id,
+      sens: brut.entry.direction,
+      montant: centimesDepuisEuros(brut.entry.amount, "amount"),
+      motif: brut.entry.memo,
+      survenueLe: horodatageIso(brut.entry.occurred_at, "occurred_at"),
+      auteur: brut.entry.created_by,
+    },
+  };
+}

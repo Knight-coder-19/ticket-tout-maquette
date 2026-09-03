@@ -1,0 +1,90 @@
+/*
+ * La vue nationale des transactions.
+ *
+ * Elle n'apporte que deux choses : la colonne de l'ecran et le bloc de totaux.
+ * Le tableau, les filtres, les etats et la pastille viennent tous de
+ * `primitives.css`, partages avec le registre et le journal du commercant.
+ */
+
+.national {
+  container-type: inline-size;
+  container-name: national;
+}
+
+.national__titre {
+  margin-block: 0 var(--espace-2);
+  font-family: var(--police-titre);
+  font-size: var(--taille-2xl);
+}
+
+.national__intro {
+  max-inline-size: var(--largeur-contenu);
+  margin-block-end: var(--espace-6);
+  color: var(--couleur-texte-secondaire);
+}
+
+/* == Le total en tete =====================================================
+ *
+ * Encadre et non rempli : le bleu institutionnel ne sert jamais d'aplat de
+ * bouton (`tokens.css:13`), et un bandeau colore en tete d'un ecran de
+ * consultation attirerait l'oeil sur le contenant plutot que sur les chiffres.
+ * ========================================================================= */
+
+.totaux {
+  margin-block-end: var(--espace-8);
+  padding: var(--espace-4) var(--espace-6);
+  background: var(--couleur-fond-secondaire);
+  border-inline-start: var(--espace-1) solid var(--couleur-primaire);
+  border-radius: var(--rayon-sm);
+}
+
+.totaux__titre {
+  margin-block: 0 var(--espace-3);
+  font-family: var(--police-titre);
+  font-size: var(--taille-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--couleur-texte-secondaire);
+}
+
+.totaux__liste {
+  margin: 0;
+  display: grid;
+  gap: var(--espace-4);
+}
+
+/* Trois colonnes des que la place existe. Le seuil est en dur : une condition
+   `@container` n'accepte pas une `var()`. */
+@container national (min-width: 40rem) {
+  .totaux__liste {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.totaux__bloc dt {
+  font-family: var(--police-titre);
+  font-size: var(--taille-sm);
+  color: var(--couleur-texte-secondaire);
+}
+
+.totaux__valeur {
+  margin: var(--espace-1) 0 0;
+  font-family: var(--police-titre);
+  font-size: var(--taille-2xl);
+  /* Les chiffres s'alignent d'une ligne a l'autre : trois nombres de largeurs
+     differentes qui dansent se comparent mal. */
+  font-variant-numeric: tabular-nums;
+}
+
+/* La note qui dit sur quoi portent les chiffres.
+ *
+ * Elle n'est pas decorative : un total place au-dessus d'un tableau pagine se
+ * lit spontanement comme le total du tableau. Sans cette phrase, un agent
+ * lirait « 24 operations » en voyant vingt lignes et conclurait a une erreur
+ * -- ou pire, ne le remarquerait pas. */
+.totaux__note {
+  margin-block: var(--espace-4) 0;
+  max-inline-size: var(--largeur-contenu);
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-sm);
+}

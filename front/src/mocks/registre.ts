@@ -105,7 +105,37 @@ export function empreinteEcriture(champs: {
 export type DirectionEcriture = "debit" | "credit";
 
 /** ENUM `operation_kind` (`:11`). */
-export type NatureOperation = "topup" | "payment" | "compensation" | "closure_forfeit";
+/**
+ * Les natures d'operation.
+ *
+ * Les quatre premieres sont l'ENUM `operation_kind` du schema
+ * (`0001_schema.sql:11`), a la lettre.
+ *
+ * ⚠ `regularisation` EST DE NOTRE FAIT, et c'est un ajout a leur ENUM. Il a
+ * fallu trancher, parce qu'aucune des quatre ne decrit une correction
+ * administrative :
+ *
+ *   - `topup` est un FINANCEMENT. `funding/topup.rs:1` l'adresse par
+ *     `(employer_id, employer_ref)` et l'inscrit dans la table `topups`, dont
+ *     la `reference` est la cle d'idempotence. Une regularisation ne vient
+ *     d'aucun employeur et ne finance rien.
+ *   - `compensation` REVERSE UNE OPERATION CONNUE : `corrections/mod.rs:1` lit
+ *     l'operation d'origine, et `compensations.original_operation_id` est
+ *     NOT NULL. Une regularisation ne corrige pas une operation, elle corrige
+ *     un solde.
+ *   - `payment` et `closure_forfeit` ne s'y pretent pas davantage.
+ *
+ * Enregistrer une regularisation au DEBIT sous le nom `topup` la ferait
+ * paraitre comme un rechargement dans l'historique du salarie et dans les
+ * chiffres nationaux -- une correction de -40 EUR presentee comme un
+ * versement. Mieux vaut une valeur marquee comme notre qu'un libelle qui ment.
+ */
+export type NatureOperation =
+  | "topup"
+  | "payment"
+  | "compensation"
+  | "closure_forfeit"
+  | "regularisation";
 
 /** ENUM `account_owner` (`:8`). */
 export type TypeProprietaire = "employee" | "partner" | "system";
@@ -189,9 +219,14 @@ function comptesInitiaux(): CompteRegistre[] {
   return [
     { id: MINISTRY_ISSUANCE, ownerType: "system", ownerId: null, systemCode: "MINISTRY_ISSUANCE", soldeCentimes: 0 },
     { id: CLOSURE_FORFEIT, ownerType: "system", ownerId: null, systemCode: "CLOSURE_FORFEIT", soldeCentimes: 0 },
-    utilisateur("employee", "SAL-001"),
-    utilisateur("employee", "SAL-002"),
-    utilisateur("employee", "SAL-003"),
+    /* Un compte par salarie du repertoire. ⚠ Cette liste doit suivre celle du
+       magasin : un salarie sans compte fait echouer sa reprise d'anteriorite
+       des le chargement du module, `posterOperation` refusant d'ecrire sur un
+       compte inconnu. C'est voulu -- mieux vaut un echec bruyant au demarrage
+       qu'un salarie dont le solde serait silencieusement introuvable. */
+    ...["SAL-001", "SAL-002", "SAL-003", "SAL-004", "SAL-005"].map((id) =>
+      utilisateur("employee", id),
+    ),
     ...["PRT-001", "PRT-002", "PRT-003", "PRT-004", "PRT-005", "PRT-006", "PRT-007",
         "PRT-008", "PRT-009", "PRT-010", "PRT-011", "PRT-012", "PRT-013", "PRT-014",
         "PRT-015", "PRT-016"].map((id) => utilisateur("partner", id)),
@@ -451,8 +486,18 @@ export interface FiltreRegistre {
   depuis?: string;
   /** Date ISO 8601 incluse. */
   jusqua?: string;
-  /** Identifiant de partenaire : ne garde que les ecritures de son compte. */
-  partenaireId?: string;
+  /**
+   * Identifiant du TITULAIRE du compte : ne garde que ses ecritures.
+   *
+   * ⚠ Nomme `titulaireId` et non `partenaireId` : `idCompte` ouvre le compte
+   * de n'importe quel proprietaire, salarie comme partenaire, et le registre
+   * ne connait de toute facon qu'un `ownerType`. Le champ s'appelait
+   * `partenaireId` tant qu'un seul ecran s'en servait ; la fiche d'un
+   * beneficiaire en a eu besoin pour un salarie, et un nom qui ne designe
+   * qu'une moitie de ses usages finit par faire croire qu'il ne sert qu'a
+   * celle-la.
+   */
+  titulaireId?: string;
   kind?: NatureOperation;
 }
 
@@ -467,7 +512,7 @@ export interface FiltreRegistre {
  */
 export function lireEcritures(filtre: FiltreRegistre): EcritureRegistre[] {
   const compteCible =
-    filtre.partenaireId === undefined ? null : idCompte(filtre.partenaireId);
+    filtre.titulaireId === undefined ? null : idCompte(filtre.titulaireId);
 
   return registre.ecritures
     .filter((ecriture) => {

@@ -29,29 +29,12 @@
   max-width: var(--largeur-contenu);
 }
 
-/* == Les raccourcis de periode ============================================= */
-
-/* Meme forme que le `label` des autres champs, mais ce n'en est pas un : ces
-   boutons ne pilotent aucun champ unique, ils en remplissent deux. D'ou un
-   `span` nomme par `aria-labelledby`, et non un `label`. */
-.filtres__intitule {
-  font-family: var(--police-titre);
-  font-size: var(--taille-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--couleur-texte-secondaire);
-}
-
-.filtres__raccourcis {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--espace-2);
-}
-
-.filtres__raccourcis .bouton {
-  font-size: var(--taille-xs);
-  padding: var(--espace-1) var(--espace-2);
-}
+/* == Les raccourcis de periode ONT REMONTE ================================
+ *
+ * `.filtres__intitule` et `.filtres__raccourcis` sont dans `primitives.css` :
+ * `FiltrePeriode` sert desormais deux espaces, et l'administration ne charge
+ * pas cette feuille. Voir `components/filtres/FiltrePeriode`.
+ * ========================================================================= */
 
 /* == L'export ============================================================== */
 
