@@ -18,16 +18,22 @@
 import { appelApi } from "@/lib/api/client";
 import {
   depuisJourneeRecettes,
+  depuisLigneEncaissement,
   depuisMonCompte,
   depuisResumeActivite,
 } from "@/lib/api/adaptateurs";
 import type {
   DailyRevenueList,
   PartnerAccountStatus,
+  PartnerTransactionList,
   PartnerSummary,
 } from "@/types/api";
 import type { MonCompte } from "@/types/domaine";
-import type { JourneeRecettes, ResumeActivite } from "@/types/encaissement";
+import type {
+  JourneeRecettes,
+  LigneEncaissement,
+  ResumeActivite,
+} from "@/types/encaissement";
 
 /**
  * L'état de mon compte : statut, motif de la dernière décision, contact.
@@ -93,4 +99,47 @@ export async function lireRecettesJournalieres(
     { cache: "no-store" },
   );
   return brut.days.map(depuisJourneeRecettes);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * JOURNAL DES ENCAISSEMENTS
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+export interface FiltresEncaissements {
+  /** Date ISO 8601 incluse, comparée au moment du geste. */
+  depuis?: string;
+  jusqua?: string;
+}
+
+export interface PageEncaissements {
+  lignes: LigneEncaissement[];
+  /** `null` = on tient tout le journal. */
+  curseurSuivant: string | null;
+}
+
+/**
+ * Les encaissements du commerçant, le plus récent d'abord.
+ *
+ * ✅ Route du CONTRAT, `GET /api/v1/partner/transactions`
+ * (`data-dictionary.md:427-435`).
+ */
+export async function listerEncaissements(
+  filtres: FiltresEncaissements = {},
+  curseur?: string,
+): Promise<PageEncaissements> {
+  const parametres = new URLSearchParams();
+  if (filtres.depuis !== undefined && filtres.depuis !== "") parametres.set("from", filtres.depuis);
+  if (filtres.jusqua !== undefined && filtres.jusqua !== "") parametres.set("to", filtres.jusqua);
+  if (curseur !== undefined && curseur !== "") parametres.set("cursor", curseur);
+
+  const requete = parametres.toString();
+  const brut = await appelApi<PartnerTransactionList>(
+    `/v1/partner/transactions${requete === "" ? "" : `?${requete}`}`,
+    { cache: "no-store" },
+  );
+
+  return {
+    lignes: brut.items.map(depuisLigneEncaissement),
+    curseurSuivant: brut.next_cursor,
+  };
 }

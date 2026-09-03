@@ -49,6 +49,7 @@ import type {
   PartnerReviewItem,
   PartnerStatus,
   PartnerSummary,
+  PartnerTransactionItem,
   PaymentResponse,
   PublicPartner,
   ResolvedTokenItem,
@@ -75,6 +76,7 @@ import type {
   EncaissementAccepte,
   JetonResolu,
   JourneeRecettes,
+  LigneEncaissement,
   MontantCentimes,
   ResumeActivite,
 } from "@/types/encaissement";
@@ -973,6 +975,48 @@ export function depuisJourneeRecettes(brut: DailyRevenueItem): JourneeRecettes {
     jour: brut.day,
     total: centimesDepuis(brut, "total_received"),
     nombre: brut.transaction_count,
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * 8 septies. JOURNAL DU COMMERÇANT
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * `PartnerTransactionItem` → `LigneEncaissement`.
+ *
+ * ✅ Les six premiers champs viennent du CONTRAT ; `status` et
+ * `compensation_reason` sont notre ajout — voir `types/api.ts`.
+ *
+ * `montant` repasse en CENTIMES entiers, comme partout dans le domaine.
+ *
+ * Un `status` inconnu lève : le journal d'un commerçant n'est pas l'endroit où
+ * ranger un état qu'on ne sait pas nommer.
+ */
+export function depuisLigneEncaissement(brut: PartnerTransactionItem): LigneEncaissement {
+  const etat =
+    brut.status === "settled"
+      ? ("regle" as const)
+      : brut.status === "compensated"
+        ? ("annule" as const)
+        : null;
+  if (etat === null) {
+    throw new ErreurService(
+      "reponse_illisible",
+      `Réponse du serveur illisible : état d'encaissement inconnu (${String(brut.status)}).`,
+      { champ: "status" },
+    );
+  }
+
+  return {
+    reference: brut.id,
+    montant: centimesDepuis(brut, "amount"),
+    modeSaisie: brut.entry_mode,
+    survenueLe: horodatageIso(brut.occurred_at, "occurred_at"),
+    synchroniseeLe: horodatageIso(brut.synced_at, "synced_at"),
+    beneficiaire: brut.customer_label,
+    etat,
+    motifAnnulation: brut.compensation_reason,
   };
 }
 

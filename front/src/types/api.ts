@@ -414,17 +414,6 @@ export type PartnerTransaction = {
 };
 
 /**
- * ⚠ UNKNOWN — enveloppe indéterminée.
- *
- * `GET /api/v1/partner/transactions?from=&to=&cursor=` accepte un curseur
- * (data-dictionary.md:427) mais sa réponse n'est PAS annotée `Paginated<T>`,
- * contrairement à `/me/transactions` (:392) et `/catalog` (:481). Liste nue,
- * ou enveloppe implicite ? Le dictionnaire se tait, et aucune ligne de Rust
- * ne tranche. Je ne devine pas.
- */
-export type PartnerTransactionList = unknown;
-
-/**
  * Source : docs/data-dictionary.md:438-442 — non encore implémenté côté back.
  *
  * ⚠ CONFLIT DE NOMMAGE NON RÉSOLU. Le dictionnaire décrit deux champs
@@ -919,4 +908,45 @@ export type DailyRevenueItem = {
 
 /** Enveloppe de la même route. */
 export type DailyRevenueList = { days: DailyRevenueItem[] };
+
+/**
+ * Un encaissement du journal partenaire.
+ *
+ * ✅ Les six premiers champs sont ceux du CONTRAT, `PartnerTransaction`
+ * (`data-dictionary.md:427-435`).
+ *
+ * ⚠ Les deux derniers sont NOTRE AJOUT. Le DTO ne porte aucun état, alors qu'un
+ * encaissement peut avoir été annulé par une compensation
+ * (`corrections/mod.rs:1-3`). Un journal qui présenterait une ligne annulée
+ * comme un encaissement ordinaire mentirait au commerçant sur ce qu'il a
+ * réellement encaissé.
+ */
+export type PartnerTransactionItem = {
+  id: string;
+  /** Euros décimaux. */
+  amount: number;
+  entry_mode: EntryMode;
+  /** `= scanned_at`, ce que le commerçant reconnaît. */
+  occurred_at: string;
+  /** Moment d'arrivée au serveur. */
+  synced_at: string;
+  /** « K. A. » — jamais le nom complet. */
+  customer_label: string;
+  /** NOTRE AJOUT. */
+  status: "settled" | "compensated";
+  /** NOTRE AJOUT. Motif de l'annulation, `null` si la ligne tient. */
+  compensation_reason: string | null;
+};
+
+/**
+ * Enveloppe de la même route.
+ *
+ * ⚠ NOTRE CHOIX, et il tranche une ambiguïté du contrat : la route accepte un
+ * `cursor` (:427) mais sa réponse n'est pas annotée `Paginated<T>`,
+ * contrairement à `/me/transactions` (:392) et `/catalog` (:481). Un curseur en
+ * entrée sans curseur en sortie ne se poursuit pas — on retient donc
+ * l'enveloppe du contrat. Ambiguïté A7 de `front/docs/contrat-api.md`, à
+ * confirmer avec l'équipe back.
+ */
+export type PartnerTransactionList = Paginated<PartnerTransactionItem>;
 

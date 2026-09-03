@@ -10,6 +10,8 @@
  * sont dans `types/erreurs.ts`, parce qu'elles ne sont plus propres à la
  * caisse — chaque service les lève.
  */
+import type { Identifiant } from "@/types/domaine";
+
 export type MontantCentimes = number;
 
 /**
@@ -101,5 +103,29 @@ export interface JourneeRecettes {
   /** Recettes du jour, en centimes entiers. Zéro les jours sans encaissement. */
   total: MontantCentimes;
   nombre: number;
+}
+
+/** L'état d'un encaissement au journal du commerçant. */
+export type EtatEncaissement = "regle" | "annule";
+
+/**
+ * Une ligne du journal du commerçant.
+ *
+ * Distincte d'`EncaissementAccepte`, qui est le reçu d'un règlement qui vient
+ * d'avoir lieu : celle-ci se relit des semaines plus tard, et porte donc un
+ * état — un encaissement annulé depuis doit se voir.
+ */
+export interface LigneEncaissement {
+  reference: Identifiant;
+  montant: MontantCentimes;
+  modeSaisie: "qr_scan" | "short_code";
+  /** Date ISO 8601 du geste au comptoir. */
+  survenueLe: string;
+  /** Date ISO 8601 d'arrivée au serveur. */
+  synchroniseeLe: string;
+  /** Le bénéficiaire, abrégé. */
+  beneficiaire: string;
+  etat: EtatEncaissement;
+  motifAnnulation: string | null;
 }
 

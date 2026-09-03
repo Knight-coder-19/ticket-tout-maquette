@@ -8,8 +8,8 @@
  * tableau de bord qui montre tout ne montre rien.
  */
 
+import "@/styles/primitives.css";
 import "@/styles/tableau-de-bord.css";
-import "@/styles/comptes.css";
 
 import { useCallback, useEffect, useState } from "react";
 
