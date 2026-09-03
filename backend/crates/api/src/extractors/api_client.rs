@@ -1,6 +1,9 @@
-// Define ApiClientAuth { client_id, employer_id } read from the authorization header against the hashed secret.
-// Refuse plain HTTP with no development exception, and derive employer_id here, never from the path.
-// Priority: P2
+//
+// EPITECH PROJECT, 2026
+// G-SVR-500-COT-5-1-survivor-21
+// File description:
+// api_client
+//
 
 use axum::extract::FromRequestParts;
 use axum::http::header::AUTHORIZATION;
