@@ -112,8 +112,12 @@ pub async fn resolve_account_by_ref(
     conn: &mut PgConnection, employer: EmployerId, employer_ref: &str,
 ) -> Result<AccountId, DirectoryError>;
 
-// extractors/auth.rs
-pub struct AuthUser<R: Role>(pub AuthenticatedUser);
+// extractors/auth.rs — corrigé, voir la note ci-dessous
+pub struct AuthUser<R: Role>(pub AuthenticatedUser, pub PhantomData<R>);
+
+// Sans ces deux conversions, aucun handler ne sait de qui il parle.
+impl From<AuthenticatedUser> for EmployeeId;
+impl From<AuthenticatedUser> for PartnerId;
 
 // ── Sèdjro fournit, Giscard consomme ────────────────────────────
 // ids.rs, money.rs, clock.rs      → livrés à H+1, DEADLINE DURE
@@ -126,6 +130,21 @@ pub async fn lock_account(tx: &mut PgTransaction<'_>, id: AccountId)
 ```
 
 **Sèdjro bouchonne `approved_account` chez lui à H+1** avec un compte en dur, sinon il est bloqué toute la nuit sur `settle`. Giscard remplace le bouchon quand son `partners` est prêt.
+
+> **Amendement — `AuthUser` corrigé.** La forme d'origine, `AuthUser<R: Role>(pub AuthenticatedUser)`,
+> ne compile pas : Rust refuse un paramètre de type qui n'apparaît dans aucun champ, c'est l'erreur
+> `E0392`. Le marqueur de rôle n'étant utilisé que par l'implémentation de `FromRequestParts`, il
+> lui faut un `PhantomData<R>`. Je ne m'en suis aperçu qu'en compilant mes handlers contre ce
+> contrat, et je le corrige ici plutôt que dans mon coin : c'est une des cinq signatures que nous
+> avons gelées justement pour ne pas nous bloquer l'un l'autre.
+>
+> Conséquence sur les handlers : ils destructurent `AuthUser(user, _)` et non `AuthUser(user)`. Si
+> Giscard préfère garder un seul champ public et exposer un accesseur, ce sont mes deux fichiers de
+> routes qui changent, pas les siens — qu'il le dise, la correction est mécanique.
+>
+> J'ajoute au passage les deux `From<AuthenticatedUser>` : le handler d'exemple de `file-guide.md`
+> §4.5 les suppose déjà avec son `partner.into()`, mais ils n'étaient écrits nulle part. Le détail
+> de tout ce que mes routes attendent est au §30 de `decisions.md`.
 
 ---
 

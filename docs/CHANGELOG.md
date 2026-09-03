@@ -3,6 +3,24 @@
 [//]: # (This is a changelog file)
 [//]: # (Each time you make a minor or minor change in the project, repertoriate it here according to the following format. So each changes equals to an affectation of this file with all the sections.)
 
+## 1.11.0 03.09.2026
+
+### Fixed
+
+- **`TASK-DISTRIBUTION-BACKEND.md` §3 — le contrat `AuthUser` ne compilait pas.** La forme gelée à
+  H+0, `AuthUser<R: Role>(pub AuthenticatedUser)`, est refusée par Rust : un paramètre de type doit
+  apparaître dans un champ, sinon `E0392`. Le marqueur de rôle réclame un `PhantomData<R>`. Je l'ai
+  découvert en compilant mes handlers contre ce contrat, et je le corrige dans le document plutôt
+  que chez moi seul — c'est une des cinq signatures gelées précisément pour que nous n'ayons pas à
+  découvrir deux fois le même problème.
+
+### Changed
+
+- Le même §3 déclare désormais `From<AuthenticatedUser> for EmployeeId` et `for PartnerId`. Le
+  handler d'exemple de `file-guide.md` §4.5 les supposait déjà avec son `partner.into()`, mais elles
+  n'étaient écrites nulle part, et sans elles aucun handler ne sait de quel employé ou de quel
+  commerçant il parle.
+
 ## 1.10.0 03.09.2026
 
 ### Changed
