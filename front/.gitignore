@@ -8,4 +8,6 @@ build/
 *.log
 coverage/
 CLAUDE.md
-tsconfig.tsbuildinfo
+*.tsbuildinfo
+next-env.d.ts
+docs/video/

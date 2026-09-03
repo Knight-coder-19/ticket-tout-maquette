@@ -1,0 +1,418 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{textcomp}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[a4paper,margin=2.3cm,headheight=15pt]{geometry}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage[most]{tcolorbox}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage[none]{hyphenat}
+\usepackage{ragged2e}
+\usepackage[hidelinks]{hyperref}
+
+\RaggedRight
+\setlength{\RaggedRightParindent}{0pt}
+\graphicspath{{assets/}}
+\setlist{leftmargin=1.3em}
+
+\renewcommand{\contentsname}{Sommaire}
+\renewcommand{\figurename}{Figure}
+\renewcommand{\tablename}{Table}
+\renewcommand{\today}{\number\day\ \ifcase\month\or janvier\or f\'evrier\or
+  mars\or avril\or mai\or juin\or juillet\or ao\^ut\or septembre\or octobre\or
+  novembre\or d\'ecembre\fi\ \number\year}
+
+% --- Palette Ticket Tout (miroir de src/styles/tokens.css) ---
+\definecolor{primaire}{HTML}{1B3A6B}
+\definecolor{primaireClair}{HTML}{2F5590}
+\definecolor{primaireSombre}{HTML}{12294C}
+\definecolor{ambre}{HTML}{F2A81C}
+\definecolor{ambreSombre}{HTML}{B97B06}
+\definecolor{corail}{HTML}{E4572E}
+\definecolor{corailSombre}{HTML}{C0421D}
+\definecolor{encre}{HTML}{1A1A1A}
+\definecolor{encre2}{HTML}{55606B}
+\definecolor{ligne}{HTML}{D6DBE3}
+\definecolor{fondclair}{HTML}{F4F6F9}
+\definecolor{succes}{HTML}{0B6B4F}
+\definecolor{alerte}{HTML}{A0341C}
+\definecolor{simu}{HTML}{7A5E12}
+\definecolor{simufond}{HTML}{FDF6E3}
+
+\hypersetup{colorlinks=true,linkcolor=primaire,urlcolor=corailSombre,pdfstartview=FitH,
+  pdftitle={Ticket Tout - Brand book}}
+
+\titleformat{\section}{\LARGE\bfseries\color{primaire}}{\thesection.}{0.5em}{}
+\titleformat{\subsection}{\large\bfseries\color{encre}}{}{0em}{}
+\titlespacing*{\section}{0pt}{0pt}{0.7em}
+\titlespacing*{\subsection}{0pt}{1.2em}{0.3em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\footnotesize\color{primaire}Ticket Tout~\textbullet~Brand book}
+\fancyhead[R]{\footnotesize\color{encre2}v1 \textbullet\ \today}
+\fancyfoot[C]{\footnotesize\color{encre2}\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\newcommand{\hex}[1]{\texttt{\small #1}}
+\newcommand{\code}[1]{\texttt{\small #1}}
+\newcommand{\file}[1]{\texttt{\small\color{primaire}#1}}
+
+% Maquette navigable : l'interface réelle du front, exportée en statique et
+% publiée sur GitHub Pages. Toutes les captures de ce book en proviennent.
+\newcommand{\maquetteurl}{https://knight-coder-19.github.io/ticket-tout-maquette/}
+
+% Pastille de couleur : \swatch{couleur}{Nom}{#HEX}{Role}
+\newcommand{\swatch}[4]{%
+  \noindent\begin{minipage}[t]{\linewidth}
+  \colorbox{#1}{\rule{0pt}{22pt}\hspace{58pt}}\hspace{8pt}%
+  \begin{minipage}[b]{0.78\linewidth}
+  \textbf{#2}\quad\hex{#3}\\[1pt]{\footnotesize\color{encre2}#4}
+  \end{minipage}\end{minipage}\par\vspace{7pt}}
+
+\newtcolorbox{bloc}[1][]{enhanced,breakable,colback=fondclair,colframe=ligne,
+  boxrule=0.5pt,arc=2pt,left=9pt,right=9pt,top=7pt,bottom=7pt,#1}
+\newtcolorbox{interdit}{enhanced,breakable,colback=white,colframe=corail,
+  boxrule=0.8pt,arc=2pt,left=9pt,right=9pt,top=7pt,bottom=7pt}
+
+\newcommand{\pageimg}[2]{% image + legende, centrees
+  \begin{center}\includegraphics[width=#1\linewidth]{#2}\end{center}}
+
+\begin{document}
+
+% ============================ COUVERTURE ============================
+\thispagestyle{empty}
+\begin{tcolorbox}[colback=primaire,colframe=primaire,arc=6pt,left=26pt,right=26pt,
+  top=70pt,bottom=70pt,halign=left]
+\color{white}
+\includegraphics[height=40pt]{marque.png}\\[20pt]
+{\Huge\bfseries Ticket Tout}\\[6pt]
+{\LARGE Brand book}\\[26pt]
+{\large\color{ambre}\textbf{v1, à valider}}\\[6pt]
+{\normalsize Ministère du Job et Bonheur, Direction du Numérique et de l'Innovation}\\[3pt]
+{\normalsize Révision du \today}
+\end{tcolorbox}
+
+\vspace{14pt}
+\begin{bloc}
+Ticket Tout est le nom retenu par le Ministre pour le dispositif d'avantages
+salariés (nom de travail précédent : « CartePro »). C'est une \textbf{marque
+produit qui vit à l'intérieur de la charte graphique ministérielle} : le bleu
+institutionnel \hex{\#1B3A6B} reste la couleur primaire ; la marque ajoute deux
+accents chauds qui « réveillent » l'ensemble.
+
+\medskip
+Ce document couvre le logotype, la palette (avec contrôle de contraste
+mesuré), la typographie, la carte physique et la carte telle qu'elle s'affiche
+dans l'application. Le périmètre laissé de côté et les raisons sont listés en
+dernière page et détaillés dans \file{docs/brand-book/livraison.md}.
+
+\medskip
+\textbf{Toutes les captures de ce book proviennent de notre maquette}, la
+version navigable du front exportée en statique et publiée sur GitHub Pages :
+\url{\maquetteurl}. Ce n'est pas un montage graphique : c'est l'interface
+réelle, avec des données simulées.
+\end{bloc}
+
+\vfill
+{\footnotesize\raggedright\color{encre2}Démonstrateur : simulation
+fonctionnelle, aucune valeur réelle ne circule. Palette et polices = jetons
+réels de \code{front/src/styles/tokens.css}. Captures = notre maquette,
+publiée sur GitHub Pages. Contrastes = \code{front/scripts/contrastes.mjs}.\par}
+\newpage
+
+\tableofcontents
+\newpage
+
+% ============================ 1. LA MARQUE ============================
+\section{La marque}
+
+\subsection{Le nom}
+\textbf{Ticket Tout}, en deux mots, avec une majuscule à chaque mot. Il remplace
+partout le nom de travail « CartePro » : titres d'onglet, écran de connexion,
+pied de page, mails de l'application, pages d'erreur, jeux de données de
+démonstration, exports, README. La bascule est faite et vérifiée
+(\code{grep} de contrôle : aucune occurrence résiduelle hors note historique).
+
+\subsection{Le principe : à l'intérieur de la charte}
+La charte ministérielle s'applique au reste de l'interface. Ticket Tout n'est
+pas une identité concurrente : c'est une couche produit.
+\begin{itemize}
+  \item Le \textbf{bleu institutionnel} \hex{\#1B3A6B} reste la couleur primaire
+        (identité, fonds, navigation).
+  \item La marque apporte \textbf{deux accents} : un ambre « pouvoir d'achat »
+        et un corail « énergie ». Ils portent l'action et les points de
+        respiration, jamais l'identité.
+  \item Marianne (police de l'État) pour les titres et le logotype, Spectral
+        pour le corps.
+\end{itemize}
+
+\subsection{La promesse}
+« Un salarié doit avoir envie de sortir sa carte de sa poche. » Le dispositif
+doit se sentir généreux et sans friction, pas administratif. D'où le choix
+d'assumer la métaphore du \emph{ticket} dans le logotype et sur la carte.
+\newpage
+
+% ============================ 2. LOGOTYPE ============================
+\section{Logotype}
+
+Le pictogramme est un \textbf{ticket} : un rectangle arrondi et une ligne de
+perforation. Écho direct du nom, il se décline en pastille (favicon) et se
+retrouve, à l'échelle de la carte physique, sous forme de talon détachable.
+
+\subsection{Versions}
+\begin{center}
+\begin{tabular}{@{}m{0.46\linewidth}m{0.46\linewidth}@{}}
+\includegraphics[width=\linewidth]{logo-complet.png} &
+\includegraphics[width=\linewidth]{logo-mono.png}\\[2pt]
+{\footnotesize\color{encre2}Principale (couleur, sur fond clair)} &
+{\footnotesize\color{encre2}Monochrome (une seule couleur)}\\[14pt]
+\includegraphics[width=\linewidth]{logo-dark.png} &
+\raisebox{4pt}{\includegraphics[width=0.42\linewidth]{logo-marque.png}}\\[2pt]
+{\footnotesize\color{encre2}Sur fond sombre (pictogramme ambre, mot blanc)} &
+{\footnotesize\color{encre2}Marque seule (favicon, espaces réduits)}\\
+\end{tabular}
+\end{center}
+
+\subsection{Règles d'emploi}
+\begin{itemize}
+  \item \textbf{Zone de protection} : au moins la hauteur du pictogramme,
+        libre de tout élément, sur les quatre côtés.
+  \item \textbf{Tailles minimales} : logotype complet 18\,px (soit environ
+        12\,mm imprimé) ; marque seule 16\,px (favicon).
+  \item Le mot est toujours en \textbf{Marianne bold}, « Ticket Tout » en deux
+        mots. Jamais « TicketTout », jamais « TT » sur un écran ou un support
+        public.
+  \item Sur fond sombre : version « fond sombre ». Sur photo : \textbf{interdit}
+        (charte ministérielle) ; utiliser un aplat.
+\end{itemize}
+\newpage
+
+% ============================ 3. COULEURS ============================
+\section{Couleurs}
+
+Toutes les valeurs vivent dans un fichier unique,
+\code{front/src/styles/tokens.css}. Changer une valeur là fait bouger toute
+l'interface. Aucune couleur n'est écrite en dur dans un composant.
+
+\subsection{Bleu institutionnel (charte)}
+\swatch{primaire}{Primaire}{\#1B3A6B}{Identité, navigation, fonds. Jamais en fond de bouton.}
+\swatch{primaireClair}{Primaire clair}{\#2F5590}{Dégradés de la carte, états survolés.}
+\swatch{primaireSombre}{Primaire sombre}{\#12294C}{Dégradés, pied de la carte.}
+
+\subsection{Accents Ticket Tout}
+\swatch{ambre}{Accent ambre}{\#F2A81C}{Bouton d'action (texte foncé), liseré de la carte, halo.}
+\swatch{ambreSombre}{Ambre sombre}{\#B97B06}{Survol du bouton d'action.}
+\swatch{corail}{Accent corail}{\#E4572E}{Décoratif uniquement : indicateur actif, détail graphique. Jamais de petit texte dessus.}
+\swatch{corailSombre}{Corail sombre}{\#C0421D}{Liens et texte d'accent sur fond blanc.}
+
+\subsection{Neutres et statuts}
+\swatch{encre}{Encre}{\#1A1A1A}{Corps de texte.}
+\swatch{encre2}{Encre secondaire}{\#55606B}{Métadonnées, dates, aides.}
+\swatch{succes}{Succès}{\#0B6B4F}{Statut « validé » / « correction ».}
+\swatch{alerte}{Alerte}{\#A0341C}{Statut « annulé », erreurs.}
+\swatch{simu}{Simulation}{\#7A5E12}{Bandeau et mention de simulation (sur \hex{\#FDF6E3}).}
+\newpage
+
+% ============================ 4. CONTRASTES ============================
+\section{Contrastes}
+
+\textbf{Outil} : \code{node front/scripts/contrastes.mjs}, implémentation de
+la formule officielle WCAG 2.1 (luminance relative puis \emph{contrast ratio}).
+Résultat reproductible en une commande. La table ci-dessous est sa sortie
+Markdown (\code{-{}-md}), pour \textbf{chaque couple texte/fond réellement
+utilisé} dans l'interface.
+
+\vspace{6pt}
+{\footnotesize
+\renewcommand{\arraystretch}{1.25}
+\begin{longtable}{@{}l l r l p{5.1cm}@{}}
+\toprule
+\textbf{Texte} & \textbf{Fond} & \textbf{Ratio} & \textbf{Verdict} & \textbf{Usage}\\
+\midrule
+\endhead
+\hex{\#FFFFFF} & \hex{\#1B3A6B} & 11{,}27:1 & AA & Rail de navigation, libellés sur la carte solde\\
+\hex{\#FFFFFF} & \hex{\#12294C} & 14{,}51:1 & AA & Texte sur le dégradé sombre de la carte\\
+\hex{\#FFFFFF} & \hex{\#2F5590} & 7{,}44:1 & AA & Texte sur le dégradé clair de la carte\\
+\hex{\#1A1A1A} & \hex{\#F2A81C} & 8{,}61:1 & AA & Libellé du bouton d'action principal\\
+\hex{\#C0421D} & \hex{\#FFFFFF} & 5{,}20:1 & AA & Lien d'accent, indicateur actif sur fond blanc\\
+\hex{\#1A1A1A} & \hex{\#FFFFFF} & 17{,}40:1 & AA & Corps de texte\\
+\hex{\#1A1A1A} & \hex{\#F4F6F9} & 16{,}08:1 & AA & Corps de texte sur le fond de page\\
+\hex{\#55606B} & \hex{\#FFFFFF} & 6{,}42:1 & AA & Métadonnées, dates, aides\\
+\hex{\#1B3A6B} & \hex{\#FFFFFF} & 11{,}27:1 & AA & Titres de section, liens de navigation\\
+\hex{\#0B6B4F} & \hex{\#E4F0EB} & 5{,}56:1 & AA & Pastille « validé » / « correction »\\
+\hex{\#A0341C} & \hex{\#FFFFFF} & 6{,}99:1 & AA & Statut « annulé », messages d'erreur\\
+\hex{\#7A5E12} & \hex{\#FDF6E3} & 5{,}66:1 & AA & Bandeau et mention de simulation\\
+\bottomrule
+\end{longtable}}
+
+\begin{bloc}
+\textbf{Aucun couple sous 4,5:1.} Un seul point de vigilance, signalé et non
+maquillé : le \textbf{corail plein} \hex{\#E4572E} sur blanc est à 3,7:1. Il
+n'est donc \emph{jamais} utilisé pour du texte. Le texte et les liens d'accent
+utilisent le \textbf{corail sombre} \hex{\#C0421D} (5,2:1) ; le corail plein
+reste décoratif (indicateur actif, détail graphique), au-dessus du seuil 3:1
+applicable aux éléments non textuels.
+\end{bloc}
+\newpage
+
+% ============================ 5. TYPOGRAPHIE ============================
+\section{Typographie}
+
+\subsection{Marianne, titres et logotype}
+Police officielle de l'État français, d'usage libre. Elle porte tous les titres
+(de \code{h1} à \code{h4}) et le mot du logotype.
+Graisses utilisées : 400, 500, 700. \textbf{Marianne plafonne à 700} dans la
+distribution retenue : les titres sont en \code{font-bold}, jamais en
+\code{font-extrabold} (le navigateur graisserait artificiellement).
+
+\subsection{Spectral, corps de texte}
+Licence SIL Open Font, redistribuable. Elle porte le corps, les libellés, les
+aides. Graisses 400 à 700.
+
+\subsection{Souveraineté}
+Les deux polices sont \textbf{auto-hébergées} dans \code{front/public/fonts}
+(fichiers \code{.woff2}). Aucun appel à un CDN externe : l'application démarre
+sur une machine hors ligne après \code{npm install}.
+\newpage
+
+% ============================ 6. CARTE PHYSIQUE ============================
+\section{La carte physique}
+
+\subsection{Format}
+\textbf{ISO/IEC 7810 ID-1} : 85,60 × 53,98 mm, ratio 1,586, coins arrondis
+rayon 3,18 mm. Emplacement de la puce d'après \textbf{ISO/IEC 7816}, piste
+magnétique d'après \textbf{ISO/IEC 7811} (5,5 mm de haut, à 5,5 mm du bord
+supérieur au verso).
+
+La carte \textbf{ne constitue pas un instrument de paiement} au sens
+réglementaire : mention « Spécimen / Simulation » présente au recto et au
+verso, aucun numéro (PAN) ni cryptogramme.
+
+\subsection{Concept retenu : « Le Ticket »}
+Le talon détachable ambre et sa ligne de perforation reprennent le pictogramme
+du logotype, à l'échelle de la carte. Dégradé bleu institutionnel, halo ambre,
+bloc-marque en haut à gauche.
+
+\pageimg{0.86}{carte-recto.png}
+\begin{center}{\footnotesize\color{encre2}Recto}\end{center}
+
+\pageimg{0.86}{carte-verso.png}
+\begin{center}{\footnotesize\color{encre2}Verso}\end{center}
+\newpage
+
+% ============================ 7. CARTE DANS L'INTERFACE - REPOS ============
+\section{La carte dans l'interface, au repos}
+
+Capture prise dans notre maquette, écran \code{/salarie}
+(\url{\maquetteurl}) : l'interface réelle du front, exportée en statique et
+publiée sur GitHub Pages, avec des données simulées. La carte solde reprend
+l'objet visuel de la carte physique : même dégradé, même halo ambre, même écho
+de perforation, même bloc-marque. Formulation positive du solde
+(« à dépenser chez vos partenaires »), mention de simulation sous la valeur.
+
+\pageimg{0.92}{app-repos-crop.png}
+\newpage
+
+% ============================ 8. CARTE DANS L'INTERFACE - PAIEMENT ========
+\section{La carte dans l'interface, au moment du paiement}
+
+Même carte, en mode paiement, capturée dans la maquette (écran
+\code{/salarie/paiement}) : le code QR (représentation ; un vrai code est signé
+côté serveur) sur une tuile claire, le jeton copiable, le minuteur de validité
+(5 minutes maximum, contrainte T. Vignal), et la régénération en un geste.
+
+\pageimg{0.92}{app-paiement-crop.png}
+\newpage
+
+% ============================ 9. LES INTERDITS ============================
+\section{Les interdits}
+
+Ce qu'on ne fait jamais avec la marque. Trois de ces interdits viennent
+d'erreurs réelles de notre propre interface, pas de règles génériques.
+
+\begin{interdit}
+\textbf{1. Le bleu institutionnel en fond de bouton.} C'est la faute qu'on a
+corrigée : le bouton d'action était vert « administratif », il est passé à
+l'ambre (texte foncé, contraste 8,6:1). Le bleu reste réservé à l'identité et
+à la navigation.
+\end{interdit}
+\begin{interdit}
+\textbf{2. Un montant affiché hors du composant \code{Montant}.} Règle 3 de
+l'architecture : un montant affiché autrement est refusé en revue de code.
+C'est ce qui garantit que la mention de simulation ne peut pas être oubliée sur
+un écran.
+\end{interdit}
+\begin{interdit}
+\textbf{3. Une couleur écrite en dur dans un composant.} Tout passe par
+\code{tokens.css}. Une valeur en dur casse la promesse « je change une valeur,
+toute l'interface bouge ».
+\end{interdit}
+\begin{interdit}
+\textbf{4. Déformer le logotype.} Pas de « TicketTout » collé, pas d'italique,
+pas de ré-espacement, pas de pictogramme seul sur un écran principal (réservé à
+la favicon et aux espaces réduits).
+\end{interdit}
+\begin{interdit}
+\textbf{5. Poser le bloc-marque sur une photo.} Charte ministérielle : toujours
+un aplat ou un dégradé de la palette.
+\end{interdit}
+\newpage
+
+% ============================ 10. PERIMETRE ============================
+\section{Périmètre et ce qui reste à faire}
+
+Priorité donnée par B. Sellami : l'interface avant le PDF, sacrifier les
+déclinaisons avant le logotype, et écrire ce qui est laissé de côté.
+
+\subsection{Livré}
+\begin{itemize}
+  \item Nom « Ticket Tout » basculé dans toute l'interface + favicon.
+  \item Palette en fichier unique (\code{tokens.css}) avec deux accents,
+        contrôle de contraste mesuré et reproductible.
+  \item Logotype : quatre versions, règles de zone de protection et de tailles.
+  \item Logotype en place dans les trois espaces (salarié, partenaire, admin)
+        et l'écran d'authentification.
+  \item Carte redessinée : concept « Le Ticket », recto/verso, et dans
+        l'interface au repos et au paiement (captures de la maquette).
+  \item \textbf{Maquette navigable} : le front exporté en statique et publié sur
+        GitHub Pages (\url{\maquetteurl}). L'espace salarié y est parcourable,
+        données simulées. C'est la source de toutes les captures de ce book.
+\end{itemize}
+
+\subsection{Reporté (v1.1), avec la raison}
+\begin{itemize}
+  \item \textbf{Déclinaisons} (bandeau web, visuel réseaux sociaux, affiche
+        A3) : priorité explicite de Sellami de les sacrifier en dernier. La
+        grille, la palette et le logotype de ce book suffisent à les produire ;
+        gabarits à fournir dans une v1.1.
+  \item \textbf{Carte « en situation »} (main, portefeuille, terminal) :
+        mockups photoréalistes non produits (ni banque d'images ni 3D dans le
+        périmètre du jour). Les rendus recto/verso tiennent lieu de référence.
+  \item \textbf{Espaces partenaire et admin} : le logotype y est posé, mais les
+        écrans eux-mêmes restent des stubs, hors périmètre du brand book.
+  \item \textbf{Vidéo} : re-tournée sous « Ticket Tout » (voix off française,
+        sous-titres calés sur la voix), à partir des mêmes captures de la
+        maquette. Traitée séparément, hors périmètre du brand book.
+\end{itemize}
+
+\vfill
+\begin{bloc}
+\textbf{Colophon.} v1, à valider par B. Sellami. Palette et polices = jetons
+réels de \code{front/src/styles/tokens.css}. Captures = notre maquette, le front
+exporté en statique et publié sur GitHub Pages (\url{\maquetteurl}). Contrastes
+= \code{front/scripts/contrastes.mjs} (WCAG 2.1). Détail du périmètre laissé de
+côté : \code{front/docs/brand-book/livraison.md}.
+\end{bloc}
+
+\end{document}

@@ -1,0 +1,140 @@
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espace-2);
+}
+
+.pictogramme {
+  flex-shrink: 0;
+  display: block;
+}
+
+.mot {
+  font-family: var(--police-titre);
+  font-weight: 700;
+  font-size: var(--taille-lg);
+  letter-spacing: -0.01em;
+  line-height: 1;
+  white-space: nowrap;
+  color: currentColor;
+}
+
+/* --- Carte Ticket Tout dans l'interface --- */
+.carte {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: var(--rayon-carte);
+  padding: var(--espace-6) var(--espace-8) var(--espace-8);
+  color: #fff;
+  background: linear-gradient(
+    135deg,
+    var(--couleur-primaire-sombre) 0%,
+    var(--couleur-primaire) 55%,
+    var(--couleur-primaire-clair) 100%
+  );
+  box-shadow: var(--ombre-carte);
+}
+.carteHalo {
+  position: absolute;
+  z-index: -1;
+  right: -70px;
+  top: -80px;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--couleur-accent-ambre) 0%, transparent 68%);
+  opacity: 0.4;
+}
+.cartePerfo {
+  position: absolute;
+  z-index: -1;
+  left: 14px;
+  top: 26px;
+  bottom: 26px;
+  width: 2px;
+  border-radius: 2px;
+  background: repeating-linear-gradient(
+    var(--couleur-accent-ambre) 0 3px,
+    transparent 3px 8px
+  );
+  opacity: 0.4;
+}
+.carteEntete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espace-4);
+  padding-left: var(--espace-6);
+  margin-bottom: var(--espace-6);
+}
+.carteCorps {
+  padding-left: var(--espace-6);
+}
+
+@media (max-width: 720px) {
+  .carte {
+    padding: var(--espace-6);
+  }
+  .carteEntete,
+  .carteCorps {
+    padding-left: var(--espace-4);
+  }
+  .cartePerfo {
+    left: 14px;
+  }
+}
+
+/* --- Rail minimal des espaces encore en stub (marque presente partout) --- */
+.railStub {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-2);
+  padding: var(--espace-4);
+  background: var(--couleur-primaire);
+  color: #fff;
+}
+.railStubSim {
+  font-family: var(--police-titre);
+  font-size: var(--taille-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.75;
+}
+.railStubEspace {
+  margin-top: var(--espace-4);
+  font-family: var(--police-titre);
+  font-weight: 700;
+}
+.railStubLien {
+  margin-top: auto;
+  color: #fff;
+  font-family: var(--police-titre);
+  font-size: var(--taille-sm);
+}
+
+/* --- En-tete publique --- */
+.entetePublique {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-3);
+  padding: var(--espace-4) var(--espace-8);
+  border-bottom: 1px solid var(--couleur-bordure);
+  background: var(--couleur-fond);
+  color: var(--couleur-primaire);
+}
+.entetePubliqueSim {
+  font-family: var(--police-titre);
+  font-size: var(--taille-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--couleur-texte-secondaire);
+}
+
+/* --- Auth : marque au-dessus du formulaire --- */
+.authEntete {
+  display: flex;
+  justify-content: center;
+  padding: var(--espace-8) var(--espace-4) var(--espace-4);
+  color: var(--couleur-primaire);
+}

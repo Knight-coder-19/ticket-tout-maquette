@@ -1,21 +1,52 @@
 @import "./tokens.css";
 
 /*
- * Declarations de polices.
- * Les fichiers doivent etre deposes dans public/fonts.
- * Marianne : police de l'Etat francais, telechargeable sur le site de la DILA.
- * Spectral : licence SIL Open Font, redistribuable.
- * Aucun appel a un CDN externe, contrainte de souverainete.
+ * Declarations de polices. Fichiers auto-heberges dans public/fonts,
+ * aucun appel a un CDN externe (contrainte de souverainete, T. Vignal).
+ * Marianne : police de l'Etat francais. Spectral : licence SIL Open Font.
  */
-
-/*
 @font-face {
   font-family: "Marianne";
   src: url("/fonts/Marianne-Regular.woff2") format("woff2");
   font-weight: 400;
   font-display: swap;
 }
-*/
+@font-face {
+  font-family: "Marianne";
+  src: url("/fonts/Marianne-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Marianne";
+  src: url("/fonts/Marianne-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Spectral";
+  src: url("/fonts/spectral-latin-400-normal.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Spectral";
+  src: url("/fonts/spectral-latin-500-normal.woff2") format("woff2");
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Spectral";
+  src: url("/fonts/spectral-latin-600-normal.woff2") format("woff2");
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Spectral";
+  src: url("/fonts/spectral-latin-700-normal.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
 
 *,
 *::before,
@@ -29,7 +60,7 @@ body {
   font-size: var(--taille-base);
   line-height: 1.6;
   color: var(--couleur-texte);
-  background: var(--couleur-fond);
+  background: var(--couleur-fond-secondaire);
 }
 
 h1,
@@ -38,12 +69,54 @@ h3,
 h4 {
   font-family: var(--police-titre);
   line-height: 1.2;
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--couleur-primaire);
 }
 
 /* Accessibilite RGAA : focus toujours visible. */
 :focus-visible {
   outline: 3px solid var(--couleur-primaire);
   outline-offset: 2px;
+  border-radius: var(--rayon-sm);
+}
+
+/* Contenu reserve aux lecteurs d'ecran. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Lien d'evitement (RGAA 12.7) : visible uniquement au focus clavier. */
+.lien-evitement {
+  position: fixed;
+  top: var(--espace-2);
+  left: var(--espace-2);
+  z-index: 100;
+  padding: var(--espace-2) var(--espace-4);
+  background: var(--couleur-primaire);
+  color: #fff;
+  font-family: var(--police-titre);
+  text-decoration: none;
+  border-radius: var(--rayon-md);
+  transform: translateY(-160%);
+  transition: transform 0.15s ease;
+}
+.lien-evitement:focus {
+  transform: translateY(0);
 }
 
 @media (prefers-reduced-motion: reduce) {

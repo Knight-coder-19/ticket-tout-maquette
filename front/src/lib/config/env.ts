@@ -38,5 +38,5 @@ export const env = {
   utiliserMocks,
   baseApi,
   qrTtlSecondes: Number(process.env.NEXT_PUBLIC_QR_TTL_SECONDS ?? 300),
-  nomApplication: process.env.NEXT_PUBLIC_APP_NAME ?? "CartePro",
+  nomApplication: process.env.NEXT_PUBLIC_APP_NAME ?? "Ticket Tout",
 } as const;

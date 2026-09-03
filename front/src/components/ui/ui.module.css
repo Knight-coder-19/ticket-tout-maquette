@@ -1,0 +1,136 @@
+/* Primitives d'interface. Aucune couleur en dur : tout vient des jetons. */
+
+/* ---- Bouton -------------------------------------------------------- */
+.bouton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espace-2);
+  min-height: 44px;
+  padding: 0 var(--espace-4);
+  font-family: var(--police-titre);
+  font-size: var(--taille-sm);
+  font-weight: 500;
+  line-height: 1;
+  border: 1px solid transparent;
+  border-radius: var(--rayon-md);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+.bouton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Le bleu institutionnel ne sert jamais de fond de bouton (charte) :
+   l'action principale porte la couleur d'action. */
+.primaire {
+  background: var(--couleur-action);
+  color: var(--couleur-action-texte);
+}
+.primaire:not(:disabled):hover {
+  background: var(--couleur-action-survol);
+}
+
+.secondaire {
+  background: var(--couleur-fond);
+  color: var(--couleur-primaire);
+  border-color: var(--couleur-bordure);
+}
+.secondaire:not(:disabled):hover {
+  background: var(--couleur-primaire-fond);
+}
+
+.discret {
+  background: transparent;
+  color: var(--couleur-primaire);
+  min-height: 0;
+  padding: var(--espace-1) var(--espace-2);
+}
+.discret:not(:disabled):hover {
+  background: var(--couleur-primaire-fond);
+}
+
+.pleine {
+  width: 100%;
+}
+
+/* ---- Carte -------------------------------------------------------- */
+.carte {
+  background: var(--couleur-fond);
+  border: 1px solid var(--couleur-bordure);
+  border-radius: var(--rayon-lg);
+  padding: var(--espace-6);
+}
+.carteTitre {
+  font-size: var(--taille-lg);
+  margin-bottom: var(--espace-4);
+}
+
+/* ---- Pastille (statut) ------------------------------------------- */
+.pastille {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espace-1);
+  padding: 2px var(--espace-2);
+  font-family: var(--police-titre);
+  font-size: var(--taille-xs);
+  font-weight: 500;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+.pastilleNeutre {
+  background: var(--couleur-fond-secondaire);
+  color: var(--couleur-texte-secondaire);
+  border-color: var(--couleur-bordure);
+}
+.pastilleSucces {
+  background: var(--couleur-succes-fond);
+  color: var(--couleur-succes);
+}
+.pastilleAlerte {
+  background: var(--couleur-alerte-fond);
+  color: var(--couleur-alerte);
+}
+.pastilleAttente {
+  background: var(--couleur-simulation-fond);
+  color: var(--couleur-simulation);
+}
+
+/* ---- Etat vide -------------------------------------------------- */
+.etatVide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--espace-2);
+  padding: var(--espace-8) var(--espace-4);
+  color: var(--couleur-texte-secondaire);
+}
+.etatVideIcone {
+  color: var(--couleur-bordure);
+}
+
+/* ---- Chargement ----------------------------------------------- */
+.chargement {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-sm);
+  padding: var(--espace-4) 0;
+}
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--couleur-bordure);
+  border-top-color: var(--couleur-primaire);
+  border-radius: 50%;
+  animation: rotation 0.7s linear infinite;
+}
+@keyframes rotation {
+  to {
+    transform: rotate(360deg);
+  }
+}

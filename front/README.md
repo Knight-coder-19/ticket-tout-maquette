@@ -1,7 +1,9 @@
-# CartePro - Frontend
+# Ticket Tout - Frontend
 
-Interface du dispositif CartePro, Ministere du Job et Bonheur.
+Interface du dispositif Ticket Tout, Ministere du Job et Bonheur.
 Demonstrateur : simulation fonctionnelle, aucune valeur reelle ne circule.
+
+Nom de marque : « Ticket Tout » (ex-nom de travail « CartePro »).
 
 ## Demarrage
 
@@ -22,7 +24,6 @@ Basculer `NEXT_PUBLIC_USE_MOCKS=false` pour interroger l'API reelle.
 | `npm run build` | Build de production |
 | `npm run typecheck` | Verification des types |
 | `npm run lint` | Analyse statique |
-| `npm test` | Tests unitaires |
 
 ## Documentation
 
