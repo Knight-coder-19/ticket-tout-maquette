@@ -5,7 +5,8 @@ use axum::{Json, Router};
 
 use cartepro_core::directory;
 use cartepro_core::error::CoreError;
-use cartepro_core::ids::{AccountId, EmployeeId, Jti};
+use cartepro_core::identity::AuthenticatedUser;
+use cartepro_core::ids::{AccountId, Jti};
 use cartepro_core::ledger;
 use cartepro_core::partners::highlights;
 use cartepro_core::payments;
@@ -39,7 +40,7 @@ async fn balance(
     State(app): State<AppState>,
 ) -> Result<Json<BalanceResponse>, ApiError>
 {
-    let account_id = account_of(&app, user.into()).await?;
+    let account_id = account_of(&app, user).await?;
 
     payments::expire_stale_tokens(&app.db, &*app.clock, payments::expire::DEFAULT_BATCH).await?;
 
@@ -58,7 +59,7 @@ async fn transactions(
     pagination: Pagination,
 ) -> Result<Json<EmployeeTransactionList>, ApiError>
 {
-    let account_id = account_of(&app, user.into()).await?;
+    let account_id = account_of(&app, user).await?;
     let limit = i64::from(pagination.limit);
     let lines = reporting::employee_statement(
         &app.db,
@@ -100,7 +101,7 @@ async fn authorize_token(
     ValidatedJson(body): ValidatedJson<AuthorizeRequest>,
 ) -> Result<(StatusCode, Json<IssuedTokenResponse>), ApiError>
 {
-    let account_id = account_of(&app, user.into()).await?;
+    let account_id = account_of(&app, user).await?;
     let mut tx = app.db.begin().await?;
 
     let issued = payments::authorize(
@@ -124,7 +125,7 @@ async fn cancel_token(
     Path(jti): Path<Jti>,
 ) -> Result<StatusCode, ApiError>
 {
-    let account_id = account_of(&app, user.into()).await?;
+    let account_id = account_of(&app, user).await?;
     let mut tx = app.db.begin().await?;
 
     payments::cancel(&mut tx, &*app.clock, account_id, jti).await?;
@@ -132,10 +133,16 @@ async fn cancel_token(
     Ok(StatusCode::NO_CONTENT)
 }
 
-async fn account_of(app: &AppState, employee: EmployeeId) -> Result<AccountId, ApiError>
+async fn account_of(app: &AppState, user: AuthenticatedUser) -> Result<AccountId, ApiError>
 {
     let mut conn = app.db.acquire().await?;
-    let account = directory::employees::active_account(&mut conn, employee).await?;
+    let found = directory::repo::find_employee_by_user(&mut conn, user.id).await?;
+
+    let employee = match found {
+        Some(employee) => employee,
+        None => return Err(CoreError::Forbidden.into())
+    };
+    let account = directory::employees::active_account(&mut conn, employee.id).await?;
 
     Ok(account)
 }
