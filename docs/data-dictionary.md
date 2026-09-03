@@ -453,12 +453,14 @@ interface PaymentResponse {
 // POST /api/v1/partner/payments/batch  — resynchronisation hors ligne
 interface BatchSettleRequest { items: SettleRequest[]; }
 interface BatchSettleResult {
-  jti: string;
+  jti: string | null;          // null si la ligne portait un short_code introuvable
   status: "settled" | "failed";
   payment: PaymentResponse | null;
   error: string | null;        // code d'erreur si failed
 }
 interface BatchSettleResponse { results: BatchSettleResult[]; }
+// results[i] repond a items[i], et le lot conserve l'ordre recu : c'est le rang,
+// et non le jti, qui fait la correspondance avec la file locale.
 // Une ligne en échec ne fait jamais tomber le lot. Le front retire de sa file
 // toute ligne "settled", et signale les "failed".
 ```
@@ -616,7 +618,15 @@ CP1.<base64url(payload_json)>.<base64url(signature)>
 
 > **Point de sécurité :** ne pas utiliser HMAC ici. Le HMAC exigerait que le partenaire détienne la clé secrète du serveur pour vérifier, ce qui lui donnerait de quoi forger des jetons. La vérification hors ligne impose une signature **asymétrique**.
 
-**L'expiration contenue dans le QR est indicative.** La seule qui fait foi est celle vérifiée par le serveur au règlement, contre son horloge (décision 2). L'app partenaire l'utilise pour l'affichage et pour refuser localement l'évident, pas comme autorité.
+**L'expiration contenue dans le QR est indicative.** Celle qui fait foi est vérifiée par le serveur au règlement, mais **contre l'instant du scan et non contre l'horloge de réception** : un jeton scanné pendant sa fenêtre de validité s'encaisse même si la synchronisation n'arrive que des heures plus tard. C'est ce qui rend la file d'attente hors ligne utilisable.
+
+Le serveur encadre le `scanned_at` que le front lui envoie par trois bornes, et le front doit les connaître :
+
+- au-delà de `RESYNC_MAX_AGE_HOURS` d'ancienneté, la ligne est refusée par `RESYNC_TOO_LATE` — elle est perdue, il faut la retirer de la file et le dire au commerçant ;
+- un `scanned_at` postérieur à l'horloge du serveur est **ramené** à celle-ci, sans erreur : une caisse dont l'horloge avance ne gagne rien, mais elle ne casse rien non plus ;
+- un `scanned_at` antérieur à l'émission du jeton est refusé par `TOKEN_EXPIRED`.
+
+L'application partenaire utilise l'expiration du QR pour l'affichage et pour refuser localement l'évident, pas comme autorité.
 
 ---
 
@@ -635,6 +645,7 @@ Stables à vie. Le front réagit sur `error`, jamais sur `message`.
 | `INSUFFICIENT_FUNDS` | 422 | disponible < montant | « solde insuffisant » |
 | `PARTNER_NOT_APPROVED` | 403 | partenaire non agréé | écran de statut |
 | `ACCOUNT_INACTIVE` | 403 | compte suspendu ou clôturé | écran de statut |
+| `RESYNC_TOO_LATE` | 422 | encaissement hors ligne plus ancien que `RESYNC_MAX_AGE_HOURS` | « ligne trop ancienne » — retirer de la file, elle ne passera plus |
 | `DUPLICATE_BATCH` | 409 | fichier déjà importé | « ce fichier a déjà été traité » |
 | `BATCH_HAS_ERRORS` | 422 | lignes invalides | affiche `errors[]` |
 | `HIGHLIGHT_NOT_ELIGIBLE` | 422 | partenaire non `approved` (A2) | « partenaire non agréé » |

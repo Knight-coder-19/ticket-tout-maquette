@@ -3,6 +3,37 @@
 [//]: # (This is a changelog file)
 [//]: # (Each time you make a minor or minor change in the project, repertoriate it here according to the following format. So each changes equals to an affectation of this file with all the sections.)
 
+## 1.10.0 03.09.2026
+
+### Changed
+
+- **`data-dictionary.md` §5 — l'expiration se juge au moment du scan.** Le document affirmait
+  encore que la seule expiration faisant foi était celle vérifiée « contre l'horloge du serveur »,
+  ce qui n'est plus vrai depuis le §26 des décisions. La section décrit maintenant le comportement
+  réel et, surtout, les **trois bornes** que le front doit connaître : le refus au-delà de
+  `RESYNC_MAX_AGE_HOURS`, le plafonnement silencieux d'un `scanned_at` en avance sur notre horloge,
+  et le refus d'un `scanned_at` antérieur à l'émission du jeton. C'est sur cette phrase que l'équipe
+  front décide si elle garde ou abandonne une ligne de sa file : la laisser fausse revenait à lui
+  faire tout abandonner au bout de cinq minutes.
+- **`data-dictionary.md` §6 — ajout de `RESYNC_TOO_LATE`, en 422.** Le backend produisait déjà ce
+  code, la table des quinze codes stables ne le connaissait pas. Un front conforme au contrat
+  serait tombé dans son cas par défaut, précisément sur le message le plus utile au comptoir :
+  cette ligne est trop vieille, elle ne passera plus, retire-la de la file.
+- **`data-dictionary.md` §4.5 — `BatchSettleResult.jti` devient `string | null`.** C'est l'écart
+  §21, jamais reporté dans le contrat publié : une ligne du lot saisie par code court introuvable
+  n'a aucun `jti` à nommer. J'ai ajouté au passage la phrase qui manquait — `results[i]` répond à
+  `items[i]`, le lot conserve l'ordre reçu, et c'est le **rang** qui fait la correspondance avec la
+  file locale, pas le `jti`.
+
+### Notes
+
+- Les huit codes que `PaymentError::code()` produit sont désormais tous déclarés au contrat. Il
+  reste à `api/src/error.rs`, chez Giscard, de leur associer leur statut HTTP — `RESYNC_TOO_LATE`
+  est le seul ajout à la table.
+- Ces trois points étaient les dernières divergences connues entre le code du chemin monétaire et
+  le document que le front lit. Il reste la dette du §20 : les cinq tests de `topup`, qui
+  attendent `funding/mod.rs` et `funding/repo.rs`.
+
 ## 1.9.0 03.09.2026
 
 ### Added
