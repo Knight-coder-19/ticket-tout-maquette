@@ -1,107 +1,105 @@
-# CartePro — Modèle de données
+# CartePro — Data model
 
-> Compagnon de `docs/data-dictionary.md` (le quoi) et de `migrations/0001_schema.sql` (le comment).
-> Ce document dit **pourquoi** le schéma est ce qu'il est. Le dictionnaire dit ce que le front en
-> voit, la migration dit comment PostgreSQL l'applique.
+> Companion to `docs/data-dictionary.md` (the what) and `migrations/0001_schema.sql` (the how).
+> This document says **why** the schema is what it is. The dictionary says what the front end sees
+> of it, the migration says how PostgreSQL applies it.
 
-Le schéma tient en treize énumérations et dix-huit tables, dans un seul fichier de migration.
-J'ai gardé l'ensemble en un seul fichier parce que l'ordre des dépendances y est lisible de haut en
-bas, et qu'une base de démonstration se recrée d'une seule commande. La migration `0002` n'apporte
-que le référentiel des villes, et la `0003` un index d'unicité que j'aurais dû poser dès le départ.
+The schema fits in thirteen enums and eighteen tables, in a single migration file. I kept it all in
+one file because the dependency order reads from top to bottom there, and because a demo database
+can be recreated with a single command. Migration `0002` brings only the city reference data, and
+`0003` a unique index I should have put in place from the start.
 
-**Trois principes gouvernent tout ce qui suit.** L'argent ne se déplace que par écriture double,
-donc jamais par une mise à jour de solde isolée. Rien de ce qui touche au journal ne se modifie ni
-ne se supprime, et c'est la base elle-même qui le refuse, pas le code applicatif. Et toute règle
-qui peut être portée par une contrainte l'est, parce qu'une contrainte tient même quand le code
-se trompe.
+**Three principles govern everything that follows.** Money moves only through double entry, and
+therefore never through an isolated balance update. Nothing touching the journal is modified or
+deleted, and it is the database itself that refuses it, not the application code. And any rule that
+can be carried by a constraint is, because a constraint holds even when the code is wrong.
 
 ---
 
-## Les treize énumérations
+## The thirteen enums
 
-J'ai choisi des types `ENUM` PostgreSQL plutôt que des colonnes `TEXT` avec un `CHECK`. Le gain
-n'est pas le stockage, il est que l'ensemble des valeurs est **déclaré une seule fois** et que
-`sqlx` peut le projeter sur une énumération Rust par `#[sqlx(type_name = ...)]`. Une valeur
-inconnue ne franchit alors ni la base, ni la désérialisation. Le coût est connu et assumé :
-ajouter une valeur demande un `ALTER TYPE`, et en retirer une est presque impossible. C'est
-exactement la friction que je veux — une nouvelle valeur d'énumération est un changement cassant
-pour le front, et le dictionnaire le dit.
+I chose PostgreSQL `ENUM` types rather than `TEXT` columns with a `CHECK`. The gain is not storage,
+it is that the set of values is **declared exactly once** and that `sqlx` can project it onto a Rust
+enum through `#[sqlx(type_name = ...)]`. An unknown value then gets past neither the database nor
+deserialisation. The cost is known and accepted: adding a value requires an `ALTER TYPE`, and
+removing one is almost impossible. That is exactly the friction I want — a new enum value is a
+breaking change for the front end, and the dictionary says so.
 
-| Type | Valeurs | Rôle |
+| Type | Values | Role |
 |---|---|---|
-| `user_role` | `employee`, `partner`, `admin` | Les trois rôles. Le contrôle d'accès s'y ramène entièrement. |
-| `user_status` | `active`, `suspended`, `closed` | Cycle de vie d'un compte utilisateur, et aussi d'un employeur et d'un client d'API. |
-| `link_status` | `active`, `ended` | Un rattachement à un employeur est en cours ou terminé. |
-| `partner_status` | `pending`, `approved`, `rejected`, `suspended`, `closed` | Le parcours de validation d'un commerçant. Seul `approved` reçoit de l'argent et paraît au catalogue. |
-| `account_owner` | `employee`, `partner`, `system` | À qui appartient un compte. `system` est la porte de sortie de toutes les contraintes de solde. |
-| `account_status` | `active`, `suspended`, `closed` | Cycle de vie d'un compte monétaire, distinct de celui de l'utilisateur. |
-| `token_status` | `active`, `consumed`, `expired`, `cancelled` | Les quatre fins possibles d'un jeton de paiement. Trois sur quatre sont définitives. |
-| `operation_kind` | `topup`, `payment`, `compensation`, `closure_forfeit` | La nature d'une opération du journal. Chaque valeur a sa table de détail. |
-| `entry_direction` | `debit`, `credit` | Le sens d'une écriture. Deux valeurs, jamais trois. |
-| `entry_mode` | `qr_scan`, `short_code` | Comment le jeton a été présenté au comptoir. Sert au support et aux statistiques de terrain. |
-| `batch_status` | `draft`, `validated`, `rejected` | Le cycle d'un lot de rechargement importé par fichier. |
-| `service_mode` | `physical`, `online`, `both` | Amendement A1. Décide si une adresse est exigée. |
-| `highlight_placement` | `minister_pick`, `public_featured` | Amendement A2. Deux vitrines distinctes, avec leurs propres positions. |
+| `user_role` | `employee`, `partner`, `admin` | The three roles. Access control reduces entirely to them. |
+| `user_status` | `active`, `suspended`, `closed` | Lifecycle of a user account, and also of an employer and an API client. |
+| `link_status` | `active`, `ended` | An employment link is current or finished. |
+| `partner_status` | `pending`, `approved`, `rejected`, `suspended`, `closed` | A merchant's approval journey. Only `approved` receives money and appears in the catalogue. |
+| `account_owner` | `employee`, `partner`, `system` | Who owns an account. `system` is the escape hatch from every balance constraint. |
+| `account_status` | `active`, `suspended`, `closed` | Lifecycle of a monetary account, distinct from the user's. |
+| `token_status` | `active`, `consumed`, `expired`, `cancelled` | The four possible ends of a payment token. Three out of four are final. |
+| `operation_kind` | `topup`, `payment`, `compensation`, `closure_forfeit` | The nature of a journal operation. Each value has its detail table. |
+| `entry_direction` | `debit`, `credit` | The direction of an entry. Two values, never three. |
+| `entry_mode` | `qr_scan`, `short_code` | How the token was presented at the counter. Used for support and field statistics. |
+| `batch_status` | `draft`, `validated`, `rejected` | The lifecycle of a top-up batch imported from a file. |
+| `service_mode` | `physical`, `online`, `both` | Amendment A1. Decides whether an address is required. |
+| `highlight_placement` | `minister_pick`, `public_featured` | Amendment A2. Two distinct shop windows, with their own positions. |
 
 ---
 
-## Les dix-huit tables
+## The eighteen tables
 
-### Le référentiel des personnes
+### The people reference data
 
 #### `cities`
 
-`id`, `name`, `department`, avec `uq_cities_name_department`.
+`id`, `name`, `department`, with `uq_cities_name_department`.
 
-Une ville n'est pas identifiée par son seul nom : plusieurs départements portent des communes
-homonymes. La clé naturelle est donc le couple, et c'est elle que l'index d'unicité protège. La
-table est alimentée par la migration `0002`, et rien dans l'application ne l'écrit.
+A city is not identified by its name alone: several departments have towns with the same name. The
+natural key is therefore the pair, and it is that pair the unique index protects. The table is
+populated by migration `0002`, and nothing in the application writes to it.
 
 #### `users`
 
 `id`, `email` (`CITEXT`, unique), `password_hash`, `role`, `status`, `last_login_at`, `created_at`,
 `updated_at`.
 
-L'adresse est en `CITEXT` et non en `TEXT` : personne ne considère que `Claire@…` et `claire@…`
-sont deux comptes, et régler la casse dans la base plutôt que dans le code garantit qu'aucun chemin
-d'écriture ne peut créer le doublon. `password_hash` porte un PHC complet — l'algorithme et ses
-paramètres voyagent avec l'empreinte, ce qui permettra de changer de coût sans migration de données.
+The address is `CITEXT` and not `TEXT`: nobody considers `Claire@…` and `claire@…` to be two
+accounts, and settling case in the database rather than in the code guarantees that no write path
+can create the duplicate. `password_hash` carries a full PHC string — the algorithm and its
+parameters travel with the digest, which will allow the cost to be changed without a data migration.
 
-La table ne porte **que** l'authentification. Ce qu'est la personne — un employé, un commerçant —
-vit dans `employees` et `partners`. C'est ce qui permet à un rôle de changer sans toucher à
-l'identité.
+The table carries **only** authentication. What the person is — an employee, a merchant — lives in
+`employees` and `partners`. That is what allows a role to change without touching identity.
 
-#### `employees` et `employers`
+#### `employees` and `employers`
 
-`employees` : `id`, `user_id` (unique), `last_name`, `first_name`, `phone`, `created_at`.
-`employers` : `id`, `legal_name`, `ifu` (unique), `contact_email`, `contact_phone`, `status`,
+`employees`: `id`, `user_id` (unique), `last_name`, `first_name`, `phone`, `created_at`.
+`employers`: `id`, `legal_name`, `ifu` (unique), `contact_email`, `contact_phone`, `status`,
 `created_at`.
 
-Un employé est toujours adossé à un utilisateur, jamais l'inverse : l'unicité de `user_id` interdit
-deux fiches employé pour un même compte. Un employeur, lui, n'a pas d'utilisateur — il n'a pas de
-session, il n'existe que comme payeur et comme émetteur de matricules. Son `ifu` est unique mais
-nullable, parce qu'un employeur public peut ne pas en avoir.
+An employee is always backed by a user, never the other way round: the uniqueness of `user_id`
+forbids two employee records for the same account. An employer, by contrast, has no user — it has no
+session, it exists only as a payer and as an issuer of payroll references. Its `ifu` is unique but
+nullable, because a public-sector employer may not have one.
 
 #### `employment_links`
 
 `id`, `employee_id`, `employer_id`, `employer_ref`, `account_id`, `status`, `started_at`,
 `ended_at`, `created_at`.
 
-C'est la table qui rattache un employé à un employeur **et à un compte**. Trois règles y sont
-portées par le schéma :
+This is the table that links an employee to an employer **and to an account**. Three rules are
+carried by the schema here:
 
-- `uq_active_employment` — un employé n'a qu'un rattachement `active`. L'index est partiel, donc
-  l'historique des rattachements terminés reste intact.
-- `uq_employer_ref` — un matricule est unique **par employeur, parmi les actifs**. Deux employeurs
-  peuvent utiliser le même matricule sans se gêner, et un matricule libéré peut être réattribué.
-- `ended_after_started` et `ended_link_has_date` — un rattachement terminé porte forcément sa date
-  de fin, et cette date ne précède pas le début.
+- `uq_active_employment` — an employee has only one `active` link. The index is partial, so the
+  history of finished links stays intact.
+- `uq_employer_ref` — a payroll reference is unique **per employer, among the active links**. Two
+  employers can use the same reference without interfering, and a released reference can be
+  reassigned.
+- `ended_after_started` and `ended_link_has_date` — a finished link necessarily carries its end
+  date, and that date does not precede the start.
 
-Le compte est porté par le rattachement et non par l'employé, parce que c'est le rattachement qui
-justifie l'existence de l'argent. Le jour où l'employé change d'employeur, la question du solde
-résiduel se pose explicitement au lieu de suivre silencieusement.
+The account is carried by the link and not by the employee, because it is the link that justifies
+the existence of the money. The day the employee changes employer, the question of the residual
+balance is raised explicitly instead of silently following along.
 
-### Les commerçants
+### Merchants
 
 #### `partners`
 
@@ -109,239 +107,233 @@ résiduel se pose explicitement au lieu de suivre silencieusement.
 `service_mode`, `website_url`, `city_id`, `district`, `address_line`, `latitude`, `longitude`,
 `status`, `submitted_at`, `reviewed_by`, `reviewed_at`, `review_reason`.
 
-Deux contraintes méritent d'être lues :
+Two constraints deserve reading:
 
-- `physical_needs_city` — un commerçant qui n'est pas exclusivement en ligne doit avoir une ville.
-  C'est l'amendement A1 : le catalogue filtre par ville, et une adresse manquante rendrait le
-  commerçant invisible sans que personne ne s'en aperçoive.
-- `reviewed_is_complete` — `reviewed_by` et `reviewed_at` sont tous deux nuls ou tous deux
-  renseignés. Une validation sans validateur, ou sans date, n'est pas une validation.
+- `physical_needs_city` — a merchant who is not exclusively online must have a city. That is
+  amendment A1: the catalogue filters by city, and a missing address would make the merchant
+  invisible without anyone noticing.
+- `reviewed_is_complete` — `reviewed_by` and `reviewed_at` are both null or both set. An approval
+  without an approver, or without a date, is not an approval.
 
-`idx_partners_catalog` est un index partiel `WHERE status = 'approved'` : le catalogue public ne
-lit que les commerçants agréés, l'index ne porte donc que ceux-là.
+`idx_partners_catalog` is a partial index `WHERE status = 'approved'`: the public catalogue reads
+only approved merchants, so the index covers only those.
 
-Les coordonnées géographiques existent en `NUMERIC(9,6)` mais ne sont pas exposées. Elles dorment
-en attendant une carte, et le dictionnaire les marque comme telles.
+Geographic coordinates exist as `NUMERIC(9,6)` but are not exposed. They lie dormant awaiting a map,
+and the dictionary marks them as such.
 
 #### `partner_highlights`
 
 `id`, `partner_id`, `placement`, `position`, `created_by`, `created_at`, `removed_at`.
 
-Amendement A2. Une mise en avant se retire en posant `removed_at`, jamais en supprimant la ligne :
-qui a mis un commerçant en vitrine, et quand, est une information d'audit. Les deux index partiels
-`uq_active_highlight_partner` et `uq_active_highlight_position` — tous deux `WHERE removed_at IS
-NULL` — garantissent qu'un commerçant n'occupe qu'une place par vitrine et qu'une position n'est
-tenue que par un commerçant. Une place libérée redevient disponible immédiatement.
+Amendment A2. A highlight is removed by setting `removed_at`, never by deleting the row: who put a
+merchant in the shop window, and when, is audit information. The two partial indexes
+`uq_active_highlight_partner` and `uq_active_highlight_position` — both `WHERE removed_at IS NULL` —
+guarantee that a merchant occupies only one slot per window and that a position is held by only one
+merchant. A released slot becomes available immediately.
 
-### L'argent
+### The money
 
 #### `accounts`
 
 `id`, `owner_type`, `owner_id`, `system_code` (unique), `payment_handle` (unique),
 `balance_settled`, `balance_held`, `status`, `version`, `opened_at`, `closed_at`.
 
-C'est la table la plus contrainte du schéma, et c'est voulu.
+It is the most constrained table in the schema, and that is deliberate.
 
-- `settled_never_negative` et `held_within_settled` sont **exemptées pour `owner_type = 'system'`**.
-  C'est l'amendement du jalon 1.0.0 : en partie double, la somme de tous les soldes vaut
-  identiquement zéro, donc la contrepartie d'émission `MINISTRY_ISSUANCE` est nécessairement
-  négative. Son solde mesure le total émis. Sans cette exemption, aucun rechargement n'était
-  possible.
-- `held_never_negative` s'applique à tout le monde : une réservation négative n'a aucun sens.
-- `system_account_shape` interdit les deux formes bâtardes — un compte système avec un
-  propriétaire, un compte d'utilisateur avec un code système.
+- `settled_never_negative` and `held_within_settled` are **exempted for `owner_type = 'system'`**.
+  That is the amendment from milestone 1.0.0: under double entry, the sum of all balances is
+  identically zero, so the issuance counterparty `MINISTRY_ISSUANCE` is necessarily negative. Its
+  balance measures the total issued. Without that exemption, no top-up was possible.
+- `held_never_negative` applies to everyone: a negative reservation makes no sense.
+- `system_account_shape` forbids the two hybrid forms — a system account with an owner, a user
+  account with a system code.
 
-`owner_id` ne porte **pas** de clé étrangère, parce qu'il désigne tantôt un employé, tantôt un
-commerçant. C'est le seul endroit du schéma où j'accepte une référence non contrainte, et
-`system_account_shape` en limite les dégâts.
+`owner_id` carries **no** foreign key, because it designates sometimes an employee, sometimes a
+merchant. It is the only place in the schema where I accept an unconstrained reference, and
+`system_account_shape` limits the damage.
 
-`balance_settled` et `balance_held` sont des **caches**. La vérité est dans `ledger_entries`, et
-l'invariant I2 exige qu'ils coïncident. Je les garde parce que recalculer un solde à chaque lecture
-de page coûterait une agrégation sur tout l'historique.
+`balance_settled` and `balance_held` are **caches**. The truth is in `ledger_entries`, and invariant
+I2 requires that they agree. I keep them because recomputing a balance on every page read would cost
+an aggregation over the whole history.
 
-`version` est un compteur d'optimistic locking, incrémenté à chaque mouvement. Il n'est pas encore
-utilisé pour arbitrer un conflit — les verrous de ligne s'en chargent — mais il rend un conflit
-détectable côté lecture.
+`version` is an optimistic-locking counter, incremented on every movement. It is not yet used to
+arbitrate a conflict — row locks handle that — but it makes a conflict detectable on the read side.
 
 #### `ledger_operations`
 
 `id`, `kind`, `amount`, `memo`, `created_by`, `occurred_at`, `recorded_at`.
 
-Une opération est le fait métier : un rechargement, un paiement. Elle porte le montant, qui est
-**strictement positif** — le sens est porté par les écritures, jamais par le signe du montant.
+An operation is the business fact: a top-up, a payment. It carries the amount, which is **strictly
+positive** — direction is carried by the entries, never by the sign of the amount.
 
-Deux dates, et la distinction compte : `occurred_at` est le moment où la chose s'est produite dans
-le monde — l'instant du scan au comptoir, éventuellement hors ligne — tandis que `recorded_at` est
-le moment où nous l'avons enregistrée. Sur un système qui accepte la resynchronisation différée,
-les confondre revient à mentir sur l'un des deux.
+Two dates, and the distinction matters: `occurred_at` is the moment the thing happened in the world
+— the instant of the scan at the counter, possibly offline — while `recorded_at` is the moment we
+recorded it. On a system that accepts deferred resynchronisation, conflating them amounts to lying
+about one of the two.
 
 #### `ledger_entries`
 
 `seq` (`BIGSERIAL`), `operation_id`, `account_id`, `direction`, `amount`, `recorded_at`,
 `prev_hash`, `hash` (unique).
 
-Le cœur. Chaque opération produit au moins deux écritures, un débit et un crédit de même montant,
-et l'invariant I1 le vérifie. Chaque écriture porte le condensat de la précédente, ce qui rend
-toute réécriture du passé détectable : modifier une ligne oblige à recalculer tous les condensats
-suivants, ce que les déclencheurs et les privilèges interdisent.
+The heart of it. Every operation produces at least two entries, a debit and a credit of the same
+amount, and invariant I1 checks it. Every entry carries the digest of the previous one, which makes
+any rewriting of the past detectable: modifying a row forces you to recompute every following
+digest, which the triggers and the privileges forbid.
 
-`hash` est unique — deux écritures ne peuvent pas porter le même condensat, ce qui serait le
-symptôme d'une collision ou d'une duplication. Les deux `CHECK` d'octets garantissent que la
-colonne contient bien un SHA-256 et non un fragment.
+`hash` is unique — two entries cannot carry the same digest, which would be the symptom of a
+collision or a duplication. The two byte-length `CHECK` constraints guarantee that the column
+contains a genuine SHA-256 and not a fragment.
 
-Le format exact de la sérialisation avant hachage est figé, et il est décrit dans `decisions.md`.
-Toute modification ultérieure invaliderait la chaîne déjà écrite.
+The exact format of the serialisation before hashing is frozen, and it is described in
+`decisions.md`. Any later modification would invalidate the chain already written.
 
-`recorded_at` est écrit **explicitement** par l'application et jamais laissé au `DEFAULT now()` :
-la valeur hachée et la valeur stockée doivent être la même, à la microseconde près, sinon
-`verify_chain` déclare la chaîne rompue.
+`recorded_at` is written **explicitly** by the application and never left to `DEFAULT now()`: the
+hashed value and the stored value must be the same, to the microsecond, otherwise `verify_chain`
+declares the chain broken.
 
-### Les paiements
+### Payments
 
 #### `payment_tokens`
 
-`jti` (clé primaire), `account_id`, `amount`, `short_code`, `status`, `issued_at`, `expires_at`,
+`jti` (primary key), `account_id`, `amount`, `short_code`, `status`, `issued_at`, `expires_at`,
 `resolved_at`.
 
-Le `jti` est fourni par l'application et non par la base : il entre dans le payload signé du QR,
-et il doit être connu avant l'insertion.
+The `jti` is supplied by the application and not by the database: it goes into the signed payload of
+the QR code, and it must be known before the insert.
 
-`uq_active_short_code` est partiel — un code court n'est unique que **parmi les jetons actifs**.
-C'est ce qui permet de réutiliser l'alphabet réduit indéfiniment sans jamais accumuler des
-collisions historiques. La conséquence, importante, est que la recherche par code court ne peut pas
-filtrer sur le statut sans casser l'idempotence d'un encaissement rejoué.
+`uq_active_short_code` is partial — a short code is unique only **among active tokens**. That is
+what makes it possible to reuse the reduced alphabet indefinitely without ever accumulating
+historical collisions. The consequence, an important one, is that the short-code lookup cannot
+filter on status without breaking the idempotence of a replayed settlement.
 
-`resolved_token_has_date` : dès qu'un jeton quitte `active`, il porte la date à laquelle il l'a
-quitté. `token_expires_after_issue` interdit un jeton mort-né.
+`resolved_token_has_date`: as soon as a token leaves `active`, it carries the date on which it left.
+`token_expires_after_issue` forbids a stillborn token.
 
 #### `payments`
 
-`operation_id` (clé primaire), `token_jti` (unique), `partner_id`, `from_account`, `entry_mode`,
+`operation_id` (primary key), `token_jti` (unique), `partner_id`, `from_account`, `entry_mode`,
 `scanned_at`, `synced_at`.
 
-La clé primaire **est** l'identifiant de l'opération du journal : un paiement n'existe pas sans
-son écriture double, et la relation est un-pour-un par construction plutôt que par convention.
+The primary key **is** the journal operation's identifier: a payment does not exist without its
+double entry, and the relationship is one-to-one by construction rather than by convention.
 
-`token_jti` est **unique**, et c'est cette contrainte, à elle seule, qui porte l'invariant I6 : un
-jeton ne peut pas être encaissé deux fois, même si deux requêtes concurrentes franchissent tous les
-contrôles applicatifs. C'est aussi ce qui rend la file d'attente hors ligne sûre.
+`token_jti` is **unique**, and that constraint alone carries invariant I6: a token cannot be settled
+twice, even if two concurrent requests get past every application check. It is also what makes the
+offline queue safe.
 
-La table ne porte **pas** de montant. Il vit dans `ledger_operations`, parce que le journal fait
-autorité sur les sommes et qu'une seconde copie finirait par diverger.
+The table carries **no** amount. It lives in `ledger_operations`, because the journal has authority
+over sums and a second copy would end up diverging.
 
-### Les rechargements
+### Top-ups
 
-#### `topup_batches` et `topups`
+#### `topup_batches` and `topups`
 
-`topup_batches` : `id`, `employer_id`, `file_name`, `file_hash`, `line_count`, `total_amount`,
+`topup_batches`: `id`, `employer_id`, `file_name`, `file_hash`, `line_count`, `total_amount`,
 `status`, `uploaded_by`, `uploaded_at`, `validated_at`.
-`topups` : `operation_id` (clé primaire), `batch_id`, `employer_id`, `to_account`, `reference`.
+`topups`: `operation_id` (primary key), `batch_id`, `employer_id`, `to_account`, `reference`.
 
-`uq_batch_file` — le couple employeur et empreinte du fichier est unique. Réimporter deux fois le
-même tableur est l'erreur la plus banale d'un service de paie, et c'est la base qui la refuse.
+`uq_batch_file` — the pair of employer and file fingerprint is unique. Re-importing the same
+spreadsheet twice is the most commonplace mistake a payroll department makes, and it is the database
+that refuses it.
 
-Comme pour les paiements, `topups.operation_id` est à la fois la clé primaire et la référence à
-l'opération. `batch_id` est nullable, parce qu'un rechargement unitaire décidé par un administrateur
-n'appartient à aucun lot.
+As with payments, `topups.operation_id` is both the primary key and the reference to the operation.
+`batch_id` is nullable, because a single top-up decided by an administrator belongs to no batch.
 
-`reference` est la clé d'idempotence d'un rechargement unitaire. La migration `0003` pose
-`uq_topup_reference` sur `(employer_id, reference) WHERE reference IS NOT NULL` : jusque-là,
-l'idempotence ne tenait que par le verrou consultatif pris par `topup`, et un `INSERT` direct
-l'aurait contournée. L'index partiel laisse coexister autant de rechargements sans référence que
-nécessaire.
+`reference` is the idempotency key of a single top-up. Migration `0003` adds `uq_topup_reference` on
+`(employer_id, reference) WHERE reference IS NOT NULL`: until then, idempotence rested only on the
+advisory lock taken by `topup`, and a direct `INSERT` would have bypassed it. The partial index
+lets as many top-ups without a reference coexist as needed.
 
-### Les corrections
+### Corrections
 
 #### `compensations`
 
-`operation_id` (clé primaire), `original_operation_id`, `reason`, `approved_by`.
+`operation_id` (primary key), `original_operation_id`, `reason`, `approved_by`.
 
-Le journal étant en ajout seul, une erreur ne se corrige pas : elle se compense par une opération
-inverse qui pointe vers l'originale. `compensation_is_not_self` interdit le cas dégénéré d'une
-opération qui se compenserait elle-même. La table est conçue et contrainte ; la logique n'est pas
-implémentée, et c'est une coupe assumée.
+Since the journal is append-only, a mistake is not corrected: it is compensated by a reversing
+operation pointing at the original. `compensation_is_not_self` forbids the degenerate case of an
+operation compensating itself. The table is designed and constrained; the logic is not implemented,
+and that is an accepted cut.
 
-### L'exploitation
+### Operations
 
 #### `sessions`
 
 `id`, `user_id`, `token_hash` (unique), `ip_address`, `user_agent`, `created_at`, `last_seen_at`,
 `expires_at`, `revoked_at`.
 
-Seule l'empreinte du jeton de session est stockée, jamais le jeton : une fuite de la base ne donne
-pas de quoi se connecter. Une session se révoque en posant `revoked_at`, elle ne se supprime pas —
-savoir qu'une session a été révoquée, et quand, fait partie de l'audit. Les deux index sont
-partiels `WHERE revoked_at IS NULL`, puisque seules les sessions vivantes sont interrogées.
+Only the session token's digest is stored, never the token: a database leak does not hand out the
+means to log in. A session is revoked by setting `revoked_at`, it is not deleted — knowing that a
+session was revoked, and when, is part of the audit trail. Both indexes are partial
+`WHERE revoked_at IS NULL`, since only live sessions are queried.
 
 #### `api_clients`
 
 `id`, `employer_id`, `client_id` (unique), `secret_hash`, `label`, `status`, `last_used_at`,
 `created_at`.
 
-L'accès machine pour l'intégration SIRH. Le secret est haché comme un mot de passe. `employer_id`
-est porté par le client lui-même : l'employeur d'une requête d'intégration se déduit du secret
-présenté, jamais d'un paramètre de chemin, sans quoi n'importe quel client lirait les soldes de
-n'importe quel employeur.
+Machine access for the HR-system integration. The secret is hashed like a password. `employer_id` is
+carried by the client itself: the employer of an integration request is derived from the secret
+presented, never from a path parameter, otherwise any client could read any employer's balances.
 
 #### `audit_log`
 
 `id`, `actor_id`, `action`, `entity_type`, `entity_id`, `payload`, `ip_address`, `created_at`.
 
-Journal des actes d'administration, en ajout seul comme le ledger. `actor_id` est nullable pour
-couvrir les actions du système lui-même. `payload` est un `JSONB` parce que la forme de ce qu'on
-consigne dépend de l'action, et qu'une table par type d'acte serait ingérable.
+A journal of administrative acts, append-only like the ledger. `actor_id` is nullable to cover
+actions by the system itself. `payload` is `JSONB` because the shape of what is recorded depends on
+the action, and one table per kind of act would be unmanageable.
 
 ---
 
-## L'immuabilité, et qui a le droit d'écrire
+## Immutability, and who is allowed to write
 
-Trois tables sont en **ajout seul** : `ledger_operations`, `ledger_entries` et `audit_log`. La
-règle est posée à deux niveaux, et c'est délibéré.
+Three tables are **append-only**: `ledger_operations`, `ledger_entries` and `audit_log`. The rule is
+enforced at two levels, and that is deliberate.
 
-**Les déclencheurs.** La fonction `forbid_mutation()` lève une exception `restrict_violation` sur
-tout `UPDATE`, `DELETE` ou `TRUNCATE`. Elle s'applique même à un superutilisateur qui écrirait à la
-main dans `psql`, et le message nomme la table et l'opération refusée.
+**The triggers.** The `forbid_mutation()` function raises a `restrict_violation` exception on any
+`UPDATE`, `DELETE` or `TRUNCATE`. It applies even to a superuser writing by hand in `psql`, and the
+message names the table and the refused operation.
 
-**Les privilèges.** Le rôle applicatif `cartepro_app` reçoit `SELECT, INSERT` sur ces trois tables
-et rien d'autre, et les `REVOKE` explicites achèvent de le dire. Sur les quinze autres tables il a
-`SELECT, INSERT, UPDATE`, jamais `DELETE`.
+**The privileges.** The application role `cartepro_app` receives `SELECT, INSERT` on those three
+tables and nothing else, and the explicit `REVOKE` statements finish saying so. On the other fifteen
+tables it has `SELECT, INSERT, UPDATE`, never `DELETE`.
 
-Deux niveaux, parce qu'ils échouent différemment : un privilège manquant se contourne en se
-connectant avec un autre rôle, un déclencheur non. Et un déclencheur peut être désactivé par le
-propriétaire de la table, un privilège non. Ensemble, ils ne laissent pas de chemin simple.
+Two levels, because they fail differently: a missing privilege can be worked around by connecting
+with another role, a trigger cannot. And a trigger can be disabled by the table's owner, a privilege
+cannot. Together, they leave no easy path.
 
-`GRANT USAGE, SELECT ON SEQUENCE ledger_entries_seq_seq` mérite une ligne d'explication : la
-séquence est consommée par un `nextval` explicite **avant** l'insertion, parce que le rang entre
-dans le condensat et qu'on ne peut donc pas l'apprendre après coup. Une transaction annulée
-consomme quand même son rang, la suite des `seq` peut donc comporter des trous. Ce n'est pas un
-problème : la continuité de la chaîne est portée par les condensats, jamais par la contiguïté des
-rangs.
+`GRANT USAGE, SELECT ON SEQUENCE ledger_entries_seq_seq` deserves a line of explanation: the
+sequence is consumed by an explicit `nextval` **before** the insert, because the rank goes into the
+digest and therefore cannot be learned after the fact. A rolled-back transaction still consumes its
+rank, so the sequence of `seq` values may have gaps. This is not a problem: the continuity of the
+chain is carried by the digests, never by the contiguity of the ranks.
 
-**Les deux comptes système** sont insérés par la migration elle-même : `MINISTRY_ISSUANCE`, la
-contrepartie d'émission dont le solde négatif mesure le total mis en circulation, et
-`CLOSURE_FORFEIT`, qui recevra les soldes des comptes clôturés hors délai de grâce.
-
----
-
-## Les invariants I1 à I9
-
-Ce sont les neuf propriétés que le système doit tenir à tout instant. Elles sont la porte de
-sortie du jalon H+6 : `crates/tests/tests/invariants.rs` contient un test par invariant, et tant
-qu'ils ne passent pas, rien d'autre ne se construit.
-
-Je les ai écrites en pensant à une seule question : **si celle-ci est fausse, est-ce que de
-l'argent est perdu, créé, ou dépensé deux fois ?** Les règles qui ne répondent pas oui à cette
-question ne sont pas des invariants, elles sont listées à part en fin de section.
-
-Chacune est vérifiable contre une base réelle, sans passer par l'API.
+**The two system accounts** are inserted by the migration itself: `MINISTRY_ISSUANCE`, the issuance
+counterparty whose negative balance measures the total put into circulation, and `CLOSURE_FORFEIT`,
+which will receive the balances of accounts closed past the grace delay.
 
 ---
 
-### I1 — La partie double est équilibrée
+## Invariants I1 to I9
 
-Pour toute opération du ledger, la somme des écritures au crédit égale la somme des écritures au
-débit, et cette somme égale `ledger_operations.amount`. Aucune opération n'a moins de deux
-écritures.
+These are the nine properties the system must hold at all times. They are the exit gate of milestone
+H+6: `crates/tests/tests/invariants.rs` contains one test per invariant, and until they pass,
+nothing else gets built.
+
+I wrote them with a single question in mind: **if this one is false, is money lost, created, or
+spent twice?** Rules that do not answer yes to that question are not invariants; they are listed
+separately at the end of this section.
+
+Each one is checkable against a real database, without going through the API.
+
+---
+
+### I1 — Double entry is balanced
+
+For any ledger operation, the sum of the credit entries equals the sum of the debit entries, and
+that sum equals `ledger_operations.amount`. No operation has fewer than two entries.
 
 ```sql
 SELECT o.id
@@ -353,130 +345,125 @@ HAVING sum(CASE WHEN e.direction = 'credit' THEN e.amount ELSE 0 END) <> o.amoun
     OR count(*) < 2;
 ```
 
-Cette requête doit toujours renvoyer zéro ligne. C'est l'invariant qui garantit que l'argent ne
-naît ni ne disparaît : il est toujours pris quelque part pour être mis ailleurs.
+This query must always return zero rows. It is the invariant that guarantees money is neither born
+nor lost: it is always taken from somewhere in order to be put somewhere else.
 
-### I2 — Le solde d'un compte est le reflet exact de ses écritures
+### I2 — An account's balance is the exact reflection of its entries
 
-Pour tout compte, `balance_settled` égale la somme de ses crédits moins la somme de ses débits.
-C'est ce que recalcule `ledger/balance.rs::recompute_balance`.
+For any account, `balance_settled` equals the sum of its credits minus the sum of its debits. That
+is what `ledger/balance.rs::recompute_balance` recomputes.
 
-Le solde stocké est un cache : le ledger est la vérité. Si les deux divergent, c'est le solde
-qui a tort, et la divergence signifie qu'une écriture a été passée sans mettre à jour le compte,
-ou l'inverse — donc qu'une transaction n'était pas atomique.
+The stored balance is a cache: the ledger is the truth. If the two diverge, it is the balance that
+is wrong, and the divergence means an entry was posted without updating the account, or the
+opposite — and therefore that a transaction was not atomic.
 
-### I3 — Aucun compte d'utilisateur n'a de solde négatif
+### I3 — No user account has a negative balance
 
-Pour tout compte de `owner_type` valant `employee` ou `partner` : `balance_settled >= 0`,
-`balance_held >= 0`, et `balance_held <= balance_settled`. **Les comptes système en sont
-exemptés.**
+For any account whose `owner_type` is `employee` or `partner`: `balance_settled >= 0`,
+`balance_held >= 0`, and `balance_held <= balance_settled`. **System accounts are exempt.**
 
-La troisième condition est celle qui protège le disponible : `available = settled - held` ne doit
-jamais devenir négatif, sinon un employé pourrait générer deux jetons couvrant chacun la totalité
-de son solde.
+The third condition is the one that protects the available balance: `available = settled - held`
+must never go negative, otherwise an employee could generate two tokens each covering their entire
+balance.
 
-L'exemption des comptes système n'est pas un assouplissement de confort, c'est une nécessité
-arithmétique. En partie double équilibrée, chaque crédit a un débit jumeau du même montant : la
-somme de tous les soldes vaut donc identiquement zéro. Si tous les comptes devaient être positifs
-ou nuls, ils vaudraient tous zéro et le système ne pourrait contenir aucun argent. Vérifié sur
-une base réelle après deux rechargements :
+The exemption for system accounts is not a convenience relaxation, it is an arithmetic necessity.
+Under balanced double entry, every credit has a twin debit of the same amount: the sum of all
+balances is therefore identically zero. If every account had to be positive or zero, they would all
+be zero and the system could hold no money at all. Checked against a real database after two
+top-ups:
 
 ```
 CLOSURE_FORFEIT    :     0
 MINISTRY_ISSUANCE  : -8000
-employé A          :  8000
-employé B          :     0
+employee A         :  8000
+employee B         :     0
 ─────────────────────────────
-somme              :     0
+sum                :     0
 ```
 
-Pré-créditer `MINISTRY_ISSUANCE` ne résoudrait rien : pour le créditer par une opération du
-ledger il faut débiter autre chose du même montant, ce qui déplace le solde négatif sans le
-supprimer. Écrire son solde directement au seed casserait I2 de façon permanente.
+Pre-crediting `MINISTRY_ISSUANCE` would solve nothing: to credit it through a ledger operation you
+must debit something else by the same amount, which moves the negative balance without removing it.
+Writing its balance directly in the seed would break I2 permanently.
 
-Le solde négatif du compte d'émission n'est donc pas un découvert : **c'est la mesure du total
-émis**. Personne ne dépense depuis ce compte — aucun jeton de paiement ne s'y rattache et
-`authorize` ne le regarde jamais. La propriété de sûreté que I3 protège vraiment, c'est qu'on ne
-laisse jamais dépenser de l'argent qui n'existe pas, et cela ne concerne que les comptes depuis
-lesquels on peut dépenser.
+The issuance account's negative balance is therefore not an overdraft: **it is the measure of the
+total issued**. Nobody spends from that account — no payment token is attached to it and `authorize`
+never looks at it. The safety property I3 really protects is that we never let anyone spend money
+that does not exist, and that concerns only the accounts one can spend from.
 
-> **Plafonner l'émission**, si le besoin s'en fait sentir, relève d'une règle métier vérifiée dans
-> `funding/topup.rs` avant de poster l'opération — jamais d'une contrainte de solde, qui
-> réintroduirait le blocage.
+> **Capping issuance**, if the need arises, is a business rule checked in `funding/topup.rs` before
+> posting the operation — never a balance constraint, which would reintroduce the deadlock.
 
-### I4 — Les réservations correspondent aux jetons actifs
+### I4 — Reservations match the active tokens
 
-Pour tout compte, `balance_held` égale la somme des `amount` des `payment_tokens` de statut
-`active` rattachés à ce compte. C'est ce que recalcule `recompute_held`.
+For any account, `balance_held` equals the sum of the `amount` values of the `payment_tokens` with
+status `active` attached to that account. That is what `recompute_held` recomputes.
 
-Si `held` est trop haut, l'employé ne peut plus dépenser de l'argent qu'il possède : une
-réservation n'a pas été libérée à l'expiration ou à l'annulation. Si `held` est trop bas, il peut
-dépenser deux fois.
+If `held` is too high, the employee can no longer spend money they own: a reservation was not
+released on expiry or on cancellation. If `held` is too low, they can spend twice.
 
-### I5 — La chaîne de hachage est continue et vérifiable
+### I5 — The hash chain is continuous and verifiable
 
-Pour toute écriture de rang `seq`, `prev_hash` est le `hash` de l'écriture de rang immédiatement
-inférieur, et `hash` est exactement la valeur que recalcule `entry_hash(...)` à partir des champs
-de la ligne. La toute première écriture a `prev_hash = GENESIS_HASH`.
+For any entry of rank `seq`, `prev_hash` is the `hash` of the entry of the immediately lower rank,
+and `hash` is exactly the value `entry_hash(...)` recomputes from the row's fields. The very first
+entry has `prev_hash = GENESIS_HASH`.
 
-`verify_chain(conn, from_seq)` renvoie le premier `seq` incohérent. C'est l'invariant qui rend une
-falsification détectable : modifier une écriture passée oblige à recalculer tous les hachages
-suivants, ce que les privilèges et les déclencheurs de I8 interdisent.
+`verify_chain(conn, from_seq)` returns the first inconsistent `seq`. It is the invariant that makes
+tampering detectable: modifying a past entry forces you to recompute every following hash, which the
+privileges and the triggers of I8 forbid.
 
-### I6 — Un jeton n'est encaissé qu'une seule fois
+### I6 — A token is settled only once
 
-`payments.token_jti` est unique. Un jeton quitte l'état `active` pour exactement un état terminal
-— `consumed`, `expired` ou `cancelled` — et `resolved_at` est alors renseigné. Un jeton `consumed`
-a exactement un paiement associé ; un jeton dans tout autre état n'en a aucun.
+`payments.token_jti` is unique. A token leaves the `active` state for exactly one terminal state —
+`consumed`, `expired` or `cancelled` — and `resolved_at` is then set. A `consumed` token has exactly
+one associated payment; a token in any other state has none.
 
-C'est la protection contre le double encaissement, et elle doit tenir même quand deux partenaires
-scannent le même QR au même instant : le verrou de `settle` en dépend.
+This is the protection against double settlement, and it must hold even when two partners scan the
+same QR code at the same instant: `settle`'s lock depends on it.
 
-### I7 — Un jeton expiré n'est jamais encaissé
+### I7 — An expired token is never settled
 
-Pour tout paiement, l'instant de règlement retenu par le serveur est antérieur à
-`payment_tokens.expires_at` du jeton correspondant.
+For any payment, the settlement instant retained by the server is earlier than the corresponding
+token's `payment_tokens.expires_at`.
 
-L'expiration inscrite dans le QR est indicative. La seule qui fait foi est celle que le serveur
-vérifie contre sa propre horloge au moment du règlement (décision 2). Cet invariant se teste avec
-`FixedClock` : on avance l'horloge au-delà de `expires_at` et le règlement doit être refusé.
+The expiry written into the QR code is indicative. The only one that counts is the one the server
+checks against its own clock at settlement time (decision 2). This invariant is tested with
+`FixedClock`: the clock is advanced beyond `expires_at` and the settlement must be refused.
 
-### I8 — Le ledger et l'audit sont en ajout seul
+### I8 — The ledger and the audit trail are append-only
 
-`UPDATE`, `DELETE` et `TRUNCATE` sur `ledger_entries`, `ledger_operations` et `audit_log`
-échouent. La protection est en deux couches : les privilèges refusent l'opération au rôle
-`cartepro_app`, et la fonction `forbid_mutation()` la refuse au propriétaire de la base, qui
-contourne les privilèges.
+`UPDATE`, `DELETE` and `TRUNCATE` on `ledger_entries`, `ledger_operations` and `audit_log` fail. The
+protection has two layers: the privileges refuse the operation to the `cartepro_app` role, and the
+`forbid_mutation()` function refuses it to the database owner, who bypasses privileges.
 
-Une erreur ne se corrige jamais par une modification : elle se corrige par une compensation, une
-opération inverse qui laisse la trace des deux (décision 4).
+A mistake is never corrected by a modification: it is corrected by a compensation, a reversing
+operation that leaves the trace of both (decision 4).
 
-### I9 — Aucune ligne n'est supprimée, seulement marquée
+### I9 — No row is deleted, only marked
 
-Aucune ligne n'est retirée de `employment_links`, `partner_highlights`, `sessions`, `accounts`,
-`partners` ni `users`. La fin de vie passe par une colonne dédiée : `ended_at`, `removed_at`,
-`revoked_at`, `closed_at`, ou un changement de `status`.
+No row is removed from `employment_links`, `partner_highlights`, `sessions`, `accounts`, `partners`
+or `users`. End of life goes through a dedicated column: `ended_at`, `removed_at`, `revoked_at`,
+`closed_at`, or a change of `status`.
 
-C'est la règle R6. Elle a une conséquence directe sur les index : l'unicité porte toujours sur les
-lignes actives via un index partiel, jamais sur la table entière, pour que l'historique reste
-intact sans bloquer une recréation.
+That is rule R6. It has a direct consequence on the indexes: uniqueness always applies to the active
+rows through a partial index, never to the whole table, so that history stays intact without
+blocking a recreation.
 
 ---
 
-## Ce que le schéma porte déjà, et qui n'est pas dans les neuf
+## What the schema already carries, and which is not among the nine
 
-Ces règles sont réelles et testées, mais elles relèvent de la cohérence du référentiel, pas de la
-sûreté monétaire. Elles n'arrêtent pas le projet si elles cassent, et la base les refuse d'elle-même.
+These rules are real and tested, but they concern reference-data consistency, not monetary safety.
+They do not stop the project if they break, and the database refuses them by itself.
 
-| Règle | Porté par |
+| Rule | Carried by |
 |---|---|
-| Un employé n'a qu'un rattachement actif | `uq_active_employment` |
-| Un matricule est unique par employeur, parmi les rattachements actifs | `uq_employer_ref` |
-| Un `short_code` actif est unique | `uq_active_short_code` |
-| Un partenaire n'occupe qu'une place par emplacement de mise en avant | `uq_active_highlight_partner` |
-| Une position de mise en avant n'est occupée que par un partenaire | `uq_active_highlight_position` |
-| Un partenaire non exclusivement en ligne a une ville | `physical_needs_city` |
-| Un même fichier n'est importé qu'une fois par employeur | `uq_batch_file` |
-| Les empreintes font 32 octets | `hash_is_32_bytes`, `prev_hash_is_32_bytes`, `batch_file_hash_is_32_bytes` |
-| Un compte système a un code et pas de propriétaire, et réciproquement | `system_account_shape` |
-| Les montants d'opération, d'écriture et de jeton sont strictement positifs | trois `CHECK` |
+| An employee has only one active link | `uq_active_employment` |
+| A payroll reference is unique per employer, among active links | `uq_employer_ref` |
+| An active `short_code` is unique | `uq_active_short_code` |
+| A partner occupies only one slot per highlight placement | `uq_active_highlight_partner` |
+| A highlight position is occupied by only one partner | `uq_active_highlight_position` |
+| A partner that is not exclusively online has a city | `physical_needs_city` |
+| The same file is imported only once per employer | `uq_batch_file` |
+| Digests are 32 bytes long | `hash_is_32_bytes`, `prev_hash_is_32_bytes`, `batch_file_hash_is_32_bytes` |
+| A system account has a code and no owner, and vice versa | `system_account_shape` |
+| Operation, entry and token amounts are strictly positive | three `CHECK` constraints |

@@ -1,8 +1,8 @@
 [
-  { "file": "TASK-DISTRIBUTION-BACKEND.md",        "title": "Répartition backend — qui fait quoi" },
-  { "file": "file-guide.md",                       "title": "Guide fichier par fichier" },
-  { "file": "data-dictionary.md",                  "title": "Dictionnaire de données" },
-  { "file": "data-model.md",                       "title": "Modèle de données" },
-  { "file": "decisions.md",                        "title": "Décisions et amendements" },
-  { "file": "../.github/pull_request_template.md", "title": "Modèle de pull request" }
+  { "file": "TASK-DISTRIBUTION-BACKEND.md",        "title": "Backend distribution — who does what" },
+  { "file": "file-guide.md",                       "title": "File-by-file guide" },
+  { "file": "data-dictionary.md",                  "title": "Data dictionary" },
+  { "file": "data-model.md",                       "title": "Data model" },
+  { "file": "decisions.md",                        "title": "Decisions and amendments" },
+  { "file": "../.github/pull_request_template.md", "title": "Pull request template" }
 ]

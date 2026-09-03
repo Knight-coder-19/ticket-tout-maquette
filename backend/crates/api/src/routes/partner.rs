@@ -3,6 +3,8 @@ use axum::routing::{get, post};
 use axum::{Json, Router};
 use chrono::{DateTime, Utc};
 
+use cartepro_core::error::CoreError;
+use cartepro_core::identity::AuthenticatedUser;
 use cartepro_core::ids::PartnerId;
 use cartepro_core::partners;
 use cartepro_core::payments::{self, PaymentError, Settlement, TokenRef};
@@ -32,21 +34,16 @@ async fn summary(
     Query(period): Query<PeriodQuery>,
 ) -> Result<Json<PartnerSummary>, ApiError>
 {
-    let partner = PartnerId::from(user);
+    let partner = partner_of(&app, user).await?;
     let (from, to) = period.resolve(app.clock.now());
-    let totals = payments::repo::partner_totals(&app.db, partner, from, to).await?;
-
-    let mut tx = app.db.begin().await?;
-    let is_official_partner = partners::repo::approved_account(&mut tx, partner).await.is_ok();
-
-    tx.rollback().await?;
+    let totals = payments::repo::partner_totals(&app.db, partner.id, from, to).await?;
 
     Ok(Json(PartnerSummary {
         total_received: totals.total_received,
         transaction_count: totals.transaction_count,
         period_from: from,
         period_to: to,
-        is_official_partner
+        is_official_partner: partner.is_official_partner()
     }))
 }
 
@@ -57,7 +54,7 @@ async fn transactions(
     pagination: Pagination,
 ) -> Result<Json<PartnerTransactionList>, ApiError>
 {
-    let partner = PartnerId::from(user);
+    let partner = partner_of(&app, user).await?.id;
     let (from, to) = period.resolve(app.clock.now());
     let limit = i64::from(pagination.limit);
     let activity = payments::repo::list_partner_activity(&app.db, partner, from, to, limit).await?;
@@ -77,7 +74,7 @@ async fn settle_payment(
     ValidatedJson(body): ValidatedJson<SettleRequest>,
 ) -> Result<Json<PaymentResponse>, ApiError>
 {
-    let partner = PartnerId::from(user);
+    let partner = partner_of(&app, user).await?.id;
     let reference = match body.token_ref() {
         Some(reference) => reference,
         None => return Err(PaymentError::UnknownToken.into())
@@ -93,7 +90,7 @@ async fn settle_batch(
     ValidatedJson(body): ValidatedJson<BatchSettleRequest>,
 ) -> Result<Json<BatchSettleResponse>, ApiError>
 {
-    let partner = PartnerId::from(user);
+    let partner = partner_of(&app, user).await?.id;
     let mut results = Vec::with_capacity(body.items.len());
 
     for item in &body.items {
@@ -137,4 +134,16 @@ async fn settle_one(
 
     tx.commit().await?;
     Ok(settlement)
+}
+
+async fn partner_of(app: &AppState, user: AuthenticatedUser)
+    -> Result<partners::Partner, ApiError>
+{
+    let mut conn = app.db.acquire().await?;
+    let found = partners::repo::find_partner_by_user(&mut conn, user.id).await?;
+
+    match found {
+        Some(partner) => Ok(partner),
+        None => Err(CoreError::Forbidden.into())
+    }
 }
