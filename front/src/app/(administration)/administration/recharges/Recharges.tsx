@@ -164,8 +164,8 @@ export function Recharges() {
 
   return (
     <div className="recharges">
-      <h1 className="recharges__titre">Rechargements</h1>
-      <p className="recharges__intro">
+      <h1 className="ecran__titre">Rechargements</h1>
+      <p className="ecran__intro">
         Créditez un salarié, un par un ou par lot. Chaque versement s&apos;écrit
         au registre, comme tout le reste.
       </p>

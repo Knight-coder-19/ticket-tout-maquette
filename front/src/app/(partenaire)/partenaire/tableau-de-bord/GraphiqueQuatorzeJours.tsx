@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react";
 import { formaterCentimes } from "@/lib/montant";
+import { dessinerBarreVerticale } from "@/lib/utils/graphiques";
 import type { JourneeRecettes } from "@/types/encaissement";
 
 /**
@@ -234,7 +235,7 @@ export function GraphiqueQuatorzeJours({ serie }: { serie: JourneeRecettes[] }) 
                     tracé explicite. Un jour à zéro ne dessine rien. */}
                 {h > 0 && (
                   <path
-                    d={dessinerBarre(x, y, EPAISSEUR, h, RAYON)}
+                    d={dessinerBarreVerticale(x, y, EPAISSEUR, h, RAYON)}
                     className={
                       estSurvolee
                         ? "graphique__barre graphique__barre--survolee"
@@ -360,31 +361,3 @@ export function GraphiqueQuatorzeJours({ serie }: { serie: JourneeRecettes[] }) 
   );
 }
 
-/**
- * Le tracé d'une barre : extrémité arrondie côté valeur, pied carré.
- *
- * `rx` sur un `<rect>` arrondirait les quatre coins, y compris ceux qui
- * reposent sur la ligne de base — la barre semblerait flotter. On trace donc le
- * contour à la main : deux coins arrondis en haut, deux angles droits en bas.
- *
- * Le rayon est réduit si la barre est plus basse que lui, sans quoi le tracé se
- * replierait sur lui-même.
- */
-function dessinerBarre(
-  x: number,
-  y: number,
-  largeur: number,
-  hauteur: number,
-  rayon: number,
-): string {
-  const r = Math.min(rayon, hauteur, largeur / 2);
-  return [
-    `M ${x} ${y + hauteur}`,
-    `L ${x} ${y + r}`,
-    `A ${r} ${r} 0 0 1 ${x + r} ${y}`,
-    `L ${x + largeur - r} ${y}`,
-    `A ${r} ${r} 0 0 1 ${x + largeur} ${y + r}`,
-    `L ${x + largeur} ${y + hauteur}`,
-    "Z",
-  ].join(" ");
-}

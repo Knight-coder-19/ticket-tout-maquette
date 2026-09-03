@@ -1,0 +1,43 @@
+/*
+ * Le tableau de bord national.
+ *
+ * N'apporte que le titre et le bandeau des choses en attente. Les tuiles, les
+ * cartes, le graphique et la repartition viennent de primitives.css, la
+ * meme feuille que le tableau de bord du commercant utilise via ces memes
+ * regles remontees.
+ */
+
+.tableau-national {
+  container-type: inline-size;
+  container-name: bord;
+}
+
+/* Le titre reutilise `.ecran__titre` (primitives.css) : pas de regle propre ici. */
+
+/* == Le bandeau de ce qui attend ============================================
+ *
+ * Encadre, jamais rempli du bleu institutionnel -- ce n'est pas un bouton,
+ * mais un rappel de statut merite la meme retenue qu'un bouton dans ce
+ * dispositif.
+ * ========================================================================= */
+
+.bandeau-flux {
+  list-style: none;
+  margin: 0 0 var(--espace-6);
+  padding: var(--espace-3) var(--espace-4);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2) var(--espace-6);
+  background: var(--couleur-fond-secondaire);
+  border-inline-start: var(--espace-1) solid var(--couleur-primaire);
+  border-radius: var(--rayon-sm);
+  font-size: var(--taille-sm);
+}
+
+.bandeau-flux--calme {
+  color: var(--couleur-texte-secondaire);
+}
+
+.bandeau-flux__alerte {
+  color: var(--couleur-alerte);
+}

@@ -1,0 +1,268 @@
+/*
+ * Les reclamations des salaries, traitees par l'administration.
+ *
+ * Domaine entierement de notre fait -- voir types/domaine.ts. Le tableau, les
+ * dialogues, les etats, les pastilles viennent de primitives.css.
+ */
+
+.reclamations {
+  container-type: inline-size;
+  container-name: reclamations;
+}
+
+/* Le titre et l'introduction ONT REMONTE dans primitives.css : `.ecran__titre`, `.ecran__intro`
+ * -- c'etait la meme regle, recopiee a l'identique
+ * dans cinq ecrans. */
+
+.reclamations__soustitre {
+  margin-block: var(--espace-6) var(--espace-3);
+  font-family: var(--police-titre);
+  font-size: var(--taille-lg);
+}
+
+.fil-reclamation__soustitre {
+  margin-block: 0 var(--espace-3);
+  font-family: var(--police-titre);
+  font-size: var(--taille-lg);
+}
+
+/* == Le filtre de statut ==================================================== */
+
+.reclamations__filtre-statut {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+  margin-block-end: var(--espace-6);
+}
+
+.reclamations__filtre-statut .bouton[aria-pressed="true"] {
+  background: var(--couleur-rail-actif-fond);
+  border-color: var(--couleur-primaire);
+  color: var(--couleur-primaire);
+}
+
+/* == La file ================================================================= */
+
+.file-reclamations {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+  max-inline-size: 42rem;
+}
+
+.carte-reclamation {
+  display: block;
+  padding: var(--espace-4);
+  background: var(--couleur-carte-fond);
+  border: 1px solid var(--couleur-carte-bordure);
+  border-radius: var(--rayon-md);
+  color: inherit;
+  text-decoration: none;
+}
+
+.carte-reclamation:hover,
+.carte-reclamation:focus-visible {
+  border-color: var(--couleur-primaire);
+}
+
+.carte-reclamation__entete {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--espace-3);
+}
+
+.carte-reclamation__salarie {
+  margin: 0;
+  font-family: var(--police-titre);
+  font-size: var(--taille-lg);
+}
+
+.carte-reclamation__extrait {
+  margin: var(--espace-2) 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.carte-reclamation__auteur {
+  color: var(--couleur-texte-secondaire);
+  font-family: var(--police-titre);
+  font-size: var(--taille-sm);
+}
+
+.carte-reclamation__attente {
+  margin: var(--espace-2) 0 0;
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-sm);
+}
+
+/* == Le fil d'un dossier ===================================================== */
+
+.fil-reclamation__fil-ariane {
+  margin-block: 0 var(--espace-2);
+  font-size: var(--taille-sm);
+}
+
+.fil-reclamation__entete {
+  display: flex;
+  align-items: baseline;
+  gap: var(--espace-3);
+  margin-block-end: var(--espace-2);
+}
+
+.fil-reclamation__motif-cloture {
+  max-inline-size: var(--largeur-contenu);
+  margin-block-end: var(--espace-6);
+  padding: var(--espace-3) var(--espace-4);
+  background: var(--couleur-neutre-fond);
+  border-radius: var(--rayon-sm);
+  font-size: var(--taille-sm);
+}
+
+.fil-reclamation__grille {
+  display: grid;
+  gap: var(--espace-8);
+}
+
+/* Le dossier passe en marge des que la place existe. Le seuil est en dur :
+   une condition `@container` n'accepte pas une `var()`. */
+@container reclamations (min-width: 50rem) {
+  .fil-reclamation__grille {
+    grid-template-columns: minmax(0, 1fr) 18rem;
+    align-items: start;
+  }
+}
+
+.fil-reclamation__principal {
+  min-inline-size: 0;
+}
+
+/* == Le dossier du beneficiaire, en marge ==================================== */
+
+.dossier-beneficiaire {
+  padding: var(--espace-4);
+  background: var(--couleur-fond-secondaire);
+  border-radius: var(--rayon-md);
+}
+
+.dossier-beneficiaire__faits {
+  margin: 0;
+}
+
+.dossier-beneficiaire__faits dt {
+  margin-block-start: var(--espace-3);
+  color: var(--couleur-texte-secondaire);
+  font-family: var(--police-titre);
+  font-size: var(--taille-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.dossier-beneficiaire__faits dt:first-child {
+  margin-block-start: 0;
+}
+
+.dossier-beneficiaire__faits dd {
+  margin: 0;
+}
+
+.dossier-beneficiaire__solde {
+  font-family: var(--police-titre);
+  font-size: var(--taille-lg);
+}
+
+/* == L'operation visee ======================================================= */
+
+.operation-visee {
+  margin-block-start: var(--espace-8);
+}
+
+.operation-visee__absente {
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-sm);
+}
+
+/* == Le fil de messages ======================================================= */
+
+.fil-messages__liste {
+  list-style: none;
+  margin: 0 0 var(--espace-6);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+}
+
+/* La forme commune d'un message ; seuls le fond, le filet et l'alignement
+   distinguent un salarie d'un agent -- jamais la seule couleur, le texte
+   nomme deja l'auteur. */
+.message {
+  max-inline-size: 34rem;
+  padding: var(--espace-3) var(--espace-4);
+  border-radius: var(--rayon-md);
+}
+
+.message--salarie {
+  margin-inline-end: auto;
+  background: var(--couleur-fond-secondaire);
+  border-inline-start: var(--espace-1) solid var(--couleur-champ-bordure);
+}
+
+.message--agent {
+  margin-inline-start: auto;
+  background: var(--couleur-succes-fond);
+  border-inline-end: var(--espace-1) solid var(--couleur-succes);
+}
+
+.message__entete {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--espace-3);
+  margin-block-end: var(--espace-1);
+}
+
+.message__auteur {
+  font-family: var(--police-titre);
+  font-size: var(--taille-sm);
+}
+
+.message__date {
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-xs);
+}
+
+.message__texte {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.fil-messages__clos {
+  padding: var(--espace-3) var(--espace-4);
+  background: var(--couleur-neutre-fond);
+  border-radius: var(--rayon-sm);
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-sm);
+}
+
+.fil-messages__reponse label {
+  display: block;
+  margin-block-end: var(--espace-2);
+  font-family: var(--police-titre);
+  font-size: var(--taille-sm);
+}
+
+.fil-messages__reponse textarea {
+  width: 100%;
+  min-height: 6rem;
+  padding: var(--espace-2);
+  font: inherit;
+  color: var(--couleur-texte);
+  background: var(--couleur-fond);
+  border: 1px solid var(--couleur-champ-bordure);
+  border-radius: var(--rayon-sm);
+  resize: vertical;
+}

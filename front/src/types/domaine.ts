@@ -567,3 +567,123 @@ export interface ApercuLot {
   erreurs: LigneEnErreur[];
   lignes: LigneApercu[];
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * RÉCLAMATIONS DES SALARIÉS
+ *
+ * ⚠⚠ DOMAINE ENTIÈREMENT DE NOTRE FAIT. Aucune route, aucune table, aucun
+ * module ne le couvre côté back — vérifié dans l'audit initial
+ * (`front/docs/contrat-api.md:376` : « Rien du tout. Aucune occurrence de
+ * "réclamation", "claim" ou "dispute" dans backend/ ni docs/. ») et jamais
+ * contredit depuis. Le modèle qui suit n'a donc aucune source à citer : il
+ * est posé ici, une fois, et tout le reste — routes, magasin, écrans — s'y
+ * range.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * L'état d'un dossier.
+ *
+ * Trois valeurs, calquées sur le vocabulaire d'un centre de support
+ * ordinaire : `ouverte` — déposée, personne n'a encore répondu ;
+ * `en_cours` — un agent a répondu au moins une fois ; `close` — tranchée,
+ * avec un motif. Le passage de `ouverte` à `en_cours` n'est PAS un geste
+ * explicite de l'agent : il est la CONSÉQUENCE de sa première réponse
+ * (`mocks/magasin.ts`, `repondreReclamation`) — un dossier qu'on vient de
+ * commencer à traiter ne devrait pas pouvoir rester marqué « ouverte » par
+ * oubli d'un bouton séparé.
+ */
+export type StatutReclamation = "ouverte" | "en_cours" | "close";
+
+/** Qui a écrit un message : le salarié qui a ouvert le dossier, ou un agent. */
+export type AuteurMessage = "salarie" | "agent";
+
+/** Un message du fil, horodaté, dont l'auteur est visuellement distingué. */
+export interface MessageReclamation {
+  id: Identifiant;
+  auteur: AuteurMessage;
+  /** Identifiant de la personne précise : le salarié lui-même, ou l'agent. */
+  auteurId: Identifiant;
+  texte: string;
+  /** Date ISO 8601 d'envoi. */
+  envoyeLe: string;
+}
+
+/**
+ * Une réclamation, avec son fil complet.
+ *
+ * `operationId` est le lien vers l'écriture visée, quand il y en a une — un
+ * dossier n'en porte pas nécessairement (un salarié peut réclamer sans citer
+ * une opération précise). Ce champ ne porte JAMAIS le détail de l'écriture :
+ * `OperationVisee` la relit en direct au registre, pour ne jamais en tenir
+ * une copie qui pourrait diverger — voir ce composant.
+ */
+export interface Reclamation {
+  id: Identifiant;
+  salarieId: Identifiant;
+  /** Le nom du salarié, joint : un fil de messages n'a pas à faire cette jointure. */
+  salarieNom: string;
+  statut: StatutReclamation;
+  operationId: Identifiant | null;
+  /** Le fil complet, du plus ancien au plus récent. */
+  messages: MessageReclamation[];
+  /** Date ISO 8601 de dépôt. */
+  ouverteLe: string;
+  /** Obligatoire dès que `statut === "close"`, `null` avant. */
+  motifCloture: string | null;
+  closeLe: string | null;
+}
+
+/**
+ * Une ligne de la file — la synthèse dont une carte a besoin, sans le fil
+ * complet. Charger chaque message de chaque dossier pour n'en afficher qu'un
+ * extrait serait transférer un fil entier pour n'en montrer qu'une ligne.
+ */
+export interface ReclamationResume {
+  id: Identifiant;
+  salarieId: Identifiant;
+  salarieNom: string;
+  statut: StatutReclamation;
+  /** Le texte du DERNIER message, tronqué côté route — voir la route. */
+  extraitDernierMessage: string;
+  /** Qui a écrit ce dernier message : conditionne le ton de la carte. */
+  auteurDernierMessage: AuteurMessage;
+  ouverteLe: string;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * TABLEAU DE BORD NATIONAL — ADMINISTRATION
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/** Les cinq chiffres clés du tableau de bord. */
+export interface ChiffresNationaux {
+  volumeTotal: MontantCentimes;
+  nombreTransactions: number;
+  partenairesActifs: number;
+  partenairesEnAttente: number;
+  salariesActifs: number;
+}
+
+/** Une ligne de répartition — par ville ou par catégorie, même forme. */
+export interface LigneRepartition {
+  libelle: string;
+  volume: MontantCentimes;
+  nombreTransactions: number;
+}
+
+/** Un point de la série hebdomadaire. */
+export interface SemaineNationale {
+  /** Lundi de la semaine, `YYYY-MM-DD`. */
+  debut: string;
+  volume: MontantCentimes;
+  nombreTransactions: number;
+}
+
+/** Le tableau de bord national complet. */
+export interface TableauDeBordNational {
+  chiffres: ChiffresNationaux;
+  parVille: LigneRepartition[];
+  /** Les commerces sans ville (A1), à part — jamais fondus dans `parVille`. */
+  enLigne: LigneRepartition;
+  parCategorie: LigneRepartition[];
+  semaines: SemaineNationale[];
+}

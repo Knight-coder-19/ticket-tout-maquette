@@ -26,172 +26,19 @@
   max-width: var(--largeur-contenu);
 }
 
-/* == Les tuiles ============================================================ */
-
-.tuiles {
-  display: grid;
-  gap: var(--espace-4);
-  grid-template-columns: minmax(0, 1fr);
-  margin-block-end: var(--espace-6);
-}
-
-@container bord (min-width: 34rem) {
-  .tuiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
-@container bord (min-width: 58rem) {
-  .tuiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-}
-
-.tuile {
-  padding: var(--espace-4);
-  background: var(--couleur-carte-fond);
-  border: 1px solid var(--couleur-carte-bordure);
-  border-radius: var(--rayon-md);
-}
-
-/*
- * Le chiffre domine.
+/* == Les tuiles ONT REMONTE ================================================
  *
- * Chiffres PROPORTIONNELS, jamais tabulaires : `tabular-nums` aligne les
- * colonnes d'un tableau, mais sur un grand nombre isole il ecarte les chiffres
- * et fait paraitre « 121 » lache. Les tabulaires restent au tableau du
- * graphique, ou les nombres s'alignent vraiment.
- */
-.tuile__valeur {
-  margin: 0;
-  font-family: var(--police-titre);
-  font-size: var(--taille-2xl);
-  font-variant-numeric: proportional-nums;
-  line-height: 1.1;
-  color: var(--couleur-texte);
-}
+ * `.tuiles*` est dans `primitives.css` : le tableau de bord national de
+ * l'administration en a besoin a l'identique, meme conteneur nomme `bord`
+ * (chaque ecran declare le sien).
+ * ========================================================================= */
 
-.tuile__libelle {
-  margin-block: var(--espace-1) 0;
-  font-size: var(--taille-sm);
-  color: var(--couleur-texte);
-}
-
-/* La periode, en toutes lettres : « aujourd'hui » et « ce mois-ci » ne sont
-   pas la meme chose, et une tuile muette se lit de travers un 1er du mois. */
-.tuile__periode {
-  margin: 0;
-  font-size: var(--taille-xs);
-  color: var(--couleur-texte-secondaire);
-}
-
-/* == Les cartes ============================================================ */
-
-.carte {
-  padding: var(--espace-4);
-  background: var(--couleur-carte-fond);
-  border: 1px solid var(--couleur-carte-bordure);
-  border-radius: var(--rayon-md);
-  margin-block-end: var(--espace-6);
-}
-
-.carte__titre {
-  margin-block: 0 var(--espace-1);
-  font-size: var(--taille-lg);
-}
-
-.carte__sous-titre {
-  margin-block: 0 var(--espace-4);
-  color: var(--couleur-texte-secondaire);
-  font-size: var(--taille-sm);
-}
-
-.carte__lien {
-  margin-block: var(--espace-4) 0;
-  font-size: var(--taille-sm);
-}
-
-/* == Le graphique ========================================================== */
-
-/*
- * Le cadre defile horizontalement s'il le faut, dans SON conteneur : quatorze
- * barres ont une largeur minimale sous laquelle elles deviennent des traits.
- * La page, elle, ne part jamais de biais.
- */
-.graphique__cadre {
-  overflow-x: auto;
-  margin-block-end: var(--espace-4);
-}
-
-.graphique__svg {
-  display: block;
-  inline-size: 100%;
-  min-inline-size: 30rem;
-  block-size: auto;
-}
-
-/*
- * LA BARRE porte l'identite, et elle seule.
+/* == Les cartes et le graphique ONT REMONTE =================================
  *
- * `--couleur-primaire` : une serie unique, donc une seule teinte. Elle est
- * neutre semantiquement -- une recette n'est ni un succes ni une alerte, et
- * reprendre le vert d'action ou le rouge d'alerte leur ferait dire ce qu'ils ne
- * disent pas. C'est aussi la couleur d'identite de la charte.
- *
- * Contraste mesure : 11,27:1 sur le fond de carte. Le seuil des elements non
- * textuels est 3:1.
- *
- * La couleur est portee par `color`, et le `<path>` a `fill="currentColor"` :
- * chaque forme dessinee a donc un `fill` explicite, aucune ne compte sur
- * l'heritage par defaut du navigateur.
- */
-.graphique__barre {
-  color: var(--couleur-primaire);
-}
-
-.graphique__barre--survolee {
-  color: var(--couleur-primaire-sombre);
-}
-
-/*
- * La grille et les axes : en retrait.
- *
- * Filet d'un pixel, PLEIN -- jamais pointille : un pointille ajoute du bruit et
- * se lit comme un seuil ou une projection alors que ce n'est qu'une grille.
- * Un cran au-dessus du fond, pas davantage : ils situent, ils ne s'exposent pas.
- */
-.graphique__grille {
-  stroke: var(--couleur-bordure);
-  stroke-width: 1;
-}
-
-.graphique__axe {
-  stroke: var(--couleur-champ-bordure);
-  stroke-width: 1;
-}
-
-/*
- * LE TEXTE PORTE L'ENCRE, JAMAIS LA COULEUR DE LA SERIE.
- *
- * Les valeurs sont en `--couleur-texte`, les graduations et les dates en encre
- * secondaire. Une etiquette bleue au-dessus d'une barre bleue melerait la
- * donnee et son commentaire ; c'est la barre qui porte l'identite, le chiffre
- * ecrit a cote n'a pas a la repeter.
- */
-.graphique__valeur {
-  color: var(--couleur-texte);
-  font-family: var(--police-titre);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-}
-
-.graphique__graduation,
-.graphique__date {
-  color: var(--couleur-texte-secondaire);
-  font-size: 10px;
-  font-variant-numeric: tabular-nums;
-}
-
-/* La cible de survol couvre toute la colonne, bien au-dela de la barre. */
-.graphique__cible {
-  cursor: pointer;
-}
+ * `.carte*` et `.graphique*` sont dans `primitives.css` : le tableau de bord
+ * national (administration) en a besoin a l'identique, et cette feuille
+ * n'est chargee que par l'espace partenaire.
+ * ========================================================================= */
 
 /* == Les derniers encaissements ============================================ */
 

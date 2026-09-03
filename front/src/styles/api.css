@@ -1,0 +1,69 @@
+/*
+ * La documentation de l'API.
+ *
+ * Un ecran de reference, sans etat ni chargement : le tableau et les etats
+ * viennent de primitives.css, cette feuille n'apporte que l'avertissement et
+ * le bloc de code.
+ */
+
+.api {
+  max-inline-size: var(--largeur-contenu);
+}
+
+.api > .tableau-defilant {
+  max-inline-size: none;
+  margin-block-end: var(--espace-6);
+}
+
+/* L'avertissement sur l'absence de documentation generee en production.
+   Meme traitement que la mention de simulation : un filet, jamais un aplat
+   du bleu institutionnel. */
+.api__avertissement {
+  margin-block-end: var(--espace-6);
+  padding: var(--espace-3) var(--espace-4);
+  background: var(--couleur-fond-secondaire);
+  border-inline-start: var(--espace-1) solid var(--couleur-primaire);
+  border-radius: var(--rayon-sm);
+  font-size: var(--taille-sm);
+}
+
+.api__avertissement p {
+  margin: 0;
+}
+
+.api__aide {
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-sm);
+}
+
+/* == Le bloc de code ========================================================
+ *
+ * Fond neutre, jamais de couleur en dur : `--couleur-texte` sur
+ * `--couleur-neutre-fond`, deja mesure ailleurs dans ce projet (les pastilles
+ * de statut ferme). Une police a chasse fixe pour l'alignement du commentaire
+ * de reponse, sans en faire un jeton de plus -- `monospace` generique suffit,
+ * ce n'est pas un choix typographique de la charte.
+ * ========================================================================= */
+
+.api .bloc-code {
+  margin-block: var(--espace-3) var(--espace-4);
+  padding: var(--espace-3) var(--espace-4);
+  background: var(--couleur-neutre-fond);
+  color: var(--couleur-texte);
+  border-radius: var(--rayon-sm);
+  overflow-x: auto;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: var(--taille-sm);
+  line-height: 1.5;
+}
+
+.api .bloc-code code {
+  white-space: pre;
+}
+
+/* Scope a .api : un selecteur `code` nu s'appliquerait a toute balise
+   <code> de l'application tant que cette feuille est chargee. */
+.api code {
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 0.9em;
+}

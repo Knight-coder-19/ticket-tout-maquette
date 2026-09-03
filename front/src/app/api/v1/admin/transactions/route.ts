@@ -77,68 +77,17 @@
 
 import { erreur, euros, identite, succes } from "@/mocks/enveloppe";
 import { decoderCurseur, encoderCurseur, lireLimite } from "@/mocks/curseur";
-import { trouverAdministrateur, trouverPartenaire, trouverVille } from "@/mocks/magasin";
 import {
-  compensationDe,
-  ecrituresDe,
-  registre,
-  type OperationRegistre,
-} from "@/mocks/registre";
+  paiementsNationaux,
+  trouverAdministrateur,
+  trouverPartenaire,
+  trouverVille,
+} from "@/mocks/magasin";
 
 export const dynamic = "force-dynamic";
 
 /** La valeur de `city` qui désigne les commerces sans ville. */
 const SANS_VILLE = "en-ligne";
-
-/** Une transaction nationale, avant mise en forme. */
-interface Transaction {
-  readonly operation: OperationRegistre;
-  readonly partenaireId: string;
-  readonly montantCentimes: number;
-  readonly annulee: boolean;
-  readonly motifAnnulation: string | null;
-}
-
-/**
- * Les paiements du registre, du plus récent au plus ancien.
- *
- * Une opération de nature `payment` porte deux écritures ; on retient celle
- * qui CRÉDITE le compte du partenaire — c'est elle qui dit qui a encaissé et
- * combien. Prendre les deux compterait chaque paiement deux fois.
- */
-function paiements(): Transaction[] {
-  const lignes: Transaction[] = [];
-
-  for (const operation of registre.operations) {
-    if (operation.kind !== "payment") continue;
-
-    const credit = ecrituresDe(operation.id).find((e) => e.direction === "credit");
-    if (credit === undefined) continue;
-
-    const compte = registre.comptes.find((c) => c.id === credit.accountId);
-    if (compte === undefined || compte.ownerType !== "partner" || compte.ownerId === null) {
-      continue;
-    }
-
-    const compensation = compensationDe(operation.id);
-    lignes.push({
-      operation,
-      partenaireId: compte.ownerId,
-      montantCentimes: credit.amountCentimes,
-      annulee: compensation !== undefined,
-      motifAnnulation: compensation?.reason ?? null,
-    });
-  }
-
-  /* Du plus récent au plus ancien, sur la date du FAIT (`occurred_at`), pas
-     sur celle de l'enregistrement : c'est celle que l'agent lit et celle sur
-     laquelle portent les bornes du filtre. L'identifiant départage les
-     ex æquo, sans quoi la pagination par curseur ne serait pas déterministe. */
-  return lignes.sort((a, b) => {
-    const ecart = Date.parse(b.operation.occurredAt) - Date.parse(a.operation.occurredAt);
-    return ecart !== 0 ? ecart : b.operation.id.localeCompare(a.operation.id);
-  });
-}
 
 export async function GET(requete: Request): Promise<Response> {
   const administrateurId = identite(requete, "X-Mock-Administrateur", "ADM-001");
@@ -173,7 +122,7 @@ export async function GET(requete: Request): Promise<Response> {
   /* ── Le filtrage, sur l'ensemble et non sur une page ────────────────────
      C'est ici que se joue la justesse du total : `retenues` est TOUT ce qui
      répond au filtre. Le découpage vient après, et ne le touche pas. */
-  const retenues = paiements().filter((ligne) => {
+  const retenues = paiementsNationaux().filter((ligne) => {
     const quand = Date.parse(ligne.operation.occurredAt);
     if (depuis !== undefined && quand < Date.parse(depuis)) return false;
     if (jusqua !== undefined && quand > Date.parse(jusqua)) return false;

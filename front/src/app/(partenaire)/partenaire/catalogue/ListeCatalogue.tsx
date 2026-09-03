@@ -24,8 +24,8 @@ import type { FicheCatalogue } from "@/types/domaine";
  *      tableau afficherait des rangées de cellules vides ; une fiche omet
  *      simplement la ligne.
  *
- *   3. LES LONGUEURS SONT HÉTÉROGÈNES. « Au Marché de Cotonou, 120 boulevard
- *      de la Marina, Fidjrossè » à côté de « Services Plus » : en colonnes,
+ *   3. LES LONGUEURS SONT HÉTÉROGÈNES. « Au Marché de Lyon, Halle centrale,
+ *      allée 3, Croix-Rousse » à côté de « Services Plus » : en colonnes,
  *      l'une force la largeur que l'autre laisse vide.
  *
  * ═════════════════════════════════════════════════════════════════════════

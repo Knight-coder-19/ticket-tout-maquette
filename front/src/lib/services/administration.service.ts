@@ -29,6 +29,9 @@ import {
   depuisEcritureRegistre,
   depuisApercuLot,
   depuisEmployeur,
+  depuisReclamation,
+  depuisTableauDeBordNational,
+  depuisReclamationResume,
   depuisRechargement,
   depuisFicheBeneficiaire,
   depuisLigneRepertoire,
@@ -48,6 +51,11 @@ import type {
   CreateHighlightRequest,
   CreateHighlightResponse,
   BatchPreview,
+  ClaimCloseRequest,
+  ClaimDetail,
+  Dashboard,
+  ClaimList,
+  ClaimMessageRequest,
   EmployerItem,
   HighlightItem,
   TopupRequest,
@@ -77,6 +85,10 @@ import type {
   MiseEnAvant,
   ApercuLot,
   Rechargement,
+  Reclamation,
+  ReclamationResume,
+  StatutReclamation,
+  TableauDeBordNational,
 } from "@/types/domaine";
 
 /** Une page de la file de validation, dans le vocabulaire du domaine. */
@@ -258,6 +270,13 @@ export interface FiltresRegistre {
   titulaireId?: string;
   /** Nature côté back : `topup`, `payment`, `compensation`, `closure_forfeit`. */
   nature?: string;
+  /**
+   * Ne garde que les écritures d'UNE opération précise.
+   *
+   * Ajouté pour `OperationVisee` (réclamations) : relire EN DIRECT l'écriture
+   * qu'un dossier vise, plutôt que d'en garder une copie qui pourrait diverger.
+   */
+  operationId?: string;
 }
 
 export interface PageRegistre {
@@ -280,6 +299,7 @@ export async function listerEcritures(
   if (filtres.jusqua !== undefined && filtres.jusqua !== "") parametres.set("to", filtres.jusqua);
   if (filtres.titulaireId !== undefined && filtres.titulaireId !== "") parametres.set("partner", filtres.titulaireId);
   if (filtres.nature !== undefined && filtres.nature !== "") parametres.set("kind", filtres.nature);
+  if (filtres.operationId !== undefined && filtres.operationId !== "") parametres.set("operation_id", filtres.operationId);
   if (curseur !== undefined && curseur !== "") parametres.set("cursor", curseur);
 
   const requete = parametres.toString();
@@ -647,4 +667,97 @@ export async function validerLot(id: string): Promise<void> {
   await appelApiSansContenu(`/v1/admin/topup-batches/${encodeURIComponent(id)}/validate`, {
     method: "POST",
   });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * RÉCLAMATIONS DES SALARIÉS
+ *
+ * ⚠⚠ LES QUATRE ROUTES SONT ENTIÈREMENT DE NOTRE FAIT. Aucune route, aucune
+ * table, aucun module ne couvre ce domaine côté back — voir l'en-tête de
+ * `app/api/v1/admin/claims/route.ts` pour le constat complet.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+export interface PageReclamations {
+  reclamations: ReclamationResume[];
+  curseurSuivant: string | null;
+}
+
+/**
+ * La file, la plus ancienne ouverte en premier. Sans filtre, ne rend pas les
+ * dossiers clos — voir la route.
+ */
+export async function listerReclamationsAdmin(
+  statut?: StatutReclamation,
+  curseur?: string,
+): Promise<PageReclamations> {
+  const STATUTS: Record<StatutReclamation, string> = {
+    ouverte: "open",
+    en_cours: "in_progress",
+    close: "closed",
+  };
+  const parametres = new URLSearchParams();
+  if (statut !== undefined) parametres.set("status", STATUTS[statut]);
+  if (curseur !== undefined && curseur !== "") parametres.set("cursor", curseur);
+
+  const requete = parametres.toString();
+  const brut = await appelApi<ClaimList>(
+    `/v1/admin/claims${requete === "" ? "" : `?${requete}`}`,
+    { cache: "no-store" },
+  );
+  return {
+    reclamations: brut.items.map(depuisReclamationResume),
+    curseurSuivant: brut.next_cursor,
+  };
+}
+
+export async function lireReclamation(id: string): Promise<Reclamation> {
+  const brut = await appelApi<ClaimDetail>(`/v1/admin/claims/${encodeURIComponent(id)}`, {
+    cache: "no-store",
+  });
+  return depuisReclamation(brut);
+}
+
+/** Répond à un dossier. Refusé si le dossier est clos — voir la route. */
+export async function repondreAReclamation(id: string, texte: string): Promise<void> {
+  await appelApi(`/v1/admin/claims/${encodeURIComponent(id)}/messages`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text: texte } satisfies ClaimMessageRequest),
+  });
+}
+
+/** Clôt un dossier. Motif obligatoire, refusé côté serveur s'il est vide. */
+export async function cloturerReclamationAdmin(id: string, motif: string): Promise<void> {
+  await appelApiSansContenu(`/v1/admin/claims/${encodeURIComponent(id)}/close`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ reason: motif } satisfies ClaimCloseRequest),
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * TABLEAU DE BORD NATIONAL
+ *
+ * ✅ `GET /admin/dashboard` est du contrat (`data-dictionary.md:561-573`).
+ * `by_category` et `weekly` sont notre ajout — voir `types/api.ts`.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+export interface FenetreTableauDeBord {
+  depuis?: string;
+  jusqua?: string;
+}
+
+export async function lireTableauDeBordNational(
+  fenetre: FenetreTableauDeBord = {},
+): Promise<TableauDeBordNational> {
+  const parametres = new URLSearchParams();
+  if (fenetre.depuis !== undefined && fenetre.depuis !== "") parametres.set("from", fenetre.depuis);
+  if (fenetre.jusqua !== undefined && fenetre.jusqua !== "") parametres.set("to", fenetre.jusqua);
+
+  const requete = parametres.toString();
+  const brut = await appelApi<Dashboard>(
+    `/v1/admin/dashboard${requete === "" ? "" : `?${requete}`}`,
+    { cache: "no-store" },
+  );
+  return depuisTableauDeBordNational(brut);
 }

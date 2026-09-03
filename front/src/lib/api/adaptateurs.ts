@@ -39,6 +39,12 @@ import type {
   AdjustmentResult,
   AdminTransactionItem,
   BatchPreview,
+  ClaimDetail,
+  Dashboard,
+  ClaimListItem,
+  ClaimMessage,
+  ClaimStatus,
+  MessageAuthor,
   AdminTransactionList,
   BalanceResponse,
   CatalogItem,
@@ -85,8 +91,14 @@ import type {
   MonCompte,
   NatureEcriture,
   Partenaire,
+  AuteurMessage,
+  MessageReclamation,
   MiseEnAvant,
   PartenaireVitrine,
+  Reclamation,
+  ReclamationResume,
+  TableauDeBordNational,
+  StatutReclamation,
   SensDecision,
   ApercuLot,
   Rechargement,
@@ -737,8 +749,8 @@ export function depuisDemandePartenaire(
  * concordent — mais on prend le champ, pas la conséquence.
  *
  * `ville` est aplati depuis `city.name`, et `departement` depuis
- * `city.department` : l'écran affiche « Cotonou (Littoral) », il n'a que faire
- * de l'identifiant de la ville.
+ * `city.department` : l'écran affiche « Lyon (Rhône) », il n'a que faire de
+ * l'identifiant de la ville.
  */
 export function depuisDemandeAdhesion(brut: PartnerReviewItem): DemandeAdhesion {
   return {
@@ -1442,6 +1454,120 @@ export function depuisApercuLot(brut: BatchPreview): ApercuLot {
       nomResolu: l.resolved_name,
       montant: l.amount === null ? null : centimesDepuisEuros(l.amount, "amount"),
       erreur: l.error,
+    })),
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * 8 terdecies. RÉCLAMATIONS DES SALARIÉS — ⚠⚠ DOMAINE DE NOTRE FAIT
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+function statutDepuisClaimStatus(brut: ClaimStatus): StatutReclamation {
+  switch (brut) {
+    case "open":
+      return "ouverte";
+    case "in_progress":
+      return "en_cours";
+    case "closed":
+      return "close";
+    default:
+      throw new ErreurService(
+        "reponse_illisible",
+        `Réponse du serveur illisible : statut de réclamation inconnu (${String(brut)}).`,
+        { champ: "status" },
+      );
+  }
+}
+
+function auteurDepuisMessageAuthor(brut: MessageAuthor): AuteurMessage {
+  switch (brut) {
+    case "employee":
+      return "salarie";
+    case "agent":
+      return "agent";
+    default:
+      throw new ErreurService(
+        "reponse_illisible",
+        `Réponse du serveur illisible : auteur de message inconnu (${String(brut)}).`,
+        { champ: "author" },
+      );
+  }
+}
+
+function depuisMessage(brut: ClaimMessage): MessageReclamation {
+  return {
+    id: brut.id,
+    auteur: auteurDepuisMessageAuthor(brut.author),
+    auteurId: brut.author_id,
+    texte: brut.text,
+    envoyeLe: horodatageIso(brut.sent_at, "sent_at"),
+  };
+}
+
+export function depuisReclamationResume(brut: ClaimListItem): ReclamationResume {
+  return {
+    id: brut.id,
+    salarieId: brut.employee_id,
+    salarieNom: brut.employee_name,
+    statut: statutDepuisClaimStatus(brut.status),
+    extraitDernierMessage: brut.last_message_excerpt,
+    auteurDernierMessage: auteurDepuisMessageAuthor(brut.last_message_author),
+    ouverteLe: horodatageIso(brut.opened_at, "opened_at"),
+  };
+}
+
+export function depuisReclamation(brut: ClaimDetail): Reclamation {
+  return {
+    id: brut.id,
+    salarieId: brut.employee_id,
+    salarieNom: brut.employee_name,
+    statut: statutDepuisClaimStatus(brut.status),
+    operationId: brut.operation_id,
+    messages: brut.messages.map(depuisMessage),
+    ouverteLe: horodatageIso(brut.opened_at, "opened_at"),
+    motifCloture: brut.close_reason,
+    closeLe: brut.closed_at === null ? null : horodatageIso(brut.closed_at, "closed_at"),
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * 8 quaterdecies. TABLEAU DE BORD NATIONAL — ADMINISTRATION
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * `Dashboard` → `TableauDeBordNational`.
+ *
+ * ✅ Le DTO d'entrée est du contrat (`data-dictionary.md:562-573`), à
+ * l'exception de `by_category` et `weekly` — voir `types/api.ts`.
+ */
+export function depuisTableauDeBordNational(brut: Dashboard): TableauDeBordNational {
+  return {
+    chiffres: {
+      volumeTotal: centimesDepuisEuros(brut.total_volume, "total_volume"),
+      nombreTransactions: brut.transaction_count,
+      partenairesActifs: brut.active_partners,
+      partenairesEnAttente: brut.pending_partners,
+      salariesActifs: brut.active_employees,
+    },
+    parVille: brut.by_city.map((ligne) => ({
+      libelle: ligne.city.name,
+      volume: centimesDepuisEuros(ligne.volume, "volume"),
+      nombreTransactions: ligne.transaction_count,
+    })),
+    enLigne: {
+      libelle: "Commerces en ligne",
+      volume: centimesDepuisEuros(brut.online_partners.volume, "volume"),
+      nombreTransactions: brut.online_partners.transaction_count,
+    },
+    parCategorie: brut.by_category.map((ligne) => ({
+      libelle: ligne.category,
+      volume: centimesDepuisEuros(ligne.volume, "volume"),
+      nombreTransactions: ligne.transaction_count,
+    })),
+    semaines: brut.weekly.map((point) => ({
+      debut: point.week_start,
+      volume: centimesDepuisEuros(point.volume, "volume"),
+      nombreTransactions: point.transaction_count,
     })),
   };
 }

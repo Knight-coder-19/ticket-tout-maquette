@@ -789,11 +789,16 @@ export type CompensationResponse = unknown;
 
 /**
  * Source : backend/crates/api/src/dto/admin.rs:2 (« dashboard ») et
- * docs/data-dictionary.md:562-573. Non encore implémenté côté back.
+ * docs/data-dictionary.md:562-573. La route existe (`app/api/v1/admin/dashboard`),
+ * marquée comme la nôtre faute de back — mais le DTO, lui, EST du contrat.
  *
  * Le bloc `online_partners` est indispensable : sans lui, la somme des
  * `by_city` ne vaut plus `total_volume`, les commerces en ligne
  * n'appartenant à aucune ville (data-dictionary.md:583).
+ *
+ * ⚠ `by_category` et `weekly` SONT NOTRE AJOUT — voir l'en-tête de la route
+ * pour pourquoi le DTO du contrat ne suffit pas à servir une répartition par
+ * catégorie ni une série temporelle.
  */
 export type Dashboard = {
   /** Euros décimaux. */
@@ -812,6 +817,19 @@ export type Dashboard = {
     volume: number;
     transaction_count: number;
   };
+  /** ⚠ Notre ajout. */
+  by_category: {
+    category: string;
+    volume: number;
+    transaction_count: number;
+  }[];
+  /** ⚠ Notre ajout. Chaque semaine de la fenêtre, même à zéro. */
+  weekly: {
+    /** Lundi de la semaine ISO, `YYYY-MM-DD`. */
+    week_start: string;
+    volume: number;
+    transaction_count: number;
+  }[];
 };
 
 /**
@@ -1249,3 +1267,70 @@ export type AdjustmentResult = {
   };
 };
 
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * RÉCLAMATIONS DES SALARIÉS
+ *
+ * ⚠⚠ DOMAINE ENTIÈREMENT DE NOTRE FAIT. Aucune route, aucune table, aucun
+ * module ne le couvre côté back — `front/docs/contrat-api.md:376` : « Rien
+ * du tout. » Les noms de champs suivent malgré tout la convention du reste du
+ * contrat (anglais, `snake_case`) : si ce domaine devait un jour être
+ * réellement construit, ces types sont ce qu'une équipe backend pourrait
+ * reprendre tels quels.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/** ⚠ Notre invention. */
+export type ClaimStatus = "open" | "in_progress" | "closed";
+
+/** ⚠ Notre invention. */
+export type MessageAuthor = "employee" | "agent";
+
+/** ⚠ Notre invention. */
+export type ClaimMessage = {
+  id: string;
+  author: MessageAuthor;
+  author_id: string;
+  text: string;
+  sent_at: string;
+};
+
+/**
+ * ⚠ Notre invention. Une ligne de la file — pas le fil complet, pour ne pas
+ * transférer chaque message de chaque dossier afin de n'en montrer qu'un
+ * extrait.
+ */
+export type ClaimListItem = {
+  id: string;
+  employee_id: string;
+  employee_name: string;
+  status: ClaimStatus;
+  last_message_excerpt: string;
+  last_message_author: MessageAuthor;
+  opened_at: string;
+};
+
+export type ClaimList = Paginated<ClaimListItem>;
+
+/** ⚠ Notre invention. Le dossier complet, fil compris. */
+export type ClaimDetail = {
+  id: string;
+  employee_id: string;
+  employee_name: string;
+  status: ClaimStatus;
+  /** `null` si aucune écriture n'est visée. */
+  operation_id: string | null;
+  messages: ClaimMessage[];
+  opened_at: string;
+  close_reason: string | null;
+  closed_at: string | null;
+};
+
+/** ⚠ Notre invention. Corps de `POST /admin/claims/{id}/messages`. */
+export type ClaimMessageRequest = {
+  text: string;
+};
+
+/** ⚠ Notre invention. Corps de `POST /admin/claims/{id}/close`. */
+export type ClaimCloseRequest = {
+  reason: string;
+};

@@ -198,8 +198,8 @@ export function MiseEnAvant() {
 
   return (
     <div className="selection-ministre">
-      <h1 className="selection-ministre__titre">Sélection du Ministre</h1>
-      <p className="selection-ministre__intro">
+      <h1 className="ecran__titre">Sélection du Ministre</h1>
+      <p className="ecran__intro">
         Choisissez les partenaires agréés à mettre en avant. Un mot du ministre
         est facultatif ; s&apos;il existe, il paraît tel quel là où la mise en
         avant est visible.

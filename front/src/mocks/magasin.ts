@@ -32,6 +32,8 @@
 import {
   idCompte,
   compenser,
+  compensationDe,
+  ecrituresDe,
   posterOperation,
   type OperationRegistre,
   registre,
@@ -128,10 +130,12 @@ export interface EmployeurMagasin {
  * exposee sous la forme `CityRef { id, name, department }`
  * (`data-dictionary.md:330`).
  *
- * ⚠ Incoherence preexistante du depot, signalee sans etre corrigee : la
- * migration `0002_cities.sql` charge des communes francaises, tandis que le
- * jeu de demonstration du front parle de Cotonou et Porto-Novo. On garde le
- * second pour ne pas reecrire des donnees qui s'affichent en demonstration.
+ * ⚠ Incoherence CORRIGEE. La migration `0002_cities.sql` charge les 35 014
+ * communes de l'INSEE (`France`) ; le jeu de demonstration du front parlait
+ * de Cotonou et Porto-Novo, signale sans etre corrige lors d'un tour
+ * precedent. Les cinq villes ci-dessous sont desormais reprises TELLES QUE
+ * `0002_cities.sql` les ecrit -- memes noms, memes departements -- pour que
+ * rien ne desaccorde le jour ou `GET /v1/cities` cessera d'etre mocke.
  */
 export interface VilleMagasin {
   id: Identifiant;
@@ -321,6 +325,8 @@ export interface Magasin {
   topups: TopupMagasin[];
   /** Colonnes `topup_batches` (`:202-215`). */
   lots: LotRechargement[];
+  /** ⚠ Domaine entièrement de notre fait — voir `types/domaine.ts`. */
+  reclamations: ReclamationMagasin[];
 }
 
 /** ENUM `highlight_placement` (`0001_schema.sql:16`). */
@@ -364,36 +370,36 @@ function donneesInitiales(): Magasin {
        reserves par un jeton en cours, et un compte ferme -- sans quoi la
        troisieme valeur de `user_status` ne serait jamais montree. */
     salaries: [
-      { id: "SAL-001", nom: "Roussel", prenom: "Amélie", telephone: "+229 97 12 34 56",
-        courriel: "amelie.roussel@cotonou.bj",
+      { id: "SAL-001", nom: "Roussel", prenom: "Amélie", telephone: "+33 6 12 34 56 78",
+        courriel: "amelie.roussel@mairie-lyon.fr",
         employeurId: "EMP-001", matricule: "MC-4471", entreLe: "2024-03-04", statut: "actif" },
       { id: "SAL-002", nom: "Nkoue", prenom: "Bastien", telephone: null,
-        courriel: "bastien.nkoue@cotonou.bj",
+        courriel: "bastien.nkoue@mairie-lyon.fr",
         employeurId: "EMP-001", matricule: "MC-5108", entreLe: "2025-09-15", statut: "actif" },
-      { id: "SAL-003", nom: "Doumbia", prenom: "Clara", telephone: "+229 95 88 21 07",
-        courriel: "clara.doumbia@tourisme.bj",
+      { id: "SAL-003", nom: "Doumbia", prenom: "Clara", telephone: "+33 6 34 56 78 90",
+        courriel: "clara.doumbia@office-tourisme.fr",
         employeurId: "EMP-002", matricule: "OT-0233", entreLe: "2023-11-20", statut: "suspendu" },
-      { id: "SAL-004", nom: "Agossou", prenom: "Delphine", telephone: "+229 96 40 55 12",
-        courriel: "delphine.agossou@tourisme.bj",
+      { id: "SAL-004", nom: "Agossou", prenom: "Delphine", telephone: "+33 6 45 67 89 01",
+        courriel: "delphine.agossou@office-tourisme.fr",
         employeurId: "EMP-002", matricule: "OT-0341", entreLe: "2025-01-08", statut: "actif" },
       { id: "SAL-005", nom: "Bakary", prenom: "Émile", telephone: null,
-        courriel: "emile.bakary@paix.bj",
+        courriel: "emile.bakary@hopital-paix.fr",
         employeurId: "EMP-003", matricule: "HP-7702", entreLe: "2022-06-01", statut: "ferme" },
     ],
     employeurs: [
-      { id: "EMP-001", legalName: "Mairie de Cotonou", ifu: "3201800045566",
-        contactEmail: "paie@cotonou.bj", statut: "actif" },
+      { id: "EMP-001", legalName: "Mairie de Lyon", ifu: "3201800045566",
+        contactEmail: "paie@mairie-lyon.fr", statut: "actif" },
       { id: "EMP-002", legalName: "Office du tourisme", ifu: "3201900077889",
-        contactEmail: "rh@tourisme.bj", statut: "actif" },
+        contactEmail: "rh@office-tourisme.fr", statut: "actif" },
       { id: "EMP-003", legalName: "Hôpital de la Paix", ifu: null,
         contactEmail: null, statut: "actif" },
     ],
     villes: [
-      { id: "VIL-COT", name: "Cotonou", department: "Littoral" },
-      { id: "VIL-PNO", name: "Porto-Novo", department: "Ouémé" },
-      { id: "VIL-PAR", name: "Parakou", department: "Borgou" },
-      { id: "VIL-ABC", name: "Abomey-Calavi", department: "Atlantique" },
-      { id: "VIL-BOH", name: "Bohicon", department: "Zou" },
+      { id: "VIL-LYO", name: "Lyon", department: "Rhône" },
+      { id: "VIL-MRS", name: "Marseille", department: "Bouches-du-Rhône" },
+      { id: "VIL-LIL", name: "Lille", department: "Nord" },
+      { id: "VIL-VLB", name: "Villeurbanne", department: "Rhône" },
+      { id: "VIL-BEB", name: "Bourg-en-Bresse", department: "Ain" },
     ],
     administrateurs: [
       { id: "ADM-001", email: "f.pontaillac@ministere.gouv", nom: "F. Pontaillac" },
@@ -417,16 +423,16 @@ function donneesInitiales(): Magasin {
     partenaires: [
       {
         id: "PRT-001",
-        contactEmail: "contact@boulangerie-du-marche.bj",
+        contactEmail: "contact@boulangerie-du-marche.fr",
         legalName: "SARL Boulangerie du Marché",
         tradeName: "Boulangerie du Marché",
         category: "alimentation",
         ifu: "3201900112233",
         serviceMode: "physical",
         websiteUrl: null,
-        cityId: "VIL-COT",
-        district: "Ganhi",
-        addressLine: "12 rue des Cocotiers",
+        cityId: "VIL-LYO",
+        district: "Presqu'île",
+        addressLine: "12 rue de la République",
         statut: "approved",
         submittedAt: "2026-07-12T09:00:00.000Z",
         reviewedBy: "ADM-001",
@@ -440,16 +446,16 @@ function donneesInitiales(): Magasin {
       },
       {
         id: "PRT-002",
-        contactEmail: "gerance@lespalmiers.bj",
+        contactEmail: "gerance@lespalmiers.fr",
         legalName: "SARL Les Palmiers",
         tradeName: "Librairie Les Palmiers",
         category: "culture",
         ifu: "3201900445566",
         serviceMode: "physical",
-        websiteUrl: "https://lespalmiers.bj",
-        cityId: "VIL-PNO",
-        district: "Djegan Kpevi",
-        addressLine: "4 avenue de la République",
+        websiteUrl: "https://lespalmiers.fr",
+        cityId: "VIL-MRS",
+        district: "Le Panier",
+        addressLine: "4 avenue Jean Jaurès",
         statut: "pending",
         submittedAt: "2026-08-05T08:15:00.000Z",
         reviewedBy: null,
@@ -459,16 +465,16 @@ function donneesInitiales(): Magasin {
       },
       {
         id: "PRT-003",
-        contactEmail: "sonagnon.epicerie@courriel.bj",
+        contactEmail: "sonagnon.epicerie@courriel.fr",
         legalName: "Établissement Sonagnon",
         tradeName: "Épicerie Sonagnon",
         category: "alimentation",
         ifu: "3201900778899",
         serviceMode: "physical",
         websiteUrl: null,
-        cityId: "VIL-COT",
-        district: "Akpakpa",
-        addressLine: "77 rue du Port",
+        cityId: "VIL-LYO",
+        district: "Part-Dieu",
+        addressLine: "77 rue Garibaldi",
         statut: "pending",
         submittedAt: "2026-08-09T14:40:00.000Z",
         reviewedBy: null,
@@ -478,7 +484,7 @@ function donneesInitiales(): Magasin {
       },
       {
         id: "PRT-004",
-        contactEmail: "lebaobab@courriel.bj",
+        contactEmail: "lebaobab@courriel.fr",
         legalName: "SARL Le Baobab",
         tradeName: "Restaurant Le Baobab",
         category: "restauration",
@@ -486,9 +492,9 @@ function donneesInitiales(): Magasin {
         ifu: null,
         serviceMode: "physical",
         websiteUrl: null,
-        cityId: "VIL-ABC",
-        district: "Godomey",
-        addressLine: "Carrefour Toyota",
+        cityId: "VIL-VLB",
+        district: "Gratte-Ciel",
+        addressLine: "Centre commercial Gratte-Ciel",
         statut: "pending",
         submittedAt: "2026-08-14T11:05:00.000Z",
         reviewedBy: null,
@@ -498,16 +504,16 @@ function donneesInitiales(): Magasin {
       },
       {
         id: "PRT-005",
-        contactEmail: "pharmacie.sainte-rita@courriel.bj",
+        contactEmail: "pharmacie.sainte-rita@courriel.fr",
         legalName: "Pharmacie Sainte-Rita",
         tradeName: "Pharmacie Sainte-Rita",
         category: "santé",
         ifu: "3201901223344",
         serviceMode: "both",
-        websiteUrl: "https://pharmacie-sainte-rita.bj",
-        cityId: "VIL-COT",
-        district: "Sainte-Rita",
-        addressLine: "3 boulevard Saint-Michel",
+        websiteUrl: "https://pharmacie-sainte-rita.fr",
+        cityId: "VIL-LYO",
+        district: "Vaise",
+        addressLine: "3 boulevard des Belges",
         statut: "pending",
         submittedAt: "2026-08-18T07:50:00.000Z",
         reviewedBy: null,
@@ -517,16 +523,16 @@ function donneesInitiales(): Magasin {
       },
       {
         id: "PRT-006",
-        contactEmail: "cycles.du.zou@courriel.bj",
-        legalName: "Cycles du Zou",
-        tradeName: "Cycles du Zou",
+        contactEmail: "cycles.de.lain@courriel.fr",
+        legalName: "Cycles de l'Ain",
+        tradeName: "Cycles de l'Ain",
         category: "mobilité",
         ifu: "3201901556677",
         serviceMode: "physical",
         websiteUrl: null,
-        cityId: "VIL-BOH",
+        cityId: "VIL-BEB",
         district: null,
-        addressLine: "Marché Bohicon-centre",
+        addressLine: "Centre-ville de Bourg-en-Bresse",
         statut: "pending",
         submittedAt: "2026-08-22T16:20:00.000Z",
         reviewedBy: null,
@@ -536,15 +542,15 @@ function donneesInitiales(): Magasin {
       },
       {
         id: "PRT-007",
-        contactEmail: "contact@kpanlingan.bj",
-        legalName: "Kpanlingan Numérique",
-        tradeName: "Librairie numérique Kpanlingan",
+        contactEmail: "contact@pages-et-ecrans.fr",
+        legalName: "Pages & Écrans",
+        tradeName: "Librairie numérique Pages & Écrans",
         category: "culture",
         ifu: "3201901889900",
         /* Exclusivement en ligne : pas de ville, et c'est conforme
            (`physical_needs_city`, :118). */
         serviceMode: "online",
-        websiteUrl: "https://kpanlingan.bj",
+        websiteUrl: "https://pages-et-ecrans.fr",
         cityId: null,
         district: null,
         addressLine: null,
@@ -557,15 +563,15 @@ function donneesInitiales(): Magasin {
       },
       {
         id: "PRT-008",
-        contactEmail: "salle.tokpa@courriel.bj",
-        legalName: "Association Sportive Tokpa",
-        tradeName: "Salle de sport Tokpa",
+        contactEmail: "salle.sport.nord@courriel.fr",
+        legalName: "Association Sportive du Nord",
+        tradeName: "Salle de sport du Nord",
         category: "sport",
         ifu: "3201902001122",
         serviceMode: "physical",
         websiteUrl: null,
-        cityId: "VIL-PAR",
-        district: "Zongo",
+        cityId: "VIL-LIL",
+        district: "Wazemmes",
         addressLine: "18 rue de l'Hippodrome",
         statut: "pending",
         submittedAt: "2026-09-01T09:30:00.000Z",
@@ -576,15 +582,15 @@ function donneesInitiales(): Magasin {
       },
       {
         id: "PRT-009",
-        contactEmail: "gerant@aumarchedecotonou.bj",
-        legalName: "SARL Au Marché de Cotonou",
-        tradeName: "Au Marché de Cotonou",
+        contactEmail: "gerant@aumarchedelyon.fr",
+        legalName: "SARL Au Marché de Lyon",
+        tradeName: "Au Marché de Lyon",
         category: "alimentation",
         ifu: "3201902334455",
         serviceMode: "physical",
         websiteUrl: null,
-        cityId: "VIL-COT",
-        district: "Dantokpa",
+        cityId: "VIL-LYO",
+        district: "Croix-Rousse",
         addressLine: "Halle centrale, allée 3",
         statut: "approved",
         submittedAt: "2026-06-02T08:00:00.000Z",
@@ -595,16 +601,16 @@ function donneesInitiales(): Magasin {
       },
       {
         id: "PRT-010",
-        contactEmail: "contact@chezadjoa.bj",
+        contactEmail: "contact@chezadjoa.fr",
         legalName: "Restaurant Chez Adjoa",
         tradeName: "Chez Adjoa",
         category: "restauration",
         ifu: "3201902667788",
         serviceMode: "physical",
         websiteUrl: null,
-        cityId: "VIL-PAR",
-        district: "Guéma",
-        addressLine: "42 route de Djougou",
+        cityId: "VIL-LIL",
+        district: "Vieux-Lille",
+        addressLine: "42 rue Nationale",
         statut: "approved",
         submittedAt: "2026-06-18T13:20:00.000Z",
         reviewedBy: "ADM-002",
@@ -614,15 +620,15 @@ function donneesInitiales(): Magasin {
       },
       {
         id: "PRT-011",
-        contactEmail: "boutique@atelierdupapier.bj",
+        contactEmail: "boutique@atelierdupapier.fr",
         legalName: "Atelier du Papier",
         tradeName: "Atelier du Papier",
         category: "culture",
         ifu: "3201902990011",
         serviceMode: "both",
-        websiteUrl: "https://atelier-du-papier.bj",
-        cityId: "VIL-PNO",
-        district: "Ouando",
+        websiteUrl: "https://atelier-du-papier.fr",
+        cityId: "VIL-MRS",
+        district: "La Joliette",
         addressLine: "9 rue des Artisans",
         statut: "approved",
         submittedAt: "2026-07-01T09:45:00.000Z",
@@ -633,16 +639,16 @@ function donneesInitiales(): Magasin {
       },
       {
         id: "PRT-012",
-        contactEmail: "direction@superettelafontaine.bj",
+        contactEmail: "direction@superettelafontaine.fr",
         legalName: "SARL La Fontaine",
         tradeName: "Supérette La Fontaine",
         category: "alimentation",
         ifu: "3201903223344",
         serviceMode: "physical",
         websiteUrl: null,
-        cityId: "VIL-COT",
-        district: "Fidjrossè",
-        addressLine: "120 boulevard de la Marina",
+        cityId: "VIL-LYO",
+        district: "Confluence",
+        addressLine: "120 cours Charlemagne",
         statut: "suspended",
         submittedAt: "2026-05-11T07:30:00.000Z",
         reviewedBy: "ADM-001",
@@ -653,16 +659,16 @@ function donneesInitiales(): Magasin {
       },
       {
         id: "PRT-013",
-        contactEmail: "club@tokpafitness.bj",
-        legalName: "Association Tokpa Fitness",
-        tradeName: "Tokpa Fitness",
+        contactEmail: "club.fitness.ain@courriel.fr",
+        legalName: "Association Fitness de l'Ain",
+        tradeName: "Fitness de l'Ain",
         category: "sport",
         ifu: null,
         serviceMode: "physical",
         websiteUrl: null,
-        cityId: "VIL-BOH",
+        cityId: "VIL-BEB",
         district: null,
-        addressLine: "Quartier Agbodjèdo",
+        addressLine: "Quartier de la Reyssouze",
         statut: "suspended",
         submittedAt: "2026-06-27T15:00:00.000Z",
         reviewedBy: "ADM-002",
@@ -672,13 +678,13 @@ function donneesInitiales(): Magasin {
       },
       {
         id: "PRT-014",
-        contactEmail: "info@servicesplusbenin.bj",
-        legalName: "Services Plus Bénin",
+        contactEmail: "info@servicesplusfrance.fr",
+        legalName: "Services Plus France",
         tradeName: "Services Plus",
         category: "services",
         ifu: "3201903556677",
         serviceMode: "online",
-        websiteUrl: "https://services-plus.bj",
+        websiteUrl: "https://services-plus.fr",
         cityId: null,
         district: null,
         addressLine: null,
@@ -692,16 +698,16 @@ function donneesInitiales(): Magasin {
       },
       {
         id: "PRT-015",
-        contactEmail: "contact@deuxrouesduborgou.bj",
-        legalName: "SARL Deux-Roues du Borgou",
-        tradeName: "Deux-Roues du Borgou",
+        contactEmail: "contact@deuxrouesdunord.fr",
+        legalName: "SARL Deux-Roues du Nord",
+        tradeName: "Deux-Roues du Nord",
         category: "mobilité",
         ifu: "3201903889900",
         serviceMode: "physical",
         websiteUrl: null,
-        cityId: "VIL-PAR",
-        district: "Zongo",
-        addressLine: "7 avenue de l'Indépendance",
+        cityId: "VIL-LIL",
+        district: "Fives",
+        addressLine: "7 avenue de la République",
         statut: "closed",
         submittedAt: "2026-04-15T08:00:00.000Z",
         reviewedBy: "ADM-002",
@@ -720,13 +726,13 @@ function donneesInitiales(): Magasin {
          * pouvait être ni montrée au jury ni vérifiée à l'exécution.
          */
         id: "PRT-016",
-        contactEmail: "libraires@lireenligne.bj",
+        contactEmail: "libraires@lireenligne.fr",
         legalName: "SARL Lire en Ligne",
         tradeName: "Lire en Ligne",
         category: "culture",
         ifu: "3201904112233",
         serviceMode: "online",
-        websiteUrl: "https://lire-en-ligne.bj",
+        websiteUrl: "https://lire-en-ligne.fr",
         cityId: null,
         district: null,
         addressLine: null,
@@ -755,7 +761,7 @@ function donneesInitiales(): Magasin {
         action: "partner.approved",
         entityType: "partner",
         entityId: "PRT-009",
-        payload: { trade_name: "Au Marché de Cotonou" },
+        payload: { trade_name: "Au Marché de Lyon" },
         ipAddress: null,
         createdAt: "2026-06-05T09:15:00.000Z",
       },
@@ -801,7 +807,7 @@ function donneesInitiales(): Magasin {
         entityType: "partner",
         entityId: "PRT-015",
         payload: {
-          trade_name: "Deux-Roues du Borgou",
+          trade_name: "Deux-Roues du Nord",
           status: "closed",
           reason: "Cessation d'activité déclarée par le gérant. Fermeture définitive du compte.",
         },
@@ -830,7 +836,7 @@ function donneesInitiales(): Magasin {
         entityType: "partner",
         entityId: "PRT-013",
         payload: {
-          trade_name: "Tokpa Fitness",
+          trade_name: "Fitness de l'Ain",
           status: "suspended",
           reason: "Identifiant fiscal jamais transmis malgré deux relances.",
         },
@@ -843,6 +849,7 @@ function donneesInitiales(): Magasin {
     misesEnAvant: [],
     topups: [],
     lots: [],
+    reclamations: [],
     transactions: [
       { id: "TRX-001", date: "2026-08-28T09:14:00.000Z", salarieId: "SAL-001", partenaireId: "PRT-001", jetonToken: null, montantCentimes: 1_250, statut: "validee" },
       { id: "TRX-002", date: "2026-08-30T12:02:00.000Z", salarieId: "SAL-002", partenaireId: "PRT-001", jetonToken: null, montantCentimes: 480, statut: "validee" },
@@ -943,13 +950,13 @@ function amorcerRegistre(): void {
   for (const [salarie, partenaire, montant, quand] of [
     ["SAL-001", "PRT-001", 12_50, "2026-08-28T09:14:00.000Z"],
     ["SAL-002", "PRT-001", 4_80, "2026-08-30T12:02:00.000Z"],
-    /* Cotonou, alimentation */
+    /* Lyon, alimentation */
     ["SAL-001", "PRT-009", 23_40, "2026-09-03T11:20:00.000Z"],
     ["SAL-002", "PRT-009", 31_20, "2026-09-18T17:45:00.000Z"],
-    /* Parakou, restauration */
+    /* Lille, restauration */
     ["SAL-001", "PRT-010", 8_90, "2026-09-08T12:35:00.000Z"],
     ["SAL-001", "PRT-010", 12_00, "2026-09-22T13:10:00.000Z"],
-    /* Porto-Novo, culture */
+    /* Marseille, culture */
     ["SAL-002", "PRT-011", 15_00, "2026-09-11T10:05:00.000Z"],
     /* Sans ville : le bloc `online_partners` du tableau de bord (A1) */
     ["SAL-001", "PRT-016", 6_50, "2026-09-15T20:12:00.000Z"],
@@ -2395,6 +2402,205 @@ export function validerLot(
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
+ * RÉCLAMATIONS DES SALARIÉS
+ *
+ * ⚠⚠ DOMAINE ENTIÈREMENT DE NOTRE FAIT — voir `types/domaine.ts` pour le
+ * constat complet. Aucune colonne, aucun index, aucune contrainte à citer :
+ * ce magasin EST la spécification, faute d'en avoir une autre.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+export interface MessageMagasin {
+  id: Identifiant;
+  auteur: "salarie" | "agent";
+  auteurId: Identifiant;
+  texte: string;
+  envoyeLe: string;
+}
+
+export interface ReclamationMagasin {
+  id: Identifiant;
+  salarieId: Identifiant;
+  statut: "ouverte" | "en_cours" | "close";
+  operationId: Identifiant | null;
+  messages: MessageMagasin[];
+  ouverteLe: string;
+  motifCloture: string | null;
+  closeLe: string | null;
+  fermeePar: Identifiant | null;
+}
+
+/**
+ * La file, du plus ancien dossier ouvert au plus récent — même règle que
+ * `Validations` pour les demandes d'adhésion : le plus vieux passe en
+ * premier, parce que c'est celui qui a le plus attendu.
+ *
+ * ⚠ Sans filtre, elle ne rend PAS les dossiers `close` : la file est un
+ * espace de travail, pas un historique. `FiltreStatut` permet de choisir
+ * explicitement `close` pour relire un dossier tranché.
+ */
+export function listerReclamations(
+  statut?: "ouverte" | "en_cours" | "close",
+): ReclamationMagasin[] {
+  const retenues = magasin.reclamations.filter((r) =>
+    statut !== undefined ? r.statut === statut : r.statut !== "close",
+  );
+  /* Tri sur la date d'OUVERTURE, la plus ancienne d'abord -- c'est
+     l'anciennete du dossier qui compte, pas celle du dernier message.
+     Depart alise sur l'id : deux dossiers ouverts a la meme milliseconde
+     doivent tomber dans un ordre STABLE, le meme que celui que la
+     pagination par curseur reconstruit cote route. */
+  return retenues.slice().sort((a, b) => {
+    const ecart = Date.parse(a.ouverteLe) - Date.parse(b.ouverteLe);
+    return ecart !== 0 ? ecart : a.id.localeCompare(b.id);
+  });
+}
+
+export function trouverReclamation(id: string): ReclamationMagasin | undefined {
+  return magasin.reclamations.find((r) => r.id === id);
+}
+
+export type EchecMessage = "introuvable" | "dossier_clos" | "texte_manquant";
+
+/**
+ * Ajoute la réponse d'un agent au fil.
+ *
+ * ═══ UN DOSSIER CLOS REFUSE UNE NOUVELLE RÉPONSE ═══
+ *
+ * Vérifié ICI, pas seulement par un bouton grisé à l'écran -- même règle que
+ * partout ailleurs dans ce projet (R2 des régularisations, "un lot avec une
+ * erreur" des rechargements) : le contrôle d'interface est une aide à la
+ * lecture, le refus qui compte est celui du serveur.
+ *
+ * ═══ LA PREMIÈRE RÉPONSE FAIT PASSER LE DOSSIER EN `en_cours` ═══
+ *
+ * Ce n'est pas un geste séparé de l'agent : `ouverte` décrit un dossier que
+ * personne n'a encore touché, et y répondre EST le fait de le prendre en
+ * charge. Exiger un second clic pour le dire créerait un état où un agent a
+ * déjà répondu à un dossier encore marqué « ouverte », ce qui trahirait la
+ * file à quiconque la regarde.
+ */
+export function repondreReclamation(
+  id: string,
+  auteur: "salarie" | "agent",
+  auteurId: string,
+  texte: string,
+  maintenant: number,
+): { reclamation: ReclamationMagasin } | { echec: EchecMessage } {
+  const reclamation = trouverReclamation(id);
+  if (!reclamation) return { echec: "introuvable" };
+  if (reclamation.statut === "close") return { echec: "dossier_clos" };
+
+  const texteNettoye = texte.trim();
+  if (texteNettoye === "") return { echec: "texte_manquant" };
+
+  reclamation.messages.push({
+    id: crypto.randomUUID(),
+    auteur,
+    auteurId,
+    texte: texteNettoye,
+    envoyeLe: new Date(maintenant).toISOString(),
+  });
+
+  if (auteur === "agent" && reclamation.statut === "ouverte") {
+    reclamation.statut = "en_cours";
+  }
+
+  return { reclamation };
+}
+
+export type EchecCloture = "introuvable" | "deja_close" | "motif_manquant";
+
+/**
+ * Clôt un dossier. Motif OBLIGATOIRE, refusé ici, pas seulement à l'écran --
+ * même `DialogueMotif` que pour une suspension, même exigence.
+ *
+ * Rien n'est supprimé : le fil reste lisible, en entier, après la clôture --
+ * voir `FilReclamation`, qui l'affiche identiquement, en lecture seule.
+ */
+export function cloturerReclamation(
+  id: string,
+  motif: string | null,
+  administrateurId: string,
+  maintenant: number,
+): { reclamation: ReclamationMagasin } | { echec: EchecCloture } {
+  const reclamation = trouverReclamation(id);
+  if (!reclamation) return { echec: "introuvable" };
+  if (reclamation.statut === "close") return { echec: "deja_close" };
+
+  const motifNettoye = motif !== null && motif.trim() !== "" ? motif.trim() : null;
+  if (motifNettoye === null) return { echec: "motif_manquant" };
+
+  reclamation.statut = "close";
+  reclamation.motifCloture = motifNettoye;
+  reclamation.closeLe = new Date(maintenant).toISOString();
+  reclamation.fermeePar = administrateurId;
+
+  return { reclamation };
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * PAIEMENTS NATIONAUX — AGRÉGATION COMMUNE
+ *
+ * ⚠ Remonté depuis `app/api/v1/admin/transactions/route.ts` : la vue
+ * nationale des transactions et le tableau de bord national ont toutes deux
+ * besoin de « tous les paiements, joints à leur partenaire », et la
+ * résolution (nature `payment`, écriture de CRÉDIT, propriétaire partenaire,
+ * compensation) ne doit être écrite qu'une fois.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/** Un paiement national, avant mise en forme. */
+export interface PaiementNational {
+  readonly operation: OperationRegistre;
+  readonly partenaireId: string;
+  readonly montantCentimes: number;
+  readonly annulee: boolean;
+  readonly motifAnnulation: string | null;
+}
+
+/**
+ * Les paiements du registre, du plus récent au plus ancien.
+ *
+ * Une opération de nature `payment` porte deux écritures ; on retient celle
+ * qui CRÉDITE le compte du partenaire — c'est elle qui dit qui a encaissé et
+ * combien. Prendre les deux compterait chaque paiement deux fois.
+ */
+export function paiementsNationaux(): PaiementNational[] {
+  const lignes: PaiementNational[] = [];
+
+  for (const operation of registre.operations) {
+    if (operation.kind !== "payment") continue;
+
+    const credit = ecrituresDe(operation.id).find((e) => e.direction === "credit");
+    if (credit === undefined) continue;
+
+    const compte = registre.comptes.find((c) => c.id === credit.accountId);
+    if (compte === undefined || compte.ownerType !== "partner" || compte.ownerId === null) {
+      continue;
+    }
+
+    const compensation = compensationDe(operation.id);
+    lignes.push({
+      operation,
+      partenaireId: compte.ownerId,
+      montantCentimes: credit.amountCentimes,
+      annulee: compensation !== undefined,
+      motifAnnulation: compensation?.reason ?? null,
+    });
+  }
+
+  /* Du plus récent au plus ancien, sur la date du FAIT (`occurred_at`), pas
+     sur celle de l'enregistrement : c'est celle que l'agent lit et celle sur
+     laquelle portent les bornes du filtre. L'identifiant départage les
+     ex æquo, sans quoi la pagination par curseur ne serait pas déterministe. */
+  return lignes.sort((a, b) => {
+    const ecart = Date.parse(b.operation.occurredAt) - Date.parse(a.operation.occurredAt);
+    return ecart !== 0 ? ecart : b.operation.id.localeCompare(a.operation.id);
+  });
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
  * AMORCE DIFFEREE
  *
  * ⚠ EN FIN DE MODULE, ET C'EST OBLIGATOIRE. `emettreJeton` s'appuie sur
@@ -2471,3 +2677,108 @@ function amorcerJetonEnCours(): void {
 
 amorcerJetonEnCours();
 amorcerMisesEnAvant();
+
+/**
+ * Les réclamations de démonstration.
+ *
+ * Choisies pour que chacun des trois statuts, et le lien vers une écriture
+ * réelle du registre, soient atteignables depuis l'écran sans rien inventer
+ * de plus : une ouverte jamais touchée, une en cours après une première
+ * réponse d'agent, une close avec son motif. L'une d'elles vise une VRAIE
+ * opération du registre -- retrouvée ici plutôt qu'un identifiant recopié à
+ * la main, pour qu'elle reste valide si l'amorçage du registre change un
+ * jour l'ordre dans lequel il poste ses écritures.
+ */
+function amorcerReclamations(): void {
+  if (magasin.reclamations.length > 0) return;
+
+  /* La première écriture de PAIEMENT au débit de SAL-001 : celle sur
+     laquelle un salarié réclamerait plausiblement. */
+  const operationCiblee = registre.ecritures.find((e) => {
+    const operation = trouverOperation(e.operationId);
+    return operation?.kind === "payment" && e.direction === "debit" && e.accountId === idCompte("SAL-001");
+  })?.operationId ?? null;
+
+  magasin.reclamations = [
+    {
+      id: "REC-001",
+      salarieId: "SAL-003",
+      statut: "ouverte",
+      operationId: null,
+      messages: [
+        {
+          id: crypto.randomUUID(),
+          auteur: "salarie",
+          auteurId: "SAL-003",
+          texte: "Bonjour, mon compte est suspendu depuis plusieurs semaines et je n'ai reçu aucune explication. Pouvez-vous me dire pourquoi ?",
+          envoyeLe: "2026-09-20T08:12:00.000Z",
+        },
+      ],
+      ouverteLe: "2026-09-20T08:12:00.000Z",
+      motifCloture: null,
+      closeLe: null,
+      fermeePar: null,
+    },
+    {
+      id: "REC-002",
+      salarieId: "SAL-001",
+      statut: "en_cours",
+      operationId: operationCiblee,
+      messages: [
+        {
+          id: crypto.randomUUID(),
+          auteur: "salarie",
+          auteurId: "SAL-001",
+          texte: "Un paiement chez ma boulangerie habituelle m'a semblé plus élevé que ce que j'ai réellement payé. Pouvez-vous vérifier ?",
+          envoyeLe: "2026-09-21T14:03:00.000Z",
+        },
+        {
+          id: crypto.randomUUID(),
+          auteur: "agent",
+          auteurId: "ADM-002",
+          texte: "Bonjour, je regarde l'écriture correspondante et reviens vers vous dans la journée.",
+          envoyeLe: "2026-09-21T16:40:00.000Z",
+        },
+      ],
+      ouverteLe: "2026-09-21T14:03:00.000Z",
+      motifCloture: null,
+      closeLe: null,
+      fermeePar: null,
+    },
+    {
+      id: "REC-003",
+      salarieId: "SAL-002",
+      statut: "close",
+      operationId: null,
+      messages: [
+        {
+          id: crypto.randomUUID(),
+          auteur: "salarie",
+          auteurId: "SAL-002",
+          texte: "Je n'arrive plus à afficher mon QR code depuis hier soir.",
+          envoyeLe: "2026-09-15T09:00:00.000Z",
+        },
+        {
+          id: crypto.randomUUID(),
+          auteur: "agent",
+          auteurId: "ADM-001",
+          texte: "C'était un incident technique côté application, résolu ce matin. Pouvez-vous réessayer et nous confirmer ?",
+          envoyeLe: "2026-09-15T11:20:00.000Z",
+        },
+        {
+          id: crypto.randomUUID(),
+          auteur: "salarie",
+          auteurId: "SAL-002",
+          texte: "Confirmé, ça fonctionne à nouveau. Merci.",
+          envoyeLe: "2026-09-15T13:05:00.000Z",
+        },
+      ],
+      ouverteLe: "2026-09-15T09:00:00.000Z",
+      motifCloture: "Incident technique confirmé résolu par le salarié. Aucune action supplémentaire requise.",
+      closeLe: "2026-09-15T13:30:00.000Z",
+      fermeePar: "ADM-001",
+    },
+  ];
+}
+
+amorcerReclamations();

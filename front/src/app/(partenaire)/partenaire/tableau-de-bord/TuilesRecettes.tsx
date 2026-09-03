@@ -1,5 +1,6 @@
 "use client";
 
+import { TuileStat } from "@/components/graphiques/TuileStat";
 import { formaterCentimes } from "@/lib/montant";
 import type { MontantCentimes } from "@/types/encaissement";
 
@@ -13,19 +14,10 @@ import type { MontantCentimes } from "@/types/encaissement";
  * ceux qui répondent aux quatre questions du matin : combien aujourd'hui,
  * combien ce mois, combien de clients, quel panier.
  *
- * ─── Le chiffre domine, le libellé est secondaire ───
- *
- * La valeur est en `--taille-2xl`, le libellé en `--taille-sm` et en encre
- * secondaire. La période est dite EN TOUTES LETTRES sous chaque chiffre : « ce
- * mois-ci » et « aujourd'hui » ne sont pas la même chose, et une tuile qui ne
- * dit pas sa période se lit de travers un 1er du mois.
- *
- * ─── Chiffres proportionnels, pas tabulaires ───
- *
- * `tabular-nums` aligne les colonnes d'un tableau ; sur un grand nombre isolé
- * il écarte les chiffres et fait paraître « 121 » lâche. Les tuiles portent
- * donc des figures proportionnelles, et le tableau du graphique garde les
- * tabulaires.
+ * Chaque tuile est un `TuileStat` (`components/graphiques/`) : la forme —
+ * chiffre dominant, période en toutes lettres, figures proportionnelles —
+ * y est décrite une fois, partagée avec le tableau de bord national de
+ * l'administration.
  */
 
 export interface TuilesRecettesProps {
@@ -35,24 +27,6 @@ export interface TuilesRecettesProps {
   recettesDuMois: MontantCentimes;
   /** Nombre d'encaissements du mois en cours. */
   encaissementsDuMois: number;
-}
-
-function Tuile({
-  libelle,
-  valeur,
-  periode,
-}: {
-  libelle: string;
-  valeur: string;
-  periode: string;
-}) {
-  return (
-    <div className="tuile">
-      <p className="tuile__valeur">{valeur}</p>
-      <p className="tuile__libelle">{libelle}</p>
-      <p className="tuile__periode">{periode}</p>
-    </div>
-  );
 }
 
 export function TuilesRecettes({
@@ -74,22 +48,22 @@ export function TuilesRecettes({
 
   return (
     <section className="tuiles" aria-label="Chiffres du mois">
-      <Tuile
+      <TuileStat
         libelle="Recettes"
         valeur={formaterCentimes(recettesDuJour)}
         periode="aujourd'hui"
       />
-      <Tuile
+      <TuileStat
         libelle="Recettes"
         valeur={formaterCentimes(recettesDuMois)}
         periode="depuis le début du mois"
       />
-      <Tuile
+      <TuileStat
         libelle={encaissementsDuMois === 1 ? "Encaissement" : "Encaissements"}
         valeur={String(encaissementsDuMois)}
         periode="depuis le début du mois"
       />
-      <Tuile
+      <TuileStat
         libelle="Panier moyen"
         valeur={encaissementsDuMois > 0 ? formaterCentimes(panierMoyen) : "—"}
         periode={

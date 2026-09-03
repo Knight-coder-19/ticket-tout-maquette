@@ -35,10 +35,21 @@ import { ErreurService } from "@/types/erreurs";
  * appellera. Rendre `undefined` en silence serait précisément le « objet vide
  * sur un échec » qu'on refuse.
  */
-/** Le seul `fetch` du front. Tout échec de transport devient `"reseau"`. */
+/**
+ * Le seul `fetch` du front. Tout échec de transport devient `"reseau"`.
+ *
+ * ⚠ `credentials: "include"` est fixé ici, pas laissé au choix de l'appelant.
+ * Le jeton de session est un cookie httpOnly (`data-dictionary.md:364`), et le
+ * back annonce une politique CORS « one origin with credentials »
+ * (`security_headers.rs:2-3`) : sans ce réglage, le navigateur retiendrait le
+ * cookie hors du même-origine, et toute route authentifiée verrait une
+ * session absente dès que `NEXT_PUBLIC_API_URL` pointera un backend sur un
+ * port ou un domaine distinct de celui du front. En mode mocks, l'appel est
+ * déjà même-origine (`env.baseApi = "/api"`) : ce réglage n'y change rien.
+ */
 async function joindre(chemin: string, options: RequestInit): Promise<Response> {
   try {
-    return await fetch(`${env.baseApi}${chemin}`, options);
+    return await fetch(`${env.baseApi}${chemin}`, { ...options, credentials: "include" });
   } catch {
     /* Le réseau a lâché. On ne sait pas si le serveur a écrit ou non : c'est
        précisément pourquoi la clé d'idempotence existe, et pourquoi elle ne

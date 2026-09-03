@@ -11,11 +11,9 @@
   container-name: ministre;
 }
 
-.selection-ministre__titre {
-  margin-block: 0 var(--espace-2);
-  font-family: var(--police-titre);
-  font-size: var(--taille-2xl);
-}
+/* L'introduction ONT REMONTE dans primitives.css : `.ecran__titre`, `.ecran__intro`
+ * -- c'etait la meme regle, recopiee a l'identique
+ * dans cinq ecrans. */
 
 .selection-ministre__intro {
   max-inline-size: var(--largeur-contenu);

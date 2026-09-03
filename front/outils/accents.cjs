@@ -58,7 +58,7 @@
  * La comparaison est insensible à la casse : « sante » attrape aussi
  * « Sante » et « SANTE ». Pour couvrir le pluriel ou le féminin, mettez la
  * partie variable entre parenthèses optionnelles, comme les entrées
- * existantes : `deposees?`, `etablissements?`, `expiree?`.
+ * existantes : `deposees?`, `etablissements?`, `expirees?`.
  *
  * Deux précautions avant d'ajouter :
  *   1. le mot ne doit pas être un identifiant ou une valeur de code utilisée
@@ -106,9 +106,19 @@ const path = require("node:path");
  * On perd la détection de « accepte » écrit pour « accepté ». C'est le bon
  * échange : un contrôle qui crie sur du texte juste finit par n'être plus lu,
  * et alors il ne détecte plus rien du tout.
+ *
+ * ─── LE PIÈGE S'ÉTAIT REGLISSÉ PAR LA PORTE À CÔTÉ ───
+ *
+ * `expire` a été retiré de la liste ci-dessus, mais `expiree?` — gardée pour
+ * « expirée »/« expirées », très fréquent dans les messages de session — le
+ * `e?` FINAL rendait aussi ce mot-là capable d'attraper « expire » tout court
+ * : `expiree?` se lit « expir » + « e » + un `e` optionnel, donc « expire »
+ * (une seule lettre e finale) matchait déjà. Corrigée en `expirees?` : le
+ * second `e` est désormais OBLIGATOIRE, seul le `s` du pluriel reste
+ * optionnel. Trouvée en lisant, comme le reste de cette section.
  */
 const MOTS =
-  /(?:^|[^a-zà-ÿ])(adhesion|decisions?|categories?|deposees?|reelles?|sante|mobilite|numerique|epicerie|republique|oueme|expiree?|deja|ete|etre|reessayer|caracteres|commercant|etablissements?|agree|parametres?|tranchees?|enregistrees?|repondu|collegue|passees|chargee|verifiez|amelie|reel|apres|tres|donnees|systeme|controle|precedent|premiere|derniere|encaisse|cree|verifie|reussi|echoue|demonstrateur|affichees?|affiches?|beneficiaires?|operations?|numero|reglement|emission|securisee?|necessaires?|evenement|resultat|selectionnee?|reserve|horodatee?|chaine|integre|integrite|verifiees?|ecritures?|references?|decheance|salaries?|retirees?|annulees?|inversees?|entete)(?![a-zà-ÿ])/i;
+  /(?:^|[^a-zà-ÿ])(adhesion|decisions?|categories?|deposees?|reelles?|sante|mobilite|numerique|epicerie|republique|oueme|expirees?|deja|ete|etre|reessayer|caracteres|commercant|etablissements?|agree|parametres?|tranchees?|enregistrees?|repondu|collegue|passees|chargee|verifiez|amelie|reel|apres|tres|donnees|systeme|controle|precedent|premiere|derniere|encaisse|cree|verifie|reussi|echoue|demonstrateur|affichees?|affiches?|beneficiaires?|operations?|numero|reglement|emission|securisee?|necessaires?|evenement|resultat|selectionnee?|reserve|horodatee?|chaine|integre|integrite|verifiees?|ecritures?|references?|decheance|salaries?|retirees?|annulees?|inversees?|entete)(?![a-zà-ÿ])/i;
 
 /** Chemins, courriels, identifiants composés : jamais du texte affiché. */
 const NON_AFFICHE = /[@/]|^[a-z0-9]+(?:[_.:-]+[a-z0-9_-]+)+$/;
@@ -129,7 +139,14 @@ const MOT_SEUL = /^[a-z0-9]+$/;
  * `reference` : colonne du CSV de rechargement (`funding/csv.rs:1`,
  * `mocks/magasin.ts`, fonction `analyserCsv`).
  */
-const IDENTIFIANTS_TECHNIQUES_MOCKS = new Set(["reference"]);
+const IDENTIFIANTS_TECHNIQUES_MOCKS = new Set([
+  "reference",
+  /* `AuteurMessage` (`types/domaine.ts`, réclamations) : valeur d'union
+     interne, jamais affichée telle quelle -- toujours traduite en « Salarié »
+     ou « Vous » avant d'atteindre l'écran (voir `FileReclamations.tsx`,
+     `FilMessages.tsx`). */
+  "salarie",
+]);
 
 /**
  * Une liste de classes CSS : tous les jetons en minuscules, au moins un

@@ -1,5 +1,5 @@
 /**
- * `GET /api/v1/admin/ledger-entries?from=&to=&partner=&kind=&cursor=&limit=`
+ * `GET /api/v1/admin/ledger-entries?from=&to=&partner=&kind=&operation_id=&cursor=&limit=`
  *
  * Les écritures du registre, la plus récente en premier.
  *
@@ -121,6 +121,7 @@ export async function GET(requete: Request): Promise<Response> {
     ...(texte("partner") !== undefined ? { titulaireId: texte("partner") as string } : {}),
     ...(texte("employee") !== undefined ? { titulaireId: texte("employee") as string } : {}),
     ...(kind !== null && kind !== "" && estNature(kind) ? { kind } : {}),
+    ...(texte("operation_id") !== undefined ? { operationId: texte("operation_id") as string } : {}),
   };
 
   const liste = lireEcritures(filtre);

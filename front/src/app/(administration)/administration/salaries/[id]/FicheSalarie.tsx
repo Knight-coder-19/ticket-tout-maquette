@@ -202,7 +202,7 @@ export function FicheSalarie({ id }: { id: string }) {
         <Link href="/administration/salaries">Bénéficiaires</Link>
       </p>
 
-      <h1 className="beneficiaires__titre">{fiche.nomAffiche}</h1>
+      <h1 className="ecran__titre">{fiche.nomAffiche}</h1>
 
       <section className="fiche" aria-labelledby="identite-titre">
         <h2 className="fiche__titre" id="identite-titre">

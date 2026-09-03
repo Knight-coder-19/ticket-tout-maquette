@@ -12,21 +12,13 @@
   container-name: beneficiaires;
 }
 
+/* Le titre et l'introduction ONT REMONTE dans primitives.css : `.ecran__titre`, `.ecran__intro`
+ * -- c'etait la meme regle, recopiee a l'identique
+ * dans cinq ecrans. */
+
 .beneficiaires__fil {
   margin-block: 0 var(--espace-2);
   font-size: var(--taille-sm);
-}
-
-.beneficiaires__titre {
-  margin-block: 0 var(--espace-2);
-  font-family: var(--police-titre);
-  font-size: var(--taille-2xl);
-}
-
-.beneficiaires__intro {
-  max-inline-size: var(--largeur-contenu);
-  margin-block-end: var(--espace-6);
-  color: var(--couleur-texte-secondaire);
 }
 
 /* == Les trois soldes =====================================================

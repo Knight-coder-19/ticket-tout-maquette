@@ -173,8 +173,8 @@ export function TransactionsNationales() {
 
   return (
     <div className="national">
-      <h1 className="national__titre">Transactions nationales</h1>
-      <p className="national__intro">
+      <h1 className="ecran__titre">Transactions nationales</h1>
+      <p className="ecran__intro">
         L&apos;activité du dispositif : qui a encaissé, où, et dans quelle
         catégorie. Le registre, lui, montre les écritures et l&apos;intégrité de
         la chaîne — c&apos;est le même fait, vu sous l&apos;angle comptable.

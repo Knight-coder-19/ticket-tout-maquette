@@ -112,8 +112,8 @@ export function Salaries() {
 
   return (
     <div className="beneficiaires">
-      <h1 className="beneficiaires__titre">Bénéficiaires</h1>
-      <p className="beneficiaires__intro">
+      <h1 className="ecran__titre">Bénéficiaires</h1>
+      <p className="ecran__intro">
         Les personnes inscrites au dispositif par leur employeur. Le solde
         affiché est le disponible : ce qui peut être dépensé aujourd&apos;hui.
       </p>

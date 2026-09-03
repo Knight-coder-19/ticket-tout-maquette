@@ -12,17 +12,9 @@
   container-name: recharges;
 }
 
-.recharges__titre {
-  margin-block: 0 var(--espace-2);
-  font-family: var(--police-titre);
-  font-size: var(--taille-2xl);
-}
-
-.recharges__intro {
-  max-inline-size: var(--largeur-contenu);
-  margin-block-end: var(--espace-6);
-  color: var(--couleur-texte-secondaire);
-}
+/* Le titre et l'introduction ONT REMONTE dans primitives.css : `.ecran__titre`, `.ecran__intro`
+ * -- c'etait la meme regle, recopiee a l'identique
+ * dans cinq ecrans. */
 
 .recharges__soustitre {
   margin-block: var(--espace-8) var(--espace-3);

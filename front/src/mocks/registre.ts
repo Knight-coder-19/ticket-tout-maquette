@@ -499,6 +499,15 @@ export interface FiltreRegistre {
    */
   titulaireId?: string;
   kind?: NatureOperation;
+  /**
+   * Ne garde que les écritures d'UNE opération précise.
+   *
+   * ⚠ Ajouté pour `OperationVisee` (réclamations, domaine entièrement de
+   * notre fait) : un dossier vise une opération, et l'écran doit pouvoir la
+   * relire TELLE QU'ELLE APPARAÎT au registre plutôt que d'en garder une
+   * copie qui pourrait diverger — voir `types/domaine.ts`, `Reclamation`.
+   */
+  operationId?: string;
 }
 
 /**
@@ -522,6 +531,7 @@ export function lireEcritures(filtre: FiltreRegistre): EcritureRegistre[] {
       if (filtre.depuis !== undefined && operation.occurredAt < filtre.depuis) return false;
       if (filtre.jusqua !== undefined && operation.occurredAt > filtre.jusqua) return false;
       if (compteCible !== null && ecriture.accountId !== compteCible) return false;
+      if (filtre.operationId !== undefined && ecriture.operationId !== filtre.operationId) return false;
       return true;
     })
     .slice()
