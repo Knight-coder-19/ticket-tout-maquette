@@ -1,0 +1,12 @@
+build/
+coverage/
+docs/video/
+.DS_Store
+.env
+.env.local
+*.log
+.next/
+next-env.d.ts
+node_modules/
+out/
+*.tsbuildinfo

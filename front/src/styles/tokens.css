@@ -1,0 +1,84 @@
+/*
+ * Jetons de design Ticket Tout.
+ * Source : charte graphique ministerielle (B. Sellami). Ticket Tout est une
+ * marque produit qui vit A L'INTERIEUR de la charte : le bleu institutionnel
+ * #1B3A6B reste la couleur primaire, deux accents chauds "reveillent"
+ * l'ensemble.
+ * Aucune couleur en dur ailleurs dans le projet. Contrastes verifies par
+ * `node scripts/contrastes.mjs` (voir le brand book, section contrastes).
+ */
+
+:root {
+  /* --- Bleu institutionnel (charte) --- */
+  --couleur-primaire: #1b3a6b;
+  --couleur-primaire-clair: #2f5590;
+  --couleur-primaire-sombre: #12294c;
+  --couleur-primaire-fond: #eaf0f7;
+
+  /* --- Accents Ticket Tout ---
+     Le bleu ne sert jamais de fond de bouton. L'action porte l'ambre
+     (texte fonce, contraste 8,6:1). Le corail est un accent decoratif
+     (liseres, indicateur actif) et, en version sombre, un accent textuel
+     sur fond blanc (5,2:1). */
+  --couleur-accent-ambre: #f2a81c;
+  --couleur-accent-ambre-sombre: #b97b06;
+  --couleur-accent-ambre-fond: #fdf1d8;
+
+  --couleur-accent-corail: #e4572e;
+  --couleur-accent-corail-sombre: #c0421d;
+  --couleur-accent-corail-fond: #fbe7e0;
+
+  --couleur-action: var(--couleur-accent-ambre);
+  --couleur-action-texte: #1a1a1a;
+  --couleur-action-survol: #da9410;
+
+  /* --- Neutres --- */
+  --couleur-texte: #1a1a1a;
+  --couleur-texte-secondaire: #55606b;
+  --couleur-fond: #ffffff;
+  --couleur-fond-secondaire: #f4f6f9;
+  --couleur-bordure: #d6dbe3;
+
+  /* --- Statuts --- */
+  --couleur-alerte: #a0341c;
+  --couleur-alerte-fond: #fbeae6;
+  --couleur-succes: #0b6b4f;
+  --couleur-succes-fond: #e4f0eb;
+  --couleur-simulation: #7a5e12;
+  --couleur-simulation-fond: #fdf6e3;
+
+  /* --- Typographie ---
+     Marianne pour les titres, Spectral pour le corps.
+     Polices auto-hebergees dans public/fonts, aucun CDN externe. */
+  --police-titre: "Marianne", system-ui, sans-serif;
+  --police-corps: "Spectral", Georgia, serif;
+
+  --taille-xs: 0.75rem;
+  --taille-sm: 0.875rem;
+  --taille-base: 1rem;
+  --taille-lg: 1.25rem;
+  --taille-xl: 1.5rem;
+  --taille-2xl: 2rem;
+  --taille-3xl: 2.75rem;
+
+  /* --- Espacements --- */
+  --espace-1: 0.25rem;
+  --espace-2: 0.5rem;
+  --espace-3: 0.75rem;
+  --espace-4: 1rem;
+  --espace-6: 1.5rem;
+  --espace-8: 2rem;
+  --espace-12: 3rem;
+
+  --rayon-sm: 2px;
+  --rayon-md: 4px;
+  --rayon-lg: 10px;
+  --rayon-carte: 16px;
+
+  --ombre-1: 0 1px 2px rgba(18, 41, 76, 0.06), 0 8px 24px rgba(18, 41, 76, 0.08);
+  --ombre-carte: 0 24px 60px -28px rgba(18, 41, 76, 0.55);
+
+  --largeur-contenu: 72ch;
+  --largeur-page: 1200px;
+  --largeur-rail: 232px;
+}
