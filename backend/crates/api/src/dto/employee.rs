@@ -8,6 +8,7 @@ use cartepro_core::ids::{Jti, OperationId};
 use cartepro_core::ledger::{Account, OperationKind};
 use cartepro_core::money::{InvalidMoneyError, Money};
 use cartepro_core::payments::IssuedToken;
+use cartepro_core::reporting::StatementLine;
 
 use crate::dto::catalog::CatalogItem;
 use crate::dto::Paginated;
@@ -121,6 +122,24 @@ impl From<IssuedToken> for IssuedTokenResponse {
             issued_at: token.issued_at,
             expires_at: token.expires_at,
             qr_payload: token.qr
+        }
+    }
+}
+
+impl From<&StatementLine> for EmployeeTransaction {
+    fn from(line: &StatementLine) -> Self
+    {
+        EmployeeTransaction {
+            id: line.operation_id,
+            kind: line.kind,
+            amount: line.amount,
+            direction: match line.incoming {
+                true => TransactionDirection::In,
+                false => TransactionDirection::Out
+            },
+            counterparty: line.counterparty.clone(),
+            occurred_at: line.occurred_at,
+            reference: line.reference.clone()
         }
     }
 }

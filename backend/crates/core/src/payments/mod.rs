@@ -81,6 +81,28 @@ impl<'r> FromRow<'r, PgRow> for Settlement {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PartnerActivity {
+    pub settlement: Settlement,
+    pub customer_label: String,
+}
+
+impl<'r> FromRow<'r, PgRow> for PartnerActivity {
+    fn from_row(row: &'r PgRow) -> Result<Self, sqlx::Error>
+    {
+        Ok(PartnerActivity {
+            settlement: Settlement::from_row(row)?,
+            customer_label: row.try_get("customer_label")?
+        })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::FromRow)]
+pub struct PartnerTotals {
+    pub total_received: Money,
+    pub transaction_count: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenRef {
     Jti(Jti),
     ShortCode(String),
@@ -130,4 +152,21 @@ pub enum PaymentError {
 
     #[error(transparent)]
     Db(#[from] sqlx::Error),
+}
+
+impl PaymentError {
+    pub fn code(&self) -> &'static str
+    {
+        match self {
+            PaymentError::UnknownToken => "TOKEN_NOT_FOUND",
+            PaymentError::TokenExpired => "TOKEN_EXPIRED",
+            PaymentError::TokenAlreadyUsed => "TOKEN_ALREADY_USED",
+            PaymentError::TokenCancelled => "TOKEN_ALREADY_USED",
+            PaymentError::PartnerNotApproved => "PARTNER_NOT_APPROVED",
+            PaymentError::AccountInactive => "ACCOUNT_INACTIVE",
+            PaymentError::InsufficientFunds => "INSUFFICIENT_FUNDS",
+            PaymentError::ResyncTooLate => "RESYNC_TOO_LATE",
+            _ => "INTERNAL"
+        }
+    }
 }
