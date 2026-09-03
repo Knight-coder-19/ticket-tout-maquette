@@ -1,0 +1,22 @@
+[package]
+name = "cartepro-seed"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "cartepro-seed"
+path = "src/main.rs"
+
+[dependencies]
+cartepro-core = { workspace = true }
+tokio = { workspace = true }
+sqlx = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+rand = { workspace = true }
+base64 = { workspace = true }
+ed25519-dalek = { workspace = true }
+dotenvy = { workspace = true }
+anyhow = { workspace = true }

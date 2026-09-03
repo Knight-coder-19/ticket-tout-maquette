@@ -1,8 +1,34 @@
 [
-  { "file": "TASK-DISTRIBUTION-BACKEND.md",        "title": "Backend distribution — who does what" },
-  { "file": "file-guide.md",                       "title": "File-by-file guide" },
-  { "file": "data-dictionary.md",                  "title": "Data dictionary" },
-  { "file": "data-model.md",                       "title": "Data model" },
-  { "file": "decisions.md",                        "title": "Decisions and amendments" },
-  { "file": "../.github/pull_request_template.md", "title": "Pull request template" }
+  {
+    "file": "TASK-DISTRIBUTION-BACKEND.md",
+    "title": "Backend distribution — who does what"
+  },
+  {
+    "file": "file-guide.md",
+    "title": "File-by-file guide"
+  },
+  {
+    "file": "data-dictionary.md",
+    "title": "Data dictionary"
+  },
+  {
+    "file": "data-model.md",
+    "title": "Data model"
+  },
+  {
+    "file": "decisions.md",
+    "title": "Decisions and amendments"
+  },
+  {
+    "file": "../.github/pull_request_template.md",
+    "title": "Pull request template"
+  },
+  {
+    "file": "sovereignty.md",
+    "title": "Digital sovereignty note"
+  },
+  {
+    "file": "data-protection.md",
+    "title": "Personal data and GDPR"
+  }
 ]

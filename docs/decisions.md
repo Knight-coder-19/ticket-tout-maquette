@@ -840,3 +840,47 @@ the signature reveals it.
 
 **What follows**: the `impl From<AuthenticatedUser> for PartnerId` in `identity/mod.rs` is now
 unused. It is harmless, but it is a trap left lying around, and it should be removed.
+
+### 33. The payment token lives five minutes, and the Minister's request is answered elsewhere
+
+**What was asked.** The specification sets the QR code at five minutes. The Minister asks for the
+opposite, a token that lives much longer. The reviewer explicitly declined to arbitrate and asked
+for the choice to be written down. This entry is that trace.
+
+**What I decided.** `TOKEN_TTL_SECONDS` stays at 300.
+
+**Why the two durations are not the same question.** `token_ttl` bounds how long an *unspent
+authorisation* stays alive. `resync_max_age`, at 72 hours, bounds how late a *scan that has already
+happened* may reach us. Conflating them is precisely what made the offline queue useless until §26.
+The need behind the Minister's request — a merchant in a valley with no signal, a customer who shows
+their QR code twenty minutes after generating it — is served by the second duration, not the first:
+since §26 a token scanned inside its validity window settles even if the synchronisation arrives
+three days later. Lengthening the token's life would not fix anything that is still broken; it would
+loosen a bound that is doing useful work.
+
+**What a long lifetime actually costs.**
+
+1. The funds stay reserved for the whole lifetime. A token blocks its amount until it is spent,
+   cancelled or swept. The employees hurt are the ones with little money — the seed deliberately
+   contains two below €5 — for whom a stale hold is the difference between paying and not paying.
+2. A screenshot of a QR code is a bearer instrument for as long as it lives. Five minutes is the
+   window in which a photographed code can be spent by someone else. Multiplying the lifetime
+   multiplies that window in exact proportion.
+3. Nothing shortens a hold except the employee cancelling the token or the sweep expiring it. A long
+   lifetime turns a mistyped amount into a long wait.
+
+**What it costs on the offline path: nothing.** That is the whole point of the paragraph above.
+
+**What would make me change my mind.** Field evidence that employees regularly fail to present the
+code within five minutes. The measurement already exists in the data: the ratio of `expired` to
+issued rows in `payment_tokens`. If that ratio rises above a few percent, the value is wrong, and I
+would move it to fifteen minutes — not to an hour, because points 1 and 2 grow linearly with it.
+
+**How to change it.** One environment variable, `TOKEN_TTL_SECONDS`. It is read into
+`CoreConfig.token_ttl` and consumed in exactly one place, `authorize`. No migration, no code change,
+no data rewrite: expiry is judged against the `expires_at` stored on each token, so tokens issued
+under the old value keep the deadline they were issued with.
+
+**What this decision does not change.** The server remains the authority on expiry (decision 2), the
+expiry written inside the QR code stays indicative, and the three bounds on `scanned_at` from §26 are
+untouched.

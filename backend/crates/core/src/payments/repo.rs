@@ -8,7 +8,10 @@
 use chrono::{DateTime, Utc};
 use sqlx::{PgConnection, PgPool};
 
-use super::{EntryMode, PartnerActivity, PartnerTotals, Payment, PaymentToken, Settlement};
+use super::{
+    EntryMode, NewAttempt, PartnerActivity, PartnerTotals, Payment, PaymentAttempt, PaymentToken,
+    Settlement,
+};
 use crate::ids::{AccountId, Jti, OperationId, PartnerId};
 use crate::money::Money;
 
@@ -21,6 +24,48 @@ const PAYMENT_COLUMNS: &str =
 const QUALIFIED_PAYMENT_COLUMNS: &str =
     "p.operation_id, p.token_jti, p.partner_id, p.from_account, p.entry_mode, p.scanned_at,
      p.synced_at";
+
+const ATTEMPT_COLUMNS: &str =
+    "id, employee_id, partner_id, amount, outcome, operation_id, occurred_at, recorded_at";
+
+pub async fn insert_attempt(
+    conn: &mut PgConnection,
+    attempt: &NewAttempt,
+) -> Result<PaymentAttempt, sqlx::Error>
+{
+    let statement = format!(
+        "INSERT INTO payment_attempts
+             (id, employee_id, partner_id, amount, outcome, operation_id, occurred_at,
+              recorded_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8::TIMESTAMPTZ, now()))
+         RETURNING {ATTEMPT_COLUMNS}"
+    );
+
+    sqlx::query_as::<_, PaymentAttempt>(&statement)
+        .bind(attempt.id)
+        .bind(attempt.employee_id)
+        .bind(attempt.partner_id)
+        .bind(attempt.amount)
+        .bind(attempt.outcome)
+        .bind(attempt.operation_id)
+        .bind(attempt.occurred_at)
+        .bind(attempt.recorded_at)
+        .fetch_one(conn)
+        .await
+}
+
+pub async fn list_transactions(pool: &PgPool) -> Result<Vec<PaymentAttempt>, sqlx::Error>
+{
+    let statement = format!(
+        "SELECT {ATTEMPT_COLUMNS}
+           FROM payment_attempts
+          ORDER BY occurred_at, id"
+    );
+
+    sqlx::query_as::<_, PaymentAttempt>(&statement)
+        .fetch_all(pool)
+        .await
+}
 
 pub async fn insert_token(
     conn: &mut PgConnection,
