@@ -4,8 +4,7 @@ use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
 use axum_extra::extract::CookieJar;
 use cartepro_core::error::CoreError;
-use cartepro_core::identity::{AuthenticatedUser, UserRole, UserStatus};
-use cartepro_core::ids::{EmployeeId, PartnerId, UserId};
+use cartepro_core::identity::{self, AuthenticatedUser, UserRole};
 
 use crate::error::ApiError;
 use crate::state::AppState;
@@ -34,41 +33,31 @@ impl Role for Admin {
 
 pub struct AuthUser<R: Role>(pub AuthenticatedUser, pub PhantomData<R>);
 
-impl From<AuthenticatedUser> for EmployeeId {
-    fn from(user: AuthenticatedUser) -> Self
-    {
-        EmployeeId::from(user.id.as_uuid())
+impl<R: Role> AuthUser<R> {
+    pub fn user(&self) -> &AuthenticatedUser {
+        &self.0
+    }
+    pub fn into_inner(self) -> AuthenticatedUser {
+        self.0
     }
 }
 
-impl From<AuthenticatedUser> for PartnerId {
-    fn from(user: AuthenticatedUser) -> Self
-    {
-        PartnerId::from(user.id.as_uuid())
-    }
-}
+async fn authenticate(state: &AppState, parts: &Parts) -> Result<AuthenticatedUser, ApiError> {
+    let jar = CookieJar::from_headers(&parts.headers);
+    let token = jar
+        .get(SESSION_COOKIE)
+        .map(|cookie| cookie.value().to_string())
+        .ok_or_else(|| ApiError::from(CoreError::Unauthorized))?;
 
-async fn find_session_user(
-    state: &AppState,
-    token: &str,
-) -> Result<Option<AuthenticatedUser>, sqlx::Error>
-{
-    let found = sqlx::query_as::<_, (UserId, UserRole, UserStatus)>(
-        "SELECT u.id, u.role, u.status FROM sessions s \
-         JOIN users u ON u.id = s.user_id \
-         WHERE s.token_hash = digest($1, 'sha256') \
-           AND s.revoked_at IS NULL \
-           AND s.expires_at > $2",
-    )
-    .bind(token)
-    .bind(state.clock.now())
-    .fetch_optional(&state.db)
-    .await?;
+    let mut conn = state
+        .db
+        .acquire()
+        .await
+        .map_err(|error| ApiError::from(CoreError::Db(error)))?;
 
-    match found {
-        Some((id, role, status)) => Ok(Some(AuthenticatedUser { id, role, status })),
-        None => Ok(None)
-    }
+    identity::validate_session(&mut conn, &*state.clock, &token)
+        .await
+        .map_err(|error| ApiError::from(CoreError::from(error)))
 }
 
 impl<R: Role + Send> FromRequestParts<AppState> for AuthUser<R> {
@@ -77,32 +66,24 @@ impl<R: Role + Send> FromRequestParts<AppState> for AuthUser<R> {
     async fn from_request_parts(
         parts: &mut Parts,
         state: &AppState,
-    ) -> Result<Self, Self::Rejection>
-    {
-        let jar = CookieJar::from_headers(&parts.headers);
-
-        let token = match jar.get(SESSION_COOKIE) {
-            Some(cookie) => cookie.value().to_string(),
-            None => return Err(ApiError::from(CoreError::Unauthorized))
-        };
-
-        let found = match find_session_user(state, &token).await {
-            Ok(found) => found,
-            Err(error) => return Err(ApiError::from(CoreError::Db(error)))
-        };
-
-        let user = match found {
-            Some(user) => user,
-            None => return Err(ApiError::from(CoreError::Unauthorized))
-        };
-
-        if user.status != UserStatus::Active {
-            return Err(ApiError::from(CoreError::AccountInactive));
-        }
-
+    ) -> Result<Self, Self::Rejection> {
+        let user = authenticate(state, parts).await?;
         if user.role != R::VALUE {
             return Err(ApiError::from(CoreError::Forbidden));
         }
         Ok(AuthUser(user, PhantomData))
+    }
+}
+
+pub struct AnyUser(pub AuthenticatedUser);
+
+impl FromRequestParts<AppState> for AnyUser {
+    type Rejection = ApiError;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
+        Ok(AnyUser(authenticate(state, parts).await?))
     }
 }
