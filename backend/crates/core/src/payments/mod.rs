@@ -7,6 +7,7 @@
 
 pub mod authorize;
 pub mod expire;
+pub mod export;
 pub mod repo;
 pub mod settle;
 
@@ -15,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgRow;
 use sqlx::{FromRow, Row};
 
-use crate::ids::{AccountId, Jti, OperationId, PartnerId};
+use crate::ids::{AccountId, AttemptId, EmployeeId, Jti, OperationId, PartnerId};
 use crate::ledger::LedgerError;
 use crate::money::Money;
 
@@ -100,6 +101,48 @@ impl<'r> FromRow<'r, PgRow> for PartnerActivity {
 pub struct PartnerTotals {
     pub total_received: Money,
     pub transaction_count: i64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "attempt_outcome", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
+pub enum AttemptOutcome {
+    Settled,
+    InsufficientFunds,
+}
+
+impl AttemptOutcome {
+    pub fn as_csv(self) -> &'static str
+    {
+        match self {
+            AttemptOutcome::Settled => "settled",
+            AttemptOutcome::InsufficientFunds => "insufficient_funds"
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, sqlx::FromRow)]
+pub struct PaymentAttempt {
+    pub id: AttemptId,
+    pub employee_id: EmployeeId,
+    pub partner_id: PartnerId,
+    pub amount: Money,
+    pub outcome: AttemptOutcome,
+    pub operation_id: Option<OperationId>,
+    pub occurred_at: DateTime<Utc>,
+    pub recorded_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NewAttempt {
+    pub id: AttemptId,
+    pub employee_id: EmployeeId,
+    pub partner_id: PartnerId,
+    pub amount: Money,
+    pub outcome: AttemptOutcome,
+    pub operation_id: Option<OperationId>,
+    pub occurred_at: DateTime<Utc>,
+    pub recorded_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

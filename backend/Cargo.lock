@@ -386,6 +386,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "cartepro-seed"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64",
+ "cartepro-core",
+ "chrono",
+ "dotenvy",
+ "ed25519-dalek",
+ "rand",
+ "sqlx",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "cartepro-tests"
 version = "0.1.0"
 dependencies = [

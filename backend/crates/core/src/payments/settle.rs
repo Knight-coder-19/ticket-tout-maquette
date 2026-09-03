@@ -82,7 +82,9 @@ pub async fn settle(
             amount: token.amount,
             occurred_at: scanned_at,
             memo: None,
-            created_by: None
+            created_by: None,
+            operation_id: None,
+            recorded_at: None
         },
     )
     .await
