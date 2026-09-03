@@ -8,7 +8,7 @@
 use chrono::{DateTime, Utc};
 use sqlx::{PgConnection, PgPool};
 
-use super::{EntryMode, Payment, PaymentToken, Settlement};
+use super::{EntryMode, PartnerActivity, PartnerTotals, Payment, PaymentToken, Settlement};
 use crate::ids::{AccountId, Jti, OperationId, PartnerId};
 use crate::money::Money;
 
@@ -112,7 +112,19 @@ pub async fn consume_token(
     resolved_at: DateTime<Utc>,
 ) -> Result<bool, sqlx::Error>
 {
-    resolve_token(conn, jti, "consumed", resolved_at).await
+    let affected = sqlx::query(
+        "UPDATE payment_tokens
+            SET status = 'consumed', resolved_at = $2
+          WHERE jti = $1
+            AND status IN ('active', 'expired')",
+    )
+    .bind(jti)
+    .bind(resolved_at)
+    .execute(conn)
+    .await?
+    .rows_affected();
+
+    Ok(affected == 1)
 }
 
 pub async fn cancel_token(
@@ -260,6 +272,61 @@ pub async fn list_partner_settlements(
 
     sqlx::query_as::<_, Settlement>(&statement)
         .bind(partner)
+        .bind(limit)
+        .fetch_all(pool)
+        .await
+}
+
+pub async fn partner_totals(
+    pool: &PgPool,
+    partner: PartnerId,
+    from: DateTime<Utc>,
+    to: DateTime<Utc>,
+) -> Result<PartnerTotals, sqlx::Error>
+{
+    sqlx::query_as::<_, PartnerTotals>(
+        "SELECT COALESCE(SUM(o.amount), 0)::BIGINT AS total_received,
+                COUNT(*)::BIGINT                   AS transaction_count
+           FROM payments p
+           JOIN ledger_operations o ON o.id = p.operation_id
+          WHERE p.partner_id = $1
+            AND p.scanned_at >= $2
+            AND p.scanned_at < $3",
+    )
+    .bind(partner)
+    .bind(from)
+    .bind(to)
+    .fetch_one(pool)
+    .await
+}
+
+pub async fn list_partner_activity(
+    pool: &PgPool,
+    partner: PartnerId,
+    from: DateTime<Utc>,
+    to: DateTime<Utc>,
+    limit: i64,
+) -> Result<Vec<PartnerActivity>, sqlx::Error>
+{
+    let statement = format!(
+        "SELECT {QUALIFIED_PAYMENT_COLUMNS}, o.amount,
+                COALESCE(left(e.first_name, 1) || '. ' || left(e.last_name, 1) || '.', '-')
+                    AS customer_label
+           FROM payments p
+           JOIN ledger_operations o ON o.id = p.operation_id
+           LEFT JOIN accounts a ON a.id = p.from_account
+           LEFT JOIN employees e ON e.id = a.owner_id
+          WHERE p.partner_id = $1
+            AND p.scanned_at >= $2
+            AND p.scanned_at < $3
+          ORDER BY p.scanned_at DESC
+          LIMIT $4"
+    );
+
+    sqlx::query_as::<_, PartnerActivity>(&statement)
+        .bind(partner)
+        .bind(from)
+        .bind(to)
         .bind(limit)
         .fetch_all(pool)
         .await

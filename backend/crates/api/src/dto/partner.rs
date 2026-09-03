@@ -5,7 +5,7 @@ use validator::{Validate, ValidationError};
 
 use cartepro_core::ids::{Jti, OperationId};
 use cartepro_core::money::Money;
-use cartepro_core::payments::{EntryMode, Settlement, TokenRef};
+use cartepro_core::payments::{EntryMode, PartnerActivity, Settlement, TokenRef};
 
 use crate::dto::Paginated;
 
@@ -170,4 +170,42 @@ impl BatchSettleResult {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct BatchSettleResponse {
     pub results: Vec<BatchSettleResult>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub struct PeriodQuery {
+    pub from: Option<DateTime<Utc>>,
+    pub to: Option<DateTime<Utc>>,
+}
+
+pub const DEFAULT_PERIOD_DAYS: i64 = 30;
+
+impl PeriodQuery {
+    pub fn resolve(&self, now: DateTime<Utc>) -> (DateTime<Utc>, DateTime<Utc>)
+    {
+        let to = self.to.unwrap_or(now);
+        let from = match self.from {
+            Some(from) => from,
+            None => to - chrono::Duration::days(DEFAULT_PERIOD_DAYS)
+        };
+
+        match from <= to {
+            true => (from, to),
+            false => (to, to)
+        }
+    }
+}
+
+impl From<&PartnerActivity> for PartnerTransaction {
+    fn from(activity: &PartnerActivity) -> Self
+    {
+        PartnerTransaction {
+            id: activity.settlement.payment.operation_id,
+            amount: activity.settlement.amount,
+            entry_mode: activity.settlement.payment.entry_mode,
+            occurred_at: activity.settlement.payment.scanned_at,
+            synced_at: activity.settlement.payment.synced_at,
+            customer_label: activity.customer_label.clone()
+        }
+    }
 }

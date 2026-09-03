@@ -629,3 +629,178 @@ pas possible tant que le type du domaine ne portait pas le montant.
 champs de `Payment`, et il aurait fallu les maintenir en double le jour où la table change. La
 composition ne coûte qu'une implémentation manuelle de `FromRow`, huit lignes, qui sert aussi bien à
 la lecture unitaire qu'à la liste jointe.
+
+### 26. L'expiration se juge au moment du scan, pas au moment de la synchronisation
+
+**Le constat** : `RESYNC_MAX_AGE_HOURS` vaut 72 h et `TOKEN_TTL_SECONDS` vaut 300 s. Tant que
+`settle` comparait `expires_at` à l'horloge du serveur, la première de ces deux durées ne servait
+strictement à rien : tout encaissement hors ligne resynchronisé plus de cinq minutes après le scan
+sortait en `TokenExpired`. `TASK-DISTRIBUTION-BACKEND.md` annonce pourtant au jury que « le backend
+est prêt » pour la file d'attente hors ligne. Il ne l'était pas.
+
+**Ce que j'ai fait** : `settle` compare désormais `expires_at` à `scanned_at`. Le jeton est valide
+si le commerçant l'a scanné pendant sa fenêtre de validité, quel que soit le moment où la
+synchronisation nous parvient — dans la limite de `resync_max_age`.
+
+**Ce que ça amende** : la décision 2, qui faisait de l'horloge du serveur la seule autorité sur
+l'expiration. Elle reste vraie pour ce qu'elle protégeait — le jeton du QR ne fait toujours pas foi,
+et c'est nous qui décidons — mais la question « à quel instant juge-t-on ? » reçoit une autre
+réponse.
+
+**Ce que je concède** : `scanned_at` vient du client. Je l'encadre par trois bornes plutôt que de
+lui faire confiance :
+
+1. `now - scanned_at > resync_max_age` reste refusé — une file d'attente ne remonte pas de trois
+   jours.
+2. `scanned_at` est ramené à `min(scanned_at, now)` — une horloge de caisse en avance ne prolonge
+   la vie d'aucun jeton, elle est simplement recalée sur la nôtre.
+3. `scanned_at < issued_at` est refusé — un scan antérieur à l'émission du jeton ne peut pas être
+   sincère.
+
+**Ce qu'un menteur y gagne, exactement** : encaisser un jeton *qu'il détient légitimement* et qui a
+expiré, en déclarant l'avoir scanné pendant sa validité. Rien de plus. Il ne peut pas en forger un,
+la signature est Ed25519 ; ni l'encaisser deux fois, `payments.token_jti` est unique ; ni en changer
+le montant, celui-ci vient du jeton et jamais de la requête ; ni le passer sur un compte suspendu ou
+un commerçant non agréé, ces contrôles sont inchangés. Mis en face d'un mode dégradé qui ne
+fonctionnait pas du tout, le compromis me paraît largement favorable.
+
+### Le jeton déjà balayé
+
+Corriger la comparaison ne suffisait pas. `expire_stale_tokens` passe les jetons échus en `expired`
+et libère leur réservation ; le `match` sur le statut refusait ces jetons avant même d'examiner
+`scanned_at`. Un encaissement hors ligne parfaitement valide restait donc refusé dès que le balayage
+était passé — c'est-à-dire toujours, puisque l'expiration est traitée en paresseux à chaque lecture
+de solde.
+
+`settle` accepte maintenant un jeton `expired`, en retenant que sa réservation n'existe plus :
+
+- `still_held` distingue `Active` (le hold est là, il faut le libérer) de `Expired` (le balayage
+  l'a déjà fait, le libérer une seconde fois donnerait `ReleaseExceedsHold`).
+- `consume_token` accepte `status IN ('active', 'expired')`, sans quoi le jeton serait resté
+  `expired` alors qu'un paiement lui est attaché, ce qui casse la cohérence que le test I6 vérifie.
+- Les fonds ayant été rendus disponibles, l'employé a pu les dépenser entre-temps. `post_operation`
+  échoue alors sur la contrainte de solde, et je traduis explicitement ce cas en
+  `PaymentError::InsufficientFunds` plutôt que de le laisser remonter en `Ledger(_)`, que la table
+  de correspondance range en 500. C'est une situation métier, le commerçant doit la comprendre.
+
+**Ce que ça règle au passage** : l'invariant I7 — « un jeton expiré n'est jamais réglé » — devient
+vrai *par construction*. Il était jusqu'ici vérifié après coup par une requête ; il est maintenant
+la condition même qui autorise l'écriture, puisque `settle` refuse tout `scanned_at` postérieur à
+`expires_at`.
+
+### 27. `AuthUser<R>(pub AuthenticatedUser)` ne peut pas compiler tel qu'il est écrit
+
+**Le contrat figé à H+0** (`TASK-DISTRIBUTION-BACKEND.md` §3, repris par `file-guide.md` §4.3) donne
+l'extracteur d'authentification sous cette forme :
+
+```rust
+pub struct AuthUser<R: Role>(pub AuthenticatedUser);
+```
+
+**Le problème** : Rust refuse un paramètre de type qui n'apparaît dans aucun champ — c'est
+l'erreur `E0392`. Le marqueur de rôle n'étant utilisé que par l'implémentation de
+`FromRequestParts`, la structure a besoin d'un `PhantomData<R>` pour exister. Je ne l'ai découvert
+qu'en compilant mes handlers contre le contrat.
+
+**Ce que j'ai fait** : mes handlers destructurent `AuthUser(user, _)`. C'est la seule forme qui
+compile, et elle laisse à Giscard le choix de rendre le second champ public ou d'exposer un
+accesseur — dans ce dernier cas, ce sont mes deux fichiers qui changent, pas les siens.
+
+**Pourquoi je le consigne plutôt que de le contourner** : c'est un des cinq contrats que nous avons
+gelés pour ne pas nous bloquer mutuellement. Un contrat qui ne compile pas doit être corrigé dans
+le document, sinon chacun de nous deux le redécouvrira de son côté.
+
+### 28. Le curseur de pagination est l'identifiant de la dernière ligne
+
+**Le plan** (`file-guide.md` §4.3) décrit un « curseur opaque base64 encapsulant
+`(valeur_de_tri, id)` ».
+
+**Ce que j'ai fait** : mes deux listes rendent l'identifiant de la dernière opération de la page,
+et `null` dès que la page n'est pas pleine.
+
+**Pourquoi** : l'encodage du curseur appartient à `extractors/pagination.rs`, qui n'existe pas
+encore. Inventer un format base64 dans mes handlers reviendrait à en fixer un deuxième, et le jour
+où Giscard écrit le sien, les deux se contrediraient en silence. L'identifiant nu reste opaque du
+point de vue du front — il ne doit rien en déduire — et se remplace par le format complet sans
+changer la forme de la réponse.
+
+### 29. Les lectures de l'espace partenaire vivent dans `payments`, pas dans `reporting`
+
+**Le plan** confie `core/src/reporting/` à Giscard, et c'est là que devraient naturellement vivre
+les relevés.
+
+**Ce que j'ai fait** : `payments/repo.rs` gagne `partner_totals` et `list_partner_activity`, avec
+les types `PartnerTotals` et `PartnerActivity` dans `payments/mod.rs`. En revanche le relevé de
+l'employé reste chez lui, dans `reporting::employee_statement`.
+
+**Pourquoi cette frontière-là** : ce que lit un commerçant, ce sont ses propres encaissements —
+`payments` joint à `ledger_operations`, exactement la matière dont `payments/repo.rs` a déjà la
+charge, et dont j'ai eu besoin de toute façon pour le montant du §25. Le relevé d'un employé, lui,
+mélange rechargements et paiements, et va chercher le nom d'un employeur ou d'une enseigne : c'est
+un croisement de trois domaines dont aucun n'est le mien.
+
+**Le libellé du client** — « K. A. » — est calculé en SQL à partir des initiales de l'employé, avec
+un `LEFT JOIN` : un compte sans fiche employé rend un tiret plutôt que de faire disparaître la
+ligne. Le nom complet ne quitte jamais la base.
+
+### 30. Ce que mes deux fichiers de routes attendent de Giscard
+
+Les neuf handlers sont écrits et compilent, vérifiés contre un jeu de bouchons que j'ai posés puis
+retirés. Voici, exactement, ce qui leur manque. Je le liste ici parce que la moitié de ces éléments
+n'était pas dans le contrat figé, et qu'ils sont autant de décisions que je prends à sa place tant
+qu'il ne les a pas prises.
+
+```rust
+// core/src/lib.rs
+pub mod directory;  pub mod partners;  pub mod payments;  pub mod reporting;
+
+// core/src/partners/mod.rs
+pub struct PartnerCard { pub id: PartnerId, pub trade_name: String }
+pub enum PartnerError { NotApproved, Db(sqlx::Error) }
+
+// core/src/partners/repo.rs
+pub async fn approved_account(tx: &mut PgTransaction<'_>, id: PartnerId)
+    -> Result<AccountId, PartnerError>;
+
+// core/src/partners/highlights.rs
+pub struct MinisterPick { pub partner: PartnerCard, pub position: i32 }
+pub async fn minister_picks(pool: &PgPool) -> Result<Vec<MinisterPick>, PartnerError>;
+
+// core/src/directory/employees.rs
+pub async fn active_account(conn: &mut PgConnection, employee: EmployeeId)
+    -> Result<AccountId, DirectoryError>;
+
+// core/src/reporting/mod.rs
+pub struct StatementLine {
+    pub operation_id: OperationId, pub kind: OperationKind, pub amount: Money,
+    pub incoming: bool, pub counterparty: String,
+    pub occurred_at: DateTime<Utc>, pub reference: Option<String>,
+}
+pub async fn employee_statement(
+    pool: &PgPool, account: AccountId, limit: i64, cursor: Option<&str>,
+) -> Result<Vec<StatementLine>, sqlx::Error>;
+
+// api/Cargo.toml : ed25519-dalek, puisque AppState porte Arc<SigningKey>
+// api/src/state.rs   : AppState { db, clock, signing_key, config }, Clone
+// api/src/error.rs   : ApiError, IntoResponse, et From<_> pour CoreError, sqlx::Error,
+//                      InvalidMoneyError, PaymentError, PartnerError, DirectoryError
+// api/src/extractors/auth.rs       : AuthUser<R>(pub AuthenticatedUser, pub PhantomData<R>),
+//                                    marqueurs Employee et Partner,
+//                                    From<AuthenticatedUser> pour EmployeeId et PartnerId
+// api/src/extractors/pagination.rs : Pagination { cursor: Option<String>, limit: u32 }
+// api/src/extractors/validated.rs  : ValidatedJson<T: Validate>(pub T)
+// api/src/dto/mod.rs               : Paginated<T> { items, next_cursor } + les pub mod
+// api/src/dto/catalog.rs           : CatalogItem + From<&PartnerCard>
+// api/src/routes/mod.rs            : monte employee::routes() et partner::routes()
+```
+
+Deux points ne se devinent pas. `AuthenticatedUser` doit se convertir en `EmployeeId` et en
+`PartnerId` — c'est ce que le handler d'exemple du guide suppose avec son `partner.into()`, et
+sans ces deux conversions aucun handler ne sait de qui il parle. Et `ApiError` doit accepter
+`PaymentError` directement, sans passer par `CoreError` : les codes du dictionnaire §6 distinguent
+`TOKEN_EXPIRED` de `TOKEN_ALREADY_USED`, ce que la conversion vers `CoreError` aplatirait.
+
+**`PaymentError::code()`** est en revanche déjà écrit, chez moi, dans `payments/mod.rs` : le lot de
+resynchronisation doit nommer l'erreur de chaque ligne sans fabriquer de réponse HTTP, donc le
+code stable appartient au domaine. `api/src/error.rs` n'a plus qu'à y ajouter le statut.
+

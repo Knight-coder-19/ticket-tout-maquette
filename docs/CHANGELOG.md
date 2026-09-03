@@ -3,6 +3,87 @@
 [//]: # (This is a changelog file)
 [//]: # (Each time you make a minor or minor change in the project, repertoriate it here according to the following format. So each changes equals to an affectation of this file with all the sections.)
 
+## 1.9.0 03.09.2026
+
+### Added
+
+- `migrations/0003_topup_reference.sql` : l'index unique partiel
+  `(employer_id, reference) WHERE reference IS NOT NULL` sur `topups`. Jusqu'ici l'idempotence du
+  rechargement ne tenait que par le verrou consultatif pris par `topup`, et un `INSERT` direct
+  l'aurait contournée — c'est la faille nommée au §17. L'index partiel laisse coexister autant de
+  rechargements sans référence que nécessaire.
+- `docs/data-model.md` : le schéma détaillé, qui restait à l'état de TODO. Les treize énumérations
+  et les dix-huit tables, colonne par colonne, avec pour chacune la contrainte qui la tient et la
+  raison de ce choix. Plus une section sur l'immuabilité — pourquoi la règle d'ajout seul est posée
+  deux fois, par déclencheur **et** par privilège, et en quoi les deux échouent différemment.
+- `api/src/routes/employee.rs` : les cinq routes de l'espace employé. `GET /me/balance` déclenche
+  au passage le balayage paresseux des jetons échus, comme le prévoit le périmètre — sans lui, un
+  solde affiché resterait grevé par une réservation morte.
+- `api/src/routes/partner.rs` : les quatre routes de l'espace partenaire, dont le lot de
+  resynchronisation, où chaque ligne s'exécute dans sa propre transaction et où une ligne en échec
+  ne fait jamais tomber le lot.
+- `payments/repo.rs` : `partner_totals` et `list_partner_activity`, les deux lectures dont l'espace
+  partenaire a besoin. `PartnerActivity` et `PartnerTotals` les accompagnent dans `payments/mod.rs`.
+- `payments/mod.rs` : `PaymentError::code()`, le code d'erreur stable du dictionnaire §6. Il vit
+  dans le domaine parce que le lot de resynchronisation doit nommer l'échec de chaque ligne sans
+  fabriquer de réponse HTTP.
+- `dto/partner.rs` : `PeriodQuery`, avec une période par défaut de trente jours et une borne
+  inversée ramenée à un intervalle vide plutôt que refusée.
+
+### Notes
+
+- **Le contrat `AuthUser<R: Role>(pub AuthenticatedUser)` figé à H+0 ne compile pas.** Rust refuse
+  un paramètre de type qui n'apparaît dans aucun champ. Mes handlers destructurent donc
+  `AuthUser(user, _)`, en supposant un `PhantomData<R>` en second position. C'est le §27, et c'est
+  un point à corriger dans `TASK-DISTRIBUTION-BACKEND.md` avant que l'un de nous le redécouvre.
+- Les neuf handlers **compilent**, vérifiés contre un jeu complet de bouchons — dix-sept fichiers
+  et une dépendance — posés puis retirés. Aucun fichier hors de mon périmètre n'est modifié.
+- Ce qu'il reste à recevoir de Giscard est listé exhaustivement au §30 de `decisions.md`, avec les
+  signatures exactes. Deux points n'étaient pas dans le contrat figé et sont des décisions que je
+  prends à sa place tant qu'il ne les a pas prises : les conversions de `AuthenticatedUser` vers
+  `EmployeeId` et `PartnerId`, et le fait qu'`ApiError` accepte `PaymentError` sans passer par
+  `CoreError`, qui aplatirait les codes du dictionnaire.
+- Le curseur de pagination est pour l'instant l'identifiant de la dernière ligne rendue, et non le
+  base64 de `(valeur_de_tri, id)` du plan : l'encodage appartient à `extractors/pagination.rs`, et
+  en inventer un second l'aurait contredit en silence. Voir §28.
+- Le relevé de l'employé reste chez Giscard, dans `reporting`, alors que les lectures du commerçant
+  sont chez moi. La frontière et sa raison sont au §29.
+
+## 1.8.0 03.09.2026
+
+### Fixed
+
+- **La file d'attente hors ligne fonctionne enfin.** `settle` jugeait l'expiration du jeton contre
+  l'horloge du serveur, alors que le commerçant a pu scanner hors ligne et ne se synchroniser que
+  plus tard. Avec un jeton qui vit 300 s et une fenêtre de resynchronisation de 72 h, tout
+  encaissement différé de plus de cinq minutes était refusé, et `RESYNC_MAX_AGE_HOURS` ne servait à
+  rien. L'expiration se juge désormais au moment du **scan**. Détail et contrepartie de sécurité
+  dans `decisions.md` §26.
+- **Un jeton déjà balayé peut être réglé.** `expire_stale_tokens` passe les jetons échus en
+  `expired` et rend leur réservation ; `settle` les refusait ensuite sans regarder `scanned_at`,
+  ce qui annulait la correction ci-dessus dès le premier balayage. `settle` les accepte maintenant,
+  sans libérer une réservation qui n'existe plus, et `consume_token` accepte
+  `status IN ('active', 'expired')` pour que le jeton ne reste pas `expired` avec un paiement
+  attaché.
+- Un encaissement différé dont les fonds libérés ont été dépensés entre-temps rend
+  `InsufficientFunds` et non plus une erreur de ledger traduite en 500.
+
+### Added
+
+- Cinq tests dans `payments_flow.rs` : le scan valide réglé deux heures plus tard, le scan
+  postérieur à l'expiration refusé malgré la fenêtre de resynchronisation, l'horodatage client en
+  avance ramené au nôtre, le scan antérieur à l'émission refusé, le jeton balayé réglé sans double
+  libération, et celui dont l'argent a été redépensé. `payments_flow.rs` compte 25 tests.
+
+### Notes
+
+- Trois bornes encadrent la confiance accordée à `scanned_at` : la fenêtre de resynchronisation,
+  le plafonnement à l'horloge serveur, et le refus d'un scan antérieur à l'émission du jeton. Ce
+  qu'un client malveillant y gagne au maximum est d'encaisser un jeton qu'il détient déjà et qui a
+  expiré — il ne peut ni en forger, ni en rejouer, ni en changer le montant.
+- **L'invariant I7 devient vrai par construction.** « Un jeton expiré n'est jamais réglé » était
+  vérifié après coup par une requête ; c'est désormais la condition qui autorise l'écriture.
+
 ## 1.7.0 03.09.2026
 
 ### Changed

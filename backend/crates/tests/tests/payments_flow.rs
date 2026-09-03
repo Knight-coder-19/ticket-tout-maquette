@@ -443,7 +443,7 @@ async fn an_expired_token_is_refused(pool: PgPool)
 }
 
 #[sqlx::test(migrations = "../../migrations")]
-async fn the_resync_window_does_not_extend_the_token_lifetime(pool: PgPool)
+async fn a_scan_made_while_the_token_was_valid_settles_hours_later(pool: PgPool)
 {
     let clock = FixedClock::new(epoch());
     let employee = make_employee(&pool, "claire@example.test").await;
@@ -455,6 +455,40 @@ async fn the_resync_window_does_not_extend_the_token_lifetime(pool: PgPool)
         .await
         .unwrap();
     let scanned_at = clock.now() + Duration::seconds(60);
+
+    clock.advance(Duration::hours(2));
+
+    let settled = settle_on(
+        &pool,
+        &clock,
+        partner.partner,
+        &TokenRef::Jti(issued.jti),
+        scanned_at,
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(
+        settled.payment.scanned_at, scanned_at,
+        "the payment is dated when the merchant scanned it, not when it reached us"
+    );
+    assert_eq!(account(&pool, employee.account).await, (8750, 0));
+    assert_eq!(account(&pool, partner.account).await, (1250, 0));
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_scan_made_after_expiry_is_refused_even_inside_the_resync_window(pool: PgPool)
+{
+    let clock = FixedClock::new(epoch());
+    let employee = make_employee(&pool, "claire@example.test").await;
+    let partner = make_partner(&pool, "chez-paul@example.test", "Chez Paul").await;
+
+    credit(&pool, employee.account, euros("100.00")).await;
+
+    let issued = authorize_on(&pool, &clock, employee.account, euros("12.50"))
+        .await
+        .unwrap();
+    let scanned_at = clock.now() + Duration::seconds(301);
 
     clock.advance(Duration::hours(2));
 
@@ -471,6 +505,145 @@ async fn the_resync_window_does_not_extend_the_token_lifetime(pool: PgPool)
         matches!(refused, Err(PaymentError::TokenExpired)),
         "expected TokenExpired, got {refused:?}"
     );
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_scan_timestamped_in_the_future_does_not_extend_the_token(pool: PgPool)
+{
+    let clock = FixedClock::new(epoch());
+    let employee = make_employee(&pool, "claire@example.test").await;
+    let partner = make_partner(&pool, "chez-paul@example.test", "Chez Paul").await;
+
+    credit(&pool, employee.account, euros("100.00")).await;
+
+    let issued = authorize_on(&pool, &clock, employee.account, euros("12.50"))
+        .await
+        .unwrap();
+
+    clock.advance(Duration::seconds(301));
+
+    let refused = settle_on(
+        &pool,
+        &clock,
+        partner.partner,
+        &TokenRef::Jti(issued.jti),
+        clock.now() + Duration::hours(1),
+    )
+    .await;
+
+    assert!(
+        matches!(refused, Err(PaymentError::TokenExpired)),
+        "a clock running ahead is clamped to ours, got {refused:?}"
+    );
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_scan_older_than_the_token_itself_is_refused(pool: PgPool)
+{
+    let clock = FixedClock::new(epoch());
+    let employee = make_employee(&pool, "claire@example.test").await;
+    let partner = make_partner(&pool, "chez-paul@example.test", "Chez Paul").await;
+
+    credit(&pool, employee.account, euros("100.00")).await;
+
+    let issued = authorize_on(&pool, &clock, employee.account, euros("12.50"))
+        .await
+        .unwrap();
+
+    let refused = settle_on(
+        &pool,
+        &clock,
+        partner.partner,
+        &TokenRef::Jti(issued.jti),
+        issued.issued_at - Duration::seconds(60),
+    )
+    .await;
+
+    assert!(
+        matches!(refused, Err(PaymentError::TokenExpired)),
+        "a scan predating the token cannot be genuine, got {refused:?}"
+    );
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_swept_token_still_settles_from_the_offline_queue(pool: PgPool)
+{
+    let clock = FixedClock::new(epoch());
+    let employee = make_employee(&pool, "claire@example.test").await;
+    let partner = make_partner(&pool, "chez-paul@example.test", "Chez Paul").await;
+
+    credit(&pool, employee.account, euros("100.00")).await;
+
+    let issued = authorize_on(&pool, &clock, employee.account, euros("12.50"))
+        .await
+        .unwrap();
+    let scanned_at = clock.now() + Duration::seconds(60);
+
+    clock.advance(Duration::hours(3));
+
+    let swept = payments::expire_stale_tokens(&pool, &clock, payments::expire::DEFAULT_BATCH)
+        .await
+        .unwrap();
+
+    assert_eq!(swept, 1);
+    assert_eq!(account(&pool, employee.account).await, (10000, 0));
+
+    let settled = settle_on(
+        &pool,
+        &clock,
+        partner.partner,
+        &TokenRef::Jti(issued.jti),
+        scanned_at,
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(settled.amount, euros("12.50"));
+    assert_eq!(
+        account(&pool, employee.account).await,
+        (8750, 0),
+        "the sweep already released the hold, settling must not release it twice"
+    );
+    assert_eq!(account(&pool, partner.account).await, (1250, 0));
+    assert_eq!(token_status(&pool, issued.jti).await, TokenStatus::Consumed);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_swept_token_is_refused_when_the_money_was_spent_meanwhile(pool: PgPool)
+{
+    let clock = FixedClock::new(epoch());
+    let employee = make_employee(&pool, "claire@example.test").await;
+    let partner = make_partner(&pool, "chez-paul@example.test", "Chez Paul").await;
+
+    credit(&pool, employee.account, euros("100.00")).await;
+
+    let issued = authorize_on(&pool, &clock, employee.account, euros("30.00"))
+        .await
+        .unwrap();
+    let scanned_at = clock.now() + Duration::seconds(60);
+
+    clock.advance(Duration::hours(3));
+    payments::expire_stale_tokens(&pool, &clock, payments::expire::DEFAULT_BATCH)
+        .await
+        .unwrap();
+    authorize_on(&pool, &clock, employee.account, euros("100.00"))
+        .await
+        .unwrap();
+
+    let refused = settle_on(
+        &pool,
+        &clock,
+        partner.partner,
+        &TokenRef::Jti(issued.jti),
+        scanned_at,
+    )
+    .await;
+
+    assert!(
+        matches!(refused, Err(PaymentError::InsufficientFunds)),
+        "the released funds were reserved again, got {refused:?}"
+    );
+    assert_eq!(payment_count(&pool).await, 0);
 }
 
 #[sqlx::test(migrations = "../../migrations")]

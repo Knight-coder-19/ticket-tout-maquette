@@ -13,7 +13,7 @@ use crate::clock::Clock;
 use crate::config::CoreConfig;
 use crate::crypto::short_code;
 use crate::ids::{AccountId, Jti, PartnerId};
-use crate::ledger::{self, OperationKind, PgTransaction, Posting};
+use crate::ledger::{self, LedgerError, OperationKind, PgTransaction, Posting};
 use crate::partners;
 
 pub async fn settle(
@@ -34,9 +34,13 @@ pub async fn settle(
         return Err(PaymentError::TokenAlreadyUsed);
     }
 
-    if clock.now() - scanned_at > config.resync_max_age {
+    let now = clock.now();
+
+    if now - scanned_at > config.resync_max_age {
         return Err(PaymentError::ResyncTooLate);
     }
+
+    let scanned_at = scanned_at.min(now);
 
     ledger::lock_chain(tx).await?;
 
@@ -46,13 +50,14 @@ pub async fn settle(
     };
     let account = ledger::lock_account(tx, token.account_id).await?;
 
-    match token.status {
-        TokenStatus::Active => (),
+    let still_held = match token.status {
+        TokenStatus::Active => true,
+        TokenStatus::Expired => false,
         TokenStatus::Consumed => return existing_settlement(&mut *tx, jti, partner).await,
-        TokenStatus::Expired => return Err(PaymentError::TokenExpired),
         TokenStatus::Cancelled => return Err(PaymentError::TokenCancelled)
-    }
-    if token.expires_at <= clock.now() {
+    };
+
+    if scanned_at < token.issued_at || token.expires_at <= scanned_at {
         return Err(PaymentError::TokenExpired);
     }
     if !account.is_active() {
@@ -64,9 +69,11 @@ pub async fn settle(
         _ => return Err(PaymentError::PartnerNotApproved)
     };
 
-    ledger::release_hold(tx, token.account_id, token.amount).await?;
+    if still_held {
+        ledger::release_hold(tx, token.account_id, token.amount).await?;
+    }
 
-    let operation = ledger::post_operation(
+    let operation = match ledger::post_operation(
         tx,
         OperationKind::Payment,
         Posting {
@@ -78,7 +85,12 @@ pub async fn settle(
             created_by: None
         },
     )
-    .await?;
+    .await
+    {
+        Ok(operation) => operation,
+        Err(LedgerError::InsufficientFunds(_)) => return Err(PaymentError::InsufficientFunds),
+        Err(error) => return Err(PaymentError::Ledger(error))
+    };
 
     repo::consume_token(&mut *tx, jti, scanned_at).await?;
     let payment = repo::insert_payment(
