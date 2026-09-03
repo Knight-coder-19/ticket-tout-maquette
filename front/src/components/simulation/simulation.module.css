@@ -1,0 +1,40 @@
+/* Mention de simulation : visible et non dissimulee partout ou un montant
+   apparait (F. Pontaillac). */
+
+.bandeau {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espace-2);
+  padding: var(--espace-2) var(--espace-4);
+  background: var(--couleur-simulation-fond);
+  color: var(--couleur-simulation);
+  border: 1px solid var(--couleur-simulation);
+  border-radius: var(--rayon-md);
+  font-size: var(--taille-sm);
+}
+.bandeau svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.mention {
+  font-size: var(--taille-xs);
+  color: var(--couleur-simulation);
+}
+
+.montant {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* Marqueur toujours present a cote d'une valeur : la mention ne peut pas
+   etre "oubliee" sur un ecran. */
+.marque {
+  margin-left: 0.35em;
+  font-family: var(--police-titre);
+  font-size: 0.62em;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--couleur-simulation);
+  vertical-align: 0.15em;
+}
