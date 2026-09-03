@@ -5,22 +5,48 @@
  * AVERTISSEMENT DE PROVENANCE — à lire avant de faire confiance à ce fichier
  * ─────────────────────────────────────────────────────────────────────────
  *
- * Au 2026-09-02, le back n'expose AUCUNE route et ne définit AUCUN DTO en
- * Rust. Les sept fichiers de `backend/crates/api/src/dto/` sont des fichiers
- * de commentaires : 18 lignes en tout, pas une `struct`, pas un `derive`.
- * Vérifiable en une commande :
+ * MISE À JOUR 2026-09-03 : le constat du 2026-09-02 ci-dessous ne tient plus
+ * pour trois fichiers. `backend/crates/api/src/dto/{employee,partner,catalog}.rs`
+ * portent maintenant de vraies `struct` (`#[derive(Serialize, Deserialize)]`),
+ * et leurs routes sont câblées : `routes/employee.rs` (`/me/balance`,
+ * `/me/transactions`, `/me/minister-picks`, `POST` + `DELETE
+ * /me/payment-tokens`) et `routes/partner.rs` (`/partner/summary`,
+ * `/partner/transactions`, `/partner/payments`, `/partner/payments/batch`)
+ * répondent réellement, derrière `AuthUser<Employee>` / `AuthUser<Partner>`
+ * (cookie de session, `extractors/auth.rs`). Vérifié champ par champ contre
+ * ce fichier : aucun écart. `dto/mod.rs::Paginated<T>` et `error.rs::ErrorBody`
+ * (la forme PLATE `{ error, message, request_id }`, jamais l'imbriquée) sont
+ * également implémentés et confirmés.
  *
- *     git show front:backend/crates/api/src/dto/employee.rs
+ * `dto/catalog.rs` NUANCE le tableau : `CatalogItem` et `CityRef` sont bien
+ * de vraies `struct`, mais `routes/catalog.rs` (qui doit câbler `GET /catalog`
+ * et `GET /cities`) est ENCORE un fichier de commentaires. La FORME de
+ * `CatalogItem`/`CityRef` est donc confirmée, la ROUTE ne l'est pas — distinction
+ * reprise plus bas type par type.
  *
- * Chaque type ci-dessous porte donc sa source. Deux niveaux, jamais mélangés :
+ * `dto/{admin,public,auth,integration}.rs` et leurs routes restent, eux,
+ * des fichiers de commentaires purs — le constat du 2026-09-02 s'y applique
+ * encore tel quel. Vérifiable en une commande :
  *
- *   - « Source : backend/... »   le fichier Rust dit quelque chose de la forme
- *                                (même en commentaire) ;
+ *     git show HEAD:backend/crates/api/src/routes/admin.rs
+ *
+ * (remplacer `admin` par `employee`, `partner` ou `catalog` pour comparer.)
+ *
+ * Chaque type ci-dessous porte donc sa source. Trois niveaux, jamais mélangés :
+ *
+ *   - « Source : backend/... » + « implémenté et câblé »
+ *                                le fichier Rust définit la `struct` ET la
+ *                                route qui la sert répond réellement ;
+ *   - « Source : backend/... » + « DTO confirmé, route non câblée »
+ *                                la `struct` existe et son contenu est vérifié,
+ *                                mais aucune route ne la sert encore ;
  *   - « Source : docs/... — non encore implémenté côté back »
- *                                la forme n'existe QUE dans la documentation.
+ *                                la forme n'existe QUE dans la documentation,
+ *                                ni la `struct` ni la route n'existent en Rust.
  *
- * Le second niveau est le cas général. Aucun de ces types n'a jamais été
- * confronté à une réponse réelle.
+ * Le troisième niveau reste le cas général pour tout ce qui touche
+ * admin/public/auth/integration. Mais les types employé, partenaire et
+ * catalogue, eux, ONT désormais été confrontés à une réponse réelle.
  *
  * ─────────────────────────────────────────────────────────────────────────
  * RÈGLE D'USAGE
@@ -110,11 +136,16 @@ export type HighlightPlacement = "minister_pick" | "public_featured";
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 /**
- * Source : docs/data-dictionary.md:319-322 — non encore implémenté côté back.
- * L'extracteur correspondant est décrit en commentaire :
- * backend/crates/api/src/extractors/pagination.rs:1-3 — curseur opaque base64
- * encapsulant `(valeur_de_tri, id)`, limite plafonnée à 100, keyset seulement,
- * jamais d'OFFSET.
+ * Source : backend/crates/api/src/dto/mod.rs:14-18 — implémenté et confirmé :
+ * `pub struct Paginated<T> { items: Vec<T>, next_cursor: Option<String> }`,
+ * exactement cette forme. Utilisé réellement par `EmployeeTransactionList` et
+ * `PartnerTransactionList` (routes câblées, voir l'avertissement en tête de
+ * fichier). L'extracteur de curseur reste en commentaire :
+ * `extractors/pagination.rs:1-3` — curseur opaque, limite plafonnée à 100,
+ * keyset seulement, jamais d'OFFSET ; la forme exacte de `next_cursor` (par
+ * exemple pour `/catalog`, keyset sur `(trade_name, id)` confirmé dans
+ * `core/src/partners/catalog.rs`) n'est donc pas encore fixée bit à bit, mais
+ * l'enveloppe `{ items, next_cursor }` elle-même l'est.
  *
  * ⚠ Incompatible avec `ReponsePaginee` du front (offset : page / taillePage /
  * total). Ce n'est pas un renommage : le back ne compte pas les lignes et ne
@@ -129,10 +160,11 @@ export type Paginated<T> = {
 };
 
 /**
- * Source : docs/data-dictionary.md:324-328 — non encore implémenté côté back.
- * Décrit aussi en commentaire dans backend/crates/api/src/error.rs:1-3
- * (« emitting { error, message, request_id } ») et dans
- * docs/TASK-DISTRIBUTION-BACKEND.md:422-426.
+ * Source : backend/crates/api/src/error.rs:16-23 — implémenté et confirmé :
+ * `struct ErrorBody { error: &'static str, message: String, request_id: String }`,
+ * sérialisée PLATE (`(self.status, Json(body)).into_response()`, error.rs:61),
+ * jamais l'enveloppe imbriquée. `From<CoreError> for ApiError` (error.rs:66-98)
+ * couvre déjà tous les codes de la section 6 du contrat.
  *
  * `error` est une CHAÎNE PLATE, pas un objet. « Le front réagit sur `error`,
  * jamais sur `message`. » (data-dictionary.md:626)
@@ -150,10 +182,13 @@ export type ApiError = {
  * Source : front/src/app/api/payment-tokens/route.ts:30-36 et
  *          front/src/app/api/payment-tokens/[token]/route.ts:17-23.
  *
- * Ce n'est PAS la forme du back. C'est celle que servent les routes de
- * simulation du front, et que lit `encaissement.service.ts:16,36-37`.
- * Elle est déclarée ici parce que `depuisErreur()` doit accepter les deux
- * tant que le back n'a pas tranché. Voir contrat-api.md, divergence D7.
+ * Ce n'est PAS la forme du back — et ça, c'est désormais TRANCHÉ, pas
+ * seulement supposé : `error.rs:16-23` confirme la forme plate (`ApiError`
+ * ci-dessus) comme la SEULE que le back rende. Cette forme imbriquée reste
+ * déclarée ici uniquement parce que d'anciennes routes de simulation du front
+ * la servent encore et que `depuisErreur()` doit rester tolérant aux deux —
+ * pas parce que le back pourrait encore choisir celle-ci. Voir contrat-api.md,
+ * divergence D7 (à clore : la question qu'elle posait a une réponse).
  */
 export type ErreurImbriquee = {
   error: {
@@ -163,8 +198,12 @@ export type ErreurImbriquee = {
 };
 
 /**
- * Source : docs/data-dictionary.md:330 — non encore implémenté côté back.
- * La table `cities` existe : backend/migrations/0001_schema.sql:18-24.
+ * Source : backend/crates/api/src/dto/catalog.rs:18-33 — DTO confirmé, route
+ * non câblée. `struct CityRef { id, name, department }`, avec
+ * `impl From<&City> for CityRef` déjà écrit — la forme ci-dessous est exacte.
+ * Mais `routes/catalog.rs`, censé câbler `GET /cities`, est encore un fichier
+ * de commentaires : rien ne sert ce DTO sur le réseau pour l'instant. La table
+ * `cities` existe : backend/migrations/0001_schema.sql:18-24.
  */
 export type CityRef = {
   id: string;
@@ -291,9 +330,10 @@ export type LoginResponse = {
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 /**
- * Source : backend/crates/api/src/dto/employee.rs:1 — le fichier Rust nomme
- * les trois champs (« balance { settled, held, available } ») sans les typer.
- * Types et quatrième champ : docs/data-dictionary.md:375-380.
+ * Source : backend/crates/api/src/dto/employee.rs:19-31 — implémenté et
+ * câblé, `GET /me/balance` (routes/employee.rs:30,37-53). Les quatre champs
+ * sont réels, `TryFrom<&Account> for BalanceResponse` (employee.rs:33-45)
+ * calcule `available` comme `settled - held`, comme documenté.
  *
  * `available = settled - held`. C'est CE nombre qui s'affiche en grand
  * (data-dictionary.md:378, glossaire :660).
@@ -314,8 +354,11 @@ export type BalanceResponse = {
 };
 
 /**
- * Source : docs/data-dictionary.md:383-391 — non encore implémenté côté back.
- * Mentionné sans détail dans dto/employee.rs:2 (« transaction page »).
+ * Source : backend/crates/api/src/dto/employee.rs:54-72 — implémenté et
+ * câblé, `GET /me/transactions?cursor=&limit=` (routes/employee.rs:31,55-78).
+ * Les sept champs correspondent exactement, `direction` compris
+ * (`TransactionDirection`, `rename_all = "lowercase"` → `"in" | "out"`,
+ * employee.rs:47-52).
  */
 export type EmployeeTransaction = {
   id: string;
@@ -338,24 +381,30 @@ export type EmployeeTransaction = {
   reference: string | null;
 };
 
-/** Source : docs/data-dictionary.md:392 — non encore implémenté côté back. */
+/** Source : backend/crates/api/src/dto/employee.rs:74 — implémenté et câblé. */
 export type EmployeeTransactionList = Paginated<EmployeeTransaction>;
 
 /**
- * Source : docs/data-dictionary.md:395-398 (amendement A2) — non encore
- * implémenté côté back. Cité dans dto/employee.rs:2 (« minister picks »).
+ * Source : backend/crates/api/src/dto/employee.rs:76-80 (amendement A2) —
+ * implémenté et câblé, `GET /me/minister-picks` (routes/employee.rs:32,80-95).
+ * `highlights::minister_picks()` (`core/src/partners/highlights.rs`) est
+ * maintenant réel — plus un `todo!()` — et joint sur `status = 'approved'`
+ * comme documenté.
  */
 export type MinisterPick = {
   partner: CatalogItem;
   position: number;
 };
 
-/** Source : docs/data-dictionary.md:399 — non encore implémenté côté back. */
+/** Source : backend/crates/api/src/dto/employee.rs:83 — implémenté et câblé. */
 export type MinisterPickList = MinisterPick[];
 
 /**
- * Source : backend/crates/api/src/dto/employee.rs:2 (« authorize request »)
- * et docs/data-dictionary.md:402. Non encore implémenté côté back.
+ * Source : backend/crates/api/src/dto/employee.rs:82-95 — implémenté et
+ * câblé, corps de `POST /me/payment-tokens` (routes/employee.rs:33,97-119).
+ * `#[validate(schema(function = "amount_is_positive"))]` refuse un montant
+ * non strictement positif — cohérent avec le `422 VALIDATION_FAILED` du
+ * contrat.
  *
  * Le montant est fixé À L'ÉMISSION, par le salarié — pas à la caisse. C'est
  * `authorize()` qui le lit, réserve les fonds et signe le jeton :
@@ -367,19 +416,19 @@ export type AuthorizeRequest = {
 };
 
 /**
- * Source : backend/crates/api/src/dto/employee.rs:2-3 — le fichier Rust nomme
- * cinq des six champs (« jti, short_code, amount, expires_at, qr_payload »),
- * `issued_at` ne vient que de docs/data-dictionary.md:405.
+ * Source : backend/crates/api/src/dto/employee.rs:97-113 — implémenté et
+ * câblé, `POST /me/payment-tokens` (routes/employee.rs:33,97-119). Les six
+ * champs sont réels, `amount` compris (type `Money`, euros décimaux).
  *
- * ⚠ CONTRADICTION NON RÉSOLUE. dto/employee.rs:3 écrit « Amounts stay plain
- * integers », ce qui décrirait des centimes entiers. docs/decisions.md:62-71
- * (amendement A5) impose au contraire des euros décimaux sur le fil, et
- * money.rs:145 le confirme dans le code compilable. Le commentaire du DTO est
- * antérieur à A5 et n'a pas été relu. `centimesDepuis()` traite les deux cas
- * plutôt que de parier sur l'un — voir adaptateurs.ts.
+ * ✅ CONTRADICTION RÉSOLUE. L'ancien commentaire du DTO (« Amounts stay plain
+ * integers ») a disparu avec l'implémentation : `IssuedTokenResponse::from`
+ * (employee.rs:115-127) copie `token.amount: Money` tel quel, sérialisé en
+ * euros décimaux comme partout ailleurs (money.rs, amendement A5).
+ * `centimesDepuis()` peut garder sa tolérance aux deux lectures par prudence,
+ * mais la question n'est plus ouverte.
  *
- * ⚠ Le statut HTTP de cette réponse n'est écrit nulle part : 200 ou 201 ?
- * data-dictionary.md:401 ne l'annote pas, alors que les routes à 204 le sont.
+ * ✅ STATUT HTTP RÉSOLU : `201 Created`
+ * (`routes/employee.rs:101`, `(StatusCode::CREATED, Json(...))`).
  */
 export type IssuedTokenResponse = {
   /** UUID du jeton (core/src/ids.rs:81 — `newtype_id!(Jti)`). */
@@ -426,8 +475,8 @@ export type ChargeUtileQr = {
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 /**
- * Source : backend/crates/api/src/dto/partner.rs:1 (« summary ») et
- * docs/data-dictionary.md:419-425. Non encore implémenté côté back.
+ * Source : backend/crates/api/src/dto/partner.rs:12-24 — implémenté et
+ * câblé, `GET /partner/summary?from=&to=` (routes/partner.rs:25,31-48).
  *
  * `total_received` n'est PAS un solde : « ce n'est pas dépensable »
  * (glossaire, data-dictionary.md:661). Il n'existe aucune notion de
@@ -444,8 +493,9 @@ export type PartnerSummary = {
 };
 
 /**
- * Source : backend/crates/api/src/dto/partner.rs:1 (« transaction page ») et
- * docs/data-dictionary.md:428-435. Non encore implémenté côté back.
+ * Source : backend/crates/api/src/dto/partner.rs:26-45 — implémenté et
+ * câblé, `GET /partner/transactions?from=&to=&cursor=`
+ * (routes/partner.rs:26,50-69).
  *
  * ⚠ `customer_label` vaut `"K. A."` — JAMAIS le nom complet
  * (data-dictionary.md:434). L'écran d'encaissement du front affiche
@@ -464,20 +514,21 @@ export type PartnerTransaction = {
 };
 
 /**
- * Source : docs/data-dictionary.md:438-442 — non encore implémenté côté back.
+ * Source : backend/crates/api/src/dto/partner.rs:47-58 — implémenté et câblé,
+ * `POST /partner/payments` (routes/partner.rs:27,71-85).
  *
- * ⚠ CONFLIT DE NOMMAGE NON RÉSOLU. Le dictionnaire décrit deux champs
- * nullables, `jti` et `short_code`, « exactement un des deux ». Le Rust dit
- * autre chose : dto/partner.rs:2 parle d'une « settle request carrying
- * token_ref plus scanned_at », et core/src/payments/mod.rs:1 déclare bien un
- * type `TokenRef` (« scanned jti or typed short code »), c'est-à-dire une
- * union d'un seul champ. Le corps JSON réel n'est donc pas décidé. La forme
- * ci-dessous est celle du contrat publié, qui fait autorité par défaut.
+ * ✅ CONFLIT DE NOMMAGE RÉSOLU EN FAVEUR DU CONTRAT. Le corps JSON reçu EST
+ * bien `{ jti, short_code, scanned_at }` — deux champs nullables au niveau du
+ * fil (`#[schema(value_type = Option<String>...)]`, partner.rs:50-55) —
+ * malgré un type Rust interne en union (`SettleRequest::token_ref()` convertit
+ * vers `TokenRef` APRÈS désérialisation, partner.rs:60-68). `TokenRef` est un
+ * détail d'implémentation, jamais sérialisé lui-même.
  *
- * ⚠ AUCUN CHAMP `amount` — et c'est volontaire : le montant a été fixé à
- * l'émission du jeton et les fonds sont déjà réservés
- * (core/src/payments/settle.rs:1). Le front envoie aujourd'hui un montant à
- * l'encaissement : voir contrat-api.md, divergence D4.
+ * ⚠ AUCUN CHAMP `amount` — confirmé, et c'est volontaire : le montant a été
+ * fixé à l'émission du jeton et les fonds sont déjà réservés
+ * (`settle_payment`, routes/partner.rs:71-85, ne lit `body.amount` nulle
+ * part). Le front envoie aujourd'hui un montant à l'encaissement : voir
+ * contrat-api.md, divergence D4 — toujours ouverte côté écran, plus côté DTO.
  */
 export type SettleRequest = {
   /** Renseigné si scan. */
@@ -489,8 +540,10 @@ export type SettleRequest = {
 };
 
 /**
- * Source : backend/crates/api/src/dto/partner.rs:2 (« payment response ») et
- * docs/data-dictionary.md:443-451. Non encore implémenté côté back.
+ * Source : backend/crates/api/src/dto/partner.rs:86-105 — implémenté et
+ * câblé, réponse de `POST /partner/payments` (routes/partner.rs:71-85) ET de
+ * chaque ligne réussie d'un `POST /partner/payments/batch`
+ * (routes/partner.rs:103-114).
  *
  * ⚠ Ce type ne porte NI l'identité du salarié (refus délibéré, cf.
  * `customer_label`), NI de marqueur de rejeu. Un règlement rejoué par le même
@@ -511,24 +564,36 @@ export type PaymentResponse = {
 };
 
 /**
- * Source : docs/data-dictionary.md:454-461 — non encore implémenté côté back.
- * Cité dans dto/partner.rs:2-3 : « a per-row status so a failing row never
- * drops the batch ».
+ * Source : backend/crates/api/src/dto/partner.rs:129-133 — implémenté et
+ * câblé, `POST /partner/payments/batch` (routes/partner.rs:28,87-101).
+ * `#[validate(length(min = 1, max = 100), nested)]` : jusqu'à 100 lignes,
+ * chacune validée comme un `SettleRequest` normal.
  */
 export type BatchSettleRequest = {
   items: SettleRequest[];
 };
 
-/** Source : docs/data-dictionary.md:455-460 — non encore implémenté. */
+/**
+ * Source : backend/crates/api/src/dto/partner.rs:135-146 — implémenté et
+ * câblé.
+ *
+ * ✅ CORRIGÉ ICI (2026-09-03) : `jti` était typé `string` alors que le Rust
+ * porte `Option<Jti>` (partner.rs:137-138) — `null` quand la ligne portait un
+ * `short_code` inconnu, jamais résolu à un jeton
+ * (`BatchSettleResult::failed`, partner.rs:159-167). Un consommateur qui
+ * lisait `resultat.jti` sans garde aurait planté sur la première ligne
+ * échouée d'un lot de resynchronisation hors-ligne — exactement le chemin
+ * `RESYNC_TOO_LATE` / `TOKEN_NOT_FOUND` que la section 5 du contrat décrit.
+ */
 export type BatchSettleResult = {
-  jti: string;
+  jti: string | null;
   status: "settled" | "failed";
   payment: PaymentResponse | null;
   /** Code d'erreur SCREAMING_SNAKE si `status === "failed"`. */
   error: string | null;
 };
 
-/** Source : docs/data-dictionary.md:461 — non encore implémenté. */
+/** Source : backend/crates/api/src/dto/partner.rs:171-173 — implémenté et câblé. */
 export type BatchSettleResponse = {
   results: BatchSettleResult[];
 };
@@ -538,10 +603,17 @@ export type BatchSettleResponse = {
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 /**
- * Source : backend/crates/api/src/dto/catalog.rs:1 — le fichier Rust ne nomme
- * que « the approved-partner entry with city and neighbourhood », sans un
- * seul champ typé. Les neuf champs viennent de
- * docs/data-dictionary.md:470-480.
+ * Source : backend/crates/api/src/dto/catalog.rs:44-71 — DTO confirmé, route
+ * non câblée. `struct CatalogItem` porte réellement les neuf champs, avec
+ * `impl From<&PartnerCard> for CatalogItem` déjà écrit — la forme ci-dessous
+ * est exacte, `is_official_partner` compris (dérivé du statut au moment de la
+ * conversion, catalog.rs:68, comme documenté). `core/src/partners/catalog.rs`
+ * implémente désormais la recherche (keyset sur `(trade_name, id)`, règle A1
+ * confirmée : `p.city_id = $1 OR p.service_mode = 'online'`). Mais
+ * `routes/catalog.rs`, censé exposer `GET /catalog`, est encore un fichier de
+ * commentaires : personne ne sert ce DTO sur le réseau pour l'instant, et la
+ * forme exacte de `next_cursor` qu'une future route en tirerait n'est donc
+ * pas encore observable.
  *
  * ⚠ `category` est une CHAÎNE, pas un identifiant. Le schéma n'a aucune table
  * de catégories (backend/migrations/0001_schema.sql, 18 tables, aucune
@@ -566,10 +638,18 @@ export type CatalogItem = {
   is_official_partner: boolean;
 };
 
-/** Source : docs/data-dictionary.md:481 — non encore implémenté côté back. */
+/**
+ * Source : docs/data-dictionary.md:481 — enveloppe non encore observable :
+ * `CatalogItem` (le contenu) est confirmé, `GET /catalog` (le contenant) ne
+ * répond pas encore. Voir la note sur `CatalogItem` ci-dessus.
+ */
 export type CatalogList = Paginated<CatalogItem>;
 
-/** Source : docs/data-dictionary.md:484 — non encore implémenté côté back. */
+/**
+ * Source : docs/data-dictionary.md:484 — même statut que `CatalogList` :
+ * `CityRef` est un DTO confirmé (`dto/catalog.rs:18-33`), `GET /cities` ne
+ * répond pas encore (`routes/catalog.rs` non câblé).
+ */
 export type CityList = CityRef[];
 
 /* ═══════════════════════════════════════════════════════════════════════════
