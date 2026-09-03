@@ -385,11 +385,15 @@ export type EmployeeTransaction = {
 export type EmployeeTransactionList = Paginated<EmployeeTransaction>;
 
 /**
- * Source : backend/crates/api/src/dto/employee.rs:76-80 (amendement A2) —
- * implémenté et câblé, `GET /me/minister-picks` (routes/employee.rs:32,80-95).
- * `highlights::minister_picks()` (`core/src/partners/highlights.rs`) est
- * maintenant réel — plus un `todo!()` — et joint sur `status = 'approved'`
- * comme documenté.
+ * Source : backend/crates/api/src/dto/employee.rs:76-80 (amendement A2) — DTO
+ * et route HTTP câblés (`GET /me/minister-picks`, routes/employee.rs:32,80-95),
+ * MAIS la fonction qu'elle appelle ne l'est pas encore sur `front` :
+ * `highlights::minister_picks()` (`core/src/partners/highlights.rs`) reste un
+ * `todo!()` sur cette branche — elle paniquerait (500) si la route était
+ * atteinte. Une implémentation réelle existe sur `origin/develop` (2 commits
+ * non fusionnés dans `front` au 2026-09-03), mais tant qu'elle n'est pas
+ * mergée ici, la forme ci-dessous est confirmée, le comportement ne l'est pas.
+ * Voir le dossier de soutenance, section « ce qui tourne vraiment ».
  */
 export type MinisterPick = {
   partner: CatalogItem;
@@ -603,17 +607,19 @@ export type BatchSettleResponse = {
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 /**
- * Source : backend/crates/api/src/dto/catalog.rs:44-71 — DTO confirmé, route
- * non câblée. `struct CatalogItem` porte réellement les neuf champs, avec
- * `impl From<&PartnerCard> for CatalogItem` déjà écrit — la forme ci-dessous
- * est exacte, `is_official_partner` compris (dérivé du statut au moment de la
- * conversion, catalog.rs:68, comme documenté). `core/src/partners/catalog.rs`
- * implémente désormais la recherche (keyset sur `(trade_name, id)`, règle A1
- * confirmée : `p.city_id = $1 OR p.service_mode = 'online'`). Mais
- * `routes/catalog.rs`, censé exposer `GET /catalog`, est encore un fichier de
- * commentaires : personne ne sert ce DTO sur le réseau pour l'instant, et la
- * forme exacte de `next_cursor` qu'une future route en tirerait n'est donc
- * pas encore observable.
+ * Source : backend/crates/api/src/dto/catalog.rs:44-71 — DTO confirmé, rien
+ * derrière lui sur `front`. `struct CatalogItem` porte réellement les neuf
+ * champs, avec `impl From<&PartnerCard> for CatalogItem` déjà écrit — la
+ * forme ci-dessous est exacte, `is_official_partner` compris (dérivé du
+ * statut, catalog.rs:68, comme documenté).
+ *
+ * ⚠ CORRIGÉ ICI (2026-09-03) : une version précédente de ce commentaire
+ * affirmait que `core/src/partners/catalog.rs` (la recherche, keyset sur
+ * `(trade_name, id)`, règle A1) était implémentée — c'est vrai sur
+ * `origin/develop`, PAS sur `front`, où ce fichier est encore un stub de 3
+ * lignes (`todo`). Sur `front`, ni la recherche ni `routes/catalog.rs`
+ * (censé exposer `GET /catalog`) n'existent : personne ne sert ce DTO sur le
+ * réseau, et la forme exacte de `next_cursor` reste inobservable.
  *
  * ⚠ `category` est une CHAÎNE, pas un identifiant. Le schéma n'a aucune table
  * de catégories (backend/migrations/0001_schema.sql, 18 tables, aucune
