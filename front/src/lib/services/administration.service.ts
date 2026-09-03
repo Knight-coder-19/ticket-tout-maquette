@@ -27,9 +27,12 @@ import {
   depuisDecisionJournal,
   depuisDemandeAdhesion,
   depuisEcritureRegistre,
+  depuisApercuLot,
   depuisEmployeur,
+  depuisRechargement,
   depuisFicheBeneficiaire,
   depuisLigneRepertoire,
+  depuisMiseEnAvant,
   depuisRegularisation,
   depuisTotauxTransactions,
   depuisTransactionNationale,
@@ -42,7 +45,15 @@ import type {
   AdminTransactionList,
   EmployeeDetail,
   EmployeeDirectoryList,
+  CreateHighlightRequest,
+  CreateHighlightResponse,
+  BatchPreview,
   EmployerItem,
+  HighlightItem,
+  TopupRequest,
+  TopupResponse,
+  ReorderRequest,
+  ReorderResponse,
   LedgerEntryList,
   Paginated,
   PartnerAccountList,
@@ -62,6 +73,10 @@ import type {
   Regularisation,
   SensRegularisation,
   StatutBeneficiaire,
+  Emplacement,
+  MiseEnAvant,
+  ApercuLot,
+  Rechargement,
 } from "@/types/domaine";
 
 /** Une page de la file de validation, dans le vocabulaire du domaine. */
@@ -491,4 +506,145 @@ export async function reactiverBeneficiaire(id: string): Promise<void> {
     `/v1/admin/employees/${encodeURIComponent(id)}/reinstate`,
     { method: "POST" },
   );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * MISES EN AVANT — VITRINE PUBLIQUE
+ *
+ * ✅ Les quatre routes sont DU CONTRAT (`data-dictionary.md:513-534`,
+ * confirmées par `front/docs/contrat-api.md:158-161`). Rien n'y manque côté
+ * surface ; voir `app/api/v1/admin/highlights/route.ts` pour ce qui EST notre
+ * ajout (le champ `note`) et pour les deux statuts HTTP non écrits par le
+ * contrat, tranchés là comme ici.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+export async function listerMisesEnAvant(emplacement: Emplacement): Promise<MiseEnAvant[]> {
+  const brut = await appelApi<HighlightItem[]>(
+    `/v1/admin/highlights?placement=${encodeURIComponent(emplacement)}`,
+    { cache: "no-store" },
+  );
+  return brut.map(depuisMiseEnAvant);
+}
+
+export type EchecMiseEnAvantAppel = "non_eligible" | "deja_en_avant";
+
+/**
+ * Ajoute un partenaire à un emplacement.
+ *
+ * ⚠ `motif` a été délibérément appelé `mot` partout dans le domaine : ce
+ * n'est pas un motif technique qui justifie une décision, ce sont les mots du
+ * ministre, qui paraissent tels quels sur la vitrine publique. Nommer ce
+ * paramètre « motif » comme pour un refus ou une suspension aurait suggéré le
+ * même ton — négatif, justificatif — que ces deux-là écartent explicitement.
+ */
+export async function ajouterMiseEnAvant(
+  partenaireId: string,
+  emplacement: Emplacement,
+  position: number | null,
+  mot: string | null,
+): Promise<MiseEnAvant> {
+  const brut = await appelApi<CreateHighlightResponse>("/v1/admin/highlights", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      partner_id: partenaireId,
+      placement: emplacement,
+      position,
+      note: mot !== null && mot.trim() !== "" ? mot.trim() : null,
+    } satisfies CreateHighlightRequest),
+  });
+  return depuisMiseEnAvant(brut);
+}
+
+export async function retirerMiseEnAvant(id: string): Promise<void> {
+  await appelApiSansContenu(`/v1/admin/highlights/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function reordonnerMisesEnAvant(
+  emplacement: Emplacement,
+  ordonnes: string[],
+): Promise<MiseEnAvant[]> {
+  const brut = await appelApi<ReorderResponse>("/v1/admin/highlights/reorder", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      placement: emplacement,
+      ordered_ids: ordonnes,
+    } satisfies ReorderRequest),
+  });
+  return brut.map(depuisMiseEnAvant);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * RECHARGEMENTS — CRÉDIT DES COMPTES SALARIÉS
+ *
+ * ✅ Les trois routes sont DU CONTRAT (`data-dictionary.md:537-556`,
+ * confirmées par `front/docs/contrat-api.md:162-164`). `topup-batches` et sa
+ * validation touchent au module le plus construit du back après le
+ * paiement — voir `app/api/v1/admin/topups/route.ts` pour le détail de ce qui
+ * EST notre ajout (le motif).
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * Crédite un salarié, adressé par SON EMPLOYEUR ET SON MATRICULE — jamais un
+ * identifiant interne. Voir `crediterSalarie` (`mocks/magasin.ts`).
+ */
+export async function crediterSalarie(
+  employeurId: string,
+  matricule: string,
+  montantCentimes: number,
+  motif: string,
+  reference: string | null,
+): Promise<Rechargement> {
+  const brut = await appelApi<TopupResponse>("/v1/admin/topups", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      employer_id: employeurId,
+      employer_ref: matricule,
+      amount: montantCentimes / 100,
+      reference,
+      reason: motif,
+    } satisfies TopupRequest),
+  });
+  return depuisRechargement(brut);
+}
+
+/**
+ * Téléverse un fichier de rechargements pour UN employeur et rend l'aperçu.
+ *
+ * ⚠ Jamais un import qui s'exécute à l'aveugle : cette fonction ne fait
+ * qu'ANALYSER le fichier et le mettre en attente. Aucune écriture n'a lieu
+ * avant `validerLot`.
+ */
+export async function televerserLot(
+  employeurId: string,
+  fichier: File,
+  motif: string,
+): Promise<ApercuLot> {
+  const formulaire = new FormData();
+  formulaire.set("employer_id", employeurId);
+  formulaire.set("reason", motif);
+  formulaire.set("file", fichier);
+
+  const brut = await appelApi<BatchPreview>("/v1/admin/topup-batches", {
+    method: "POST",
+    body: formulaire,
+  });
+  return depuisApercuLot(brut);
+}
+
+/**
+ * Valide un lot en attente : POSTE une opération par ligne.
+ *
+ * ⚠ RÈGLE DU BACK : un lot avec une seule ligne en erreur est refusé EN
+ * ENTIER, et c'est le SERVEUR qui l'impose (`funding/batch.rs:2`) — pas
+ * seulement un bouton grisé ici, qui se contournerait.
+ */
+export async function validerLot(id: string): Promise<void> {
+  await appelApiSansContenu(`/v1/admin/topup-batches/${encodeURIComponent(id)}/validate`, {
+    method: "POST",
+  });
 }

@@ -38,6 +38,8 @@ import {
   soldeDuCompte,
   trouverOperation,
 } from "@/mocks/registre";
+import { sha256 } from "@/mocks/sha256";
+import { centimesDepuisSaisie } from "@/lib/montant";
 import type {
   Identifiant,
   MontantCentimes,
@@ -89,6 +91,13 @@ export interface SalarieMagasin {
   prenom: string;
   /** `employees.phone`, `TEXT NULL`. */
   telephone: string | null;
+  /**
+   * `users.email`, joint via `employees.user_id` -- `CITEXT NOT NULL UNIQUE`
+   * (`0001_schema.sql:28`). Ajoute au type : aucun ecran n'en avait besoin
+   * jusqu'ici. L'import CSV des rechargements l'exige -- `funding/csv.rs:1`
+   * accepte un courriel comme cle alternative au matricule.
+   */
+  courriel: string;
   /** `employment_links.employer_id` du lien ACTIF. */
   employeurId: Identifiant;
   /** `employment_links.employer_ref` : le matricule (decision 12). */
@@ -306,6 +315,39 @@ export interface Magasin {
   jetons: Map<Identifiant, JetonMagasin>;
   paiements: PaiementMagasin[];
   transactions: TransactionMagasin[];
+  /** Les mises en avant, actives et retirees confondues (R6). */
+  misesEnAvant: MiseEnAvantMagasin[];
+  /** Colonnes `topups` (`0001_schema.sql:219-225`). */
+  topups: TopupMagasin[];
+  /** Colonnes `topup_batches` (`:202-215`). */
+  lots: LotRechargement[];
+}
+
+/** ENUM `highlight_placement` (`0001_schema.sql:16`). */
+export type Emplacement = "minister_pick" | "public_featured";
+
+/**
+ * Une mise en avant. Table `partner_highlights` (`0001_schema.sql:128-142`).
+ *
+ * ⚠ `mot` EST DE NOTRE FAIT. La table n'a AUCUNE colonne pour un texte : id,
+ * partner_id, placement, position, created_by, created_at, removed_at -- rien
+ * d'autre. Voir `app/api/v1/admin/highlights/route.ts` pour le raisonnement
+ * complet sur pourquoi ce champ existe quand meme, et pourquoi il n'enfreint
+ * pas la regle R9 qui verrouille `PublicPartner`.
+ */
+export interface MiseEnAvantMagasin {
+  id: Identifiant;
+  partenaireId: Identifiant;
+  emplacement: Emplacement;
+  /** 1-indexe, `CHECK (position > 0)` (:136). */
+  position: number;
+  /** Les mots du ministre. `null` si aucun n'a ete saisi. Jamais un motif. */
+  mot: string | null;
+  creePar: Identifiant;
+  /** Date ISO 8601. */
+  creeLe: string;
+  /** `null` tant qu'active. Un retrait REMPLIT ce champ, ne supprime rien (R6). */
+  retireLe: string | null;
 }
 
 /**
@@ -323,14 +365,19 @@ function donneesInitiales(): Magasin {
        troisieme valeur de `user_status` ne serait jamais montree. */
     salaries: [
       { id: "SAL-001", nom: "Roussel", prenom: "Amélie", telephone: "+229 97 12 34 56",
+        courriel: "amelie.roussel@cotonou.bj",
         employeurId: "EMP-001", matricule: "MC-4471", entreLe: "2024-03-04", statut: "actif" },
       { id: "SAL-002", nom: "Nkoue", prenom: "Bastien", telephone: null,
+        courriel: "bastien.nkoue@cotonou.bj",
         employeurId: "EMP-001", matricule: "MC-5108", entreLe: "2025-09-15", statut: "actif" },
       { id: "SAL-003", nom: "Doumbia", prenom: "Clara", telephone: "+229 95 88 21 07",
+        courriel: "clara.doumbia@tourisme.bj",
         employeurId: "EMP-002", matricule: "OT-0233", entreLe: "2023-11-20", statut: "suspendu" },
       { id: "SAL-004", nom: "Agossou", prenom: "Delphine", telephone: "+229 96 40 55 12",
+        courriel: "delphine.agossou@tourisme.bj",
         employeurId: "EMP-002", matricule: "OT-0341", entreLe: "2025-01-08", statut: "actif" },
       { id: "SAL-005", nom: "Bakary", prenom: "Émile", telephone: null,
+        courriel: "emile.bakary@paix.bj",
         employeurId: "EMP-003", matricule: "HP-7702", entreLe: "2022-06-01", statut: "ferme" },
     ],
     employeurs: [
@@ -793,6 +840,9 @@ function donneesInitiales(): Magasin {
     ],
     jetons: new Map<Identifiant, JetonMagasin>(),
     paiements: [],
+    misesEnAvant: [],
+    topups: [],
+    lots: [],
     transactions: [
       { id: "TRX-001", date: "2026-08-28T09:14:00.000Z", salarieId: "SAL-001", partenaireId: "PRT-001", jetonToken: null, montantCentimes: 1_250, statut: "validee" },
       { id: "TRX-002", date: "2026-08-30T12:02:00.000Z", salarieId: "SAL-002", partenaireId: "PRT-001", jetonToken: null, montantCentimes: 480, statut: "validee" },
@@ -1771,6 +1821,580 @@ export function changerStatutPartenaire(
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
+ * MISES EN AVANT — VITRINE PUBLIQUE
+ *
+ * Table `partner_highlights` (`0001_schema.sql:128-142`), logique de
+ * `partners/highlights.rs`. Deux emplacements, deux index partiels
+ * d'unicite -- un partenaire n'a qu'une mise en avant ACTIVE par emplacement,
+ * une position n'est occupee que par une mise en avant ACTIVE -- et un
+ * retrait REMPLIT `removed_at`, ne supprime jamais rien (R6).
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+export function misesEnAvantActives(emplacement: Emplacement): MiseEnAvantMagasin[] {
+  return magasin.misesEnAvant
+    .filter((m) => m.emplacement === emplacement && m.retireLe === null)
+    .sort((a, b) => a.position - b.position);
+}
+
+/**
+ * Joint une mise en avant a la fiche du partenaire, au format `HighlightItem`
+ * du contrat.
+ *
+ * ⚠ Extraite d'une duplication : les routes `GET/POST /admin/highlights` et
+ * `PUT /admin/highlights/reorder` en avaient chacune leur copie, a l'identique
+ * hormis le nom de la variable source. Une seule fonction, un seul endroit ou
+ * `note` (notre ajout) doit rester en phase avec `types/api.ts`.
+ *
+ * `null` si le partenaire est introuvable -- un cas que le registre des
+ * mises en avant ne devrait jamais produire (aucune suppression, R6), mais
+ * que la route filtre plutot que de faire planter la reponse.
+ */
+export function versHighlightItem(m: MiseEnAvantMagasin): Record<string, unknown> | null {
+  const partenaire = trouverPartenaire(m.partenaireId);
+  if (!partenaire) return null;
+  return {
+    id: m.id,
+    partner: { id: partenaire.id, trade_name: partenaire.tradeName, category: partenaire.category },
+    placement: m.emplacement,
+    position: m.position,
+    note: m.mot,
+    created_by: m.creePar,
+    created_at: m.creeLe,
+  };
+}
+
+export type EchecMiseEnAvant =
+  | "partenaire_introuvable"
+  | "partenaire_non_agree"
+  | "deja_en_avant";
+
+/**
+ * Ajoute un partenaire a un emplacement.
+ *
+ * ═══ SEUL UN PARTENAIRE `approved` EST ELIGIBLE ═══
+ *
+ * `highlights.rs:1` ne le dit qu'a demi -- « list joins on status = 'approved' »
+ * ne parle que de la LECTURE. C'est `data-dictionary.md:143` qui tranche :
+ * « Deux regles portees par le code : seul un partenaire approved est
+ * eligible... ». Filtrer seulement a la lecture laisserait un administrateur
+ * mettre en avant un dossier suspendu, qui disparaitrait alors silencieusement
+ * de la liste sans que rien n'explique pourquoi il refuse d'apparaitre sur la
+ * page publique. La regle est donc imposee ICI, a l'ecriture -- pas seulement
+ * a `misesEnAvantActives`.
+ *
+ * ═══ LA POSITION ═══
+ *
+ * `position: null` signifie « en fin de liste » (`CreateHighlightRequest`,
+ * `data-dictionary.md:524`) : on prend le maximum des positions actives + 1.
+ * Une position explicite DECALE tout ce qui suit -- c'est ce que le
+ * commentaire du back appelle « shift positions out of range first », a
+ * cause de l'index partiel sur (placement, position). Le mock n'a pas de
+ * transaction SQL a proteger, mais l'effet observable doit etre le meme :
+ * aucune collision, meme un instant.
+ */
+export function ajouterMiseEnAvant(
+  partenaireId: string,
+  emplacement: Emplacement,
+  position: number | null,
+  mot: string | null,
+  administrateurId: string,
+  maintenant: number,
+): { miseEnAvant: MiseEnAvantMagasin } | { echec: EchecMiseEnAvant } {
+  const partenaire = trouverPartenaire(partenaireId);
+  if (!partenaire) return { echec: "partenaire_introuvable" };
+  if (partenaire.statut !== "approved") return { echec: "partenaire_non_agree" };
+
+  const actives = misesEnAvantActives(emplacement);
+  if (actives.some((m) => m.partenaireId === partenaireId)) {
+    return { echec: "deja_en_avant" };
+  }
+
+  const motNettoye = mot !== null && mot.trim() !== "" ? mot.trim() : null;
+
+  let cible: number;
+  if (position === null) {
+    cible = actives.length === 0 ? 1 : Math.max(...actives.map((m) => m.position)) + 1;
+  } else {
+    cible = Math.max(1, Math.min(position, actives.length + 1));
+    /* Decale d'un cran tout ce qui est a la position visee ou au-dela : sans
+       cela, deux mises en avant actives partageraient une position, ce que
+       l'index partiel interdit en base. */
+    for (const m of magasin.misesEnAvant) {
+      if (m.emplacement === emplacement && m.retireLe === null && m.position >= cible) {
+        m.position += 1;
+      }
+    }
+  }
+
+  const miseEnAvant: MiseEnAvantMagasin = {
+    id: crypto.randomUUID(),
+    partenaireId,
+    emplacement,
+    position: cible,
+    mot: motNettoye,
+    creePar: administrateurId,
+    creeLe: new Date(maintenant).toISOString(),
+    retireLe: null,
+  };
+  magasin.misesEnAvant.push(miseEnAvant);
+
+  /* « toute pose ou retrait ecrit dans audit_log » (:143). */
+  consignerAuJournal({
+    actorId: administrateurId,
+    action: "highlight.added",
+    entityType: "partner_highlight",
+    entityId: miseEnAvant.id,
+    payload: { partner_id: partenaireId, placement: emplacement, position: cible },
+    quand: maintenant,
+  });
+
+  return { miseEnAvant };
+}
+
+/**
+ * Retire une mise en avant. REMPLIT `removed_at`, ne supprime rien (R6).
+ *
+ * La position des mises en avant qui suivaient N'EST PAS RECALEE : ce n'est
+ * pas demande par le contrat (`DELETE .../{id} → 204`, sans effet de bord
+ * documente sur les autres lignes), et une renumerotation automatique
+ * surprendrait un ecran qui affiche encore l'ancien ordre a l'instant du
+ * retrait. Un reordonnancement explicite (`PUT .../reorder`) reste la seule
+ * facon de combler le trou.
+ */
+export function retirerMiseEnAvant(
+  id: string,
+  administrateurId: string,
+  maintenant: number,
+): { miseEnAvant: MiseEnAvantMagasin } | { echec: "introuvable" | "deja_retiree" } {
+  const miseEnAvant = magasin.misesEnAvant.find((m) => m.id === id);
+  if (!miseEnAvant) return { echec: "introuvable" };
+  if (miseEnAvant.retireLe !== null) return { echec: "deja_retiree" };
+
+  const retiree: MiseEnAvantMagasin = { ...miseEnAvant, retireLe: new Date(maintenant).toISOString() };
+  const index = magasin.misesEnAvant.indexOf(miseEnAvant);
+  magasin.misesEnAvant[index] = retiree;
+
+  consignerAuJournal({
+    actorId: administrateurId,
+    action: "highlight.removed",
+    entityType: "partner_highlight",
+    entityId: id,
+    payload: { partner_id: miseEnAvant.partenaireId, placement: miseEnAvant.emplacement },
+    quand: maintenant,
+  });
+
+  return { miseEnAvant: retiree };
+}
+
+export type EchecReordonnancement = "ensemble_incomplet" | "identifiant_inconnu";
+
+/**
+ * Reordonne un emplacement entier.
+ *
+ * `ReorderRequest.ordered_ids` est « la liste COMPLETE, dans l'ordre voulu »
+ * (`data-dictionary.md:534`) -- pas un delta. La fonction verifie donc que
+ * l'ensemble recu est EXACTEMENT celui des mises en avant actives de cet
+ * emplacement, ni plus ni moins : un identifiant absent laisserait une ligne
+ * sans position coherente, un identifiant en trop referencerait une mise en
+ * avant qui n'existe pas ou qui est ailleurs.
+ *
+ * Les positions sont reaffectees 1..N dans l'ordre recu, en une seule passe :
+ * comme il n'y a ni ecriture partagee ni lecture concurrente dans ce mock, le
+ * risque de collision transitoire que le commentaire du back signale
+ * (« shift positions out of range first ») ne se pose pas ici -- mais
+ * l'ordre final observe est le meme que si on l'avait fait.
+ */
+export function reordonnerMisesEnAvant(
+  emplacement: Emplacement,
+  ordonnes: string[],
+  administrateurId: string,
+  maintenant: number,
+): { misesEnAvant: MiseEnAvantMagasin[] } | { echec: EchecReordonnancement } {
+  const actives = misesEnAvantActives(emplacement);
+  const attendus = new Set(actives.map((m) => m.id));
+  const recus = new Set(ordonnes);
+
+  if (attendus.size !== recus.size || ![...attendus].every((id) => recus.has(id))) {
+    return ordonnes.some((id) => !attendus.has(id))
+      ? { echec: "identifiant_inconnu" }
+      : { echec: "ensemble_incomplet" };
+  }
+
+  ordonnes.forEach((id, index) => {
+    const miseEnAvant = magasin.misesEnAvant.find((m) => m.id === id);
+    if (miseEnAvant) miseEnAvant.position = index + 1;
+  });
+
+  consignerAuJournal({
+    actorId: administrateurId,
+    action: "highlight.reordered",
+    entityType: "partner_highlight",
+    entityId: null,
+    payload: { placement: emplacement, ordered_ids: ordonnes },
+    quand: maintenant,
+  });
+
+  return { misesEnAvant: misesEnAvantActives(emplacement) };
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * RECHARGEMENTS — FINANCEMENT DES COMPTES SALARIES
+ *
+ * Modele : `funding/topup.rs` (rechargement individuel, ENTIEREMENT ECRIT
+ * cote back -- le module le plus construit apres le paiement), `batch.rs`
+ * (lot), `csv.rs` (format d'import). Un FINANCEMENT, pas une correction : a
+ * distinguer de `regulariser` (fiche salarie), qui repare une erreur. Ici on
+ * verse un droit -- le compte d'emission `MINISTRY_ISSUANCE` est TOUJOURS le
+ * debiteur, jamais un compte de correction.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+export type EchecTopup = "salarie_introuvable" | "compte_inactif" | "motif_manquant" | "montant_invalide";
+
+/**
+ * Credite un salarie, identifie par SON EMPLOYEUR ET SON MATRICULE.
+ *
+ * ⚠ PAS PAR IDENTIFIANT INTERNE. `topup(tx, admin, employer_id, account_id,
+ * amount, reference)` (`funding/topup.rs:16-24`) adresse par
+ * `(employer_id, employer_ref)`, exactement comme `TopupRequest`
+ * (`data-dictionary.md:537-543`) : `employer_id`, `employer_ref`, jamais un
+ * identifiant de salarie. C'est la meme logique que le matricule d'un jeton
+ * de paie : l'employeur connait ses salaries par ce numero, pas par un UUID
+ * interne au dispositif.
+ *
+ * ═══ IDEMPOTENCE PAR `reference`, ET C'EST PLUS SURPRENANT QU'IL N'Y PARAIT ═══
+ *
+ * `topup.rs:28-33` : si une `reference` est fournie et qu'un rechargement
+ * portant la MEME `(employer_id, reference)` existe deja, la fonction rend
+ * CET rechargement EXISTANT sans en creer un second -- **quel que soit le
+ * compte vise cette fois**. La cle d'idempotence ne porte QUE sur
+ * `(employer_id, reference)`, jamais sur le compte credite. Reutiliser par
+ * erreur la reference d'un autre salarie du meme employeur ne leve AUCUNE
+ * erreur : ca renvoie silencieusement le premier rechargement, et le second
+ * salarie n'est pas credite. C'est le comportement REEL du back, implemente
+ * tel quel ici -- pas une version "plus sure" qu'on aurait pu preferer.
+ *
+ * ═══ LE MOTIF EST NOTRE AJOUT, ET VOICI POURQUOI IL DIVERGE DU BACK REEL ═══
+ *
+ * `topup.rs:59` poste l'operation avec `memo: None` -- EN DUR. La signature de
+ * `topup()` n'a d'ailleurs AUCUN parametre pour un motif, et `TopupRequest`
+ * n'en porte pas davantage. Ce n'est pas un trou du contrat comme les autres
+ * : c'est un choix explicite, ecrit dans du code qui fonctionne.
+ *
+ * L'ecran le demande neanmoins : "un salarie, un montant, un motif" -- et un
+ * versement d'argent public sans aucune trace de sa raison serait la seule
+ * ecriture du registre a n'en porter aucune, alors que la regularisation et
+ * l'annulation en exigent une. Le motif est donc collecte et pose sur
+ * `memo`, la colonne generique de `ledger_operations` que d'autres natures
+ * utilisent deja -- mais SI cette route doit un jour parler a un vrai
+ * `topup()`, sa signature devra gagner un parametre `memo: Option<&str>`
+ * pour le recevoir. Le signaler ici, c'est le signaler au bon endroit :
+ * c'est la seule fonction qui pretend imiter `topup()`.
+ */
+export function crediterSalarie(
+  employeurId: string,
+  matricule: string,
+  montantCentimes: MontantCentimes,
+  motif: string | null,
+  reference: string | null,
+  administrateurId: string,
+  maintenant: number,
+): { operation: OperationRegistre; rejoue: boolean } | { echec: EchecTopup } {
+  const salarie = magasin.salaries.find(
+    (s) => s.employeurId === employeurId && s.matricule === matricule,
+  );
+  if (!salarie) return { echec: "salarie_introuvable" };
+  if (salarie.statut !== "actif") return { echec: "compte_inactif" };
+
+  if (!Number.isInteger(montantCentimes) || montantCentimes <= 0) {
+    return { echec: "montant_invalide" };
+  }
+
+  const motifNettoye = motif !== null && motif.trim() !== "" ? motif.trim() : null;
+  if (motifNettoye === null) return { echec: "motif_manquant" };
+
+  const referenceNettoyee = reference !== null && reference.trim() !== "" ? reference.trim() : null;
+
+  /* Le rejeu : voir l'en-tete. Scope volontairement (employeurId, reference),
+     PAS le compte -- c'est le comportement du back, fidelement reproduit. */
+  if (referenceNettoyee !== null) {
+    const existant = magasin.topups.find(
+      (t) => t.employeurId === employeurId && t.reference === referenceNettoyee,
+    );
+    if (existant) {
+      const operation = trouverOperation(existant.operationId);
+      if (operation) return { operation, rejoue: true };
+    }
+  }
+
+  const operation = posterOperation({
+    kind: "topup",
+    amountCentimes: montantCentimes,
+    debiter: "ACC-MINISTRY_ISSUANCE",
+    crediter: idCompte(salarie.id),
+    memo: motifNettoye,
+    createdBy: administrateurId,
+    occurredAt: new Date(maintenant).toISOString(),
+    quand: maintenant,
+  });
+
+  magasin.topups.push({
+    operationId: operation.id,
+    batchId: null,
+    employeurId,
+    reference: referenceNettoyee,
+  });
+
+  return { operation, rejoue: false };
+}
+
+/** Colonnes `topups` (`0001_schema.sql:219-225`) que le magasin doit tenir pour l'idempotence et les lots. */
+export interface TopupMagasin {
+  operationId: Identifiant;
+  batchId: Identifiant | null;
+  employeurId: Identifiant;
+  reference: string | null;
+}
+
+/* ── L'import CSV ─────────────────────────────────────────────────────────
+ *
+ * Deux etages, comme le back : `csv.rs` ne valide que le FORMAT (colonnes,
+ * types) ; `batch.rs` resout ensuite chaque ligne contre les salaries reels
+ * de l'employeur. Une erreur de format et une ligne sans salarie correspondant
+ * sont deux choses distinctes, mais rendent la MEME chose a l'ecran :
+ * `BatchLineError { line, employer_ref, reason }`.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+export type EchecCsv = "fichier_vide" | "entete_invalide";
+
+interface LigneCsvBrute {
+  ligne: number;
+  matriculeOuCourriel: string;
+  montantTexte: string;
+  reference: string | null;
+}
+
+/**
+ * `csv.rs:1-2` : colonnes `matricule, montant`, `reference` FACULTATIVE, un
+ * courriel accepte comme cle alternative dans la colonne matricule. Format
+ * seulement -- aucune resolution de salarie ici.
+ *
+ * L'ordre des colonnes n'est pas impose, seuls leurs noms comptent : c'est
+ * NOTRE CHOIX, le contrat ne precise rien de plus que les trois noms.
+ */
+function analyserCsv(texte: string): { lignes: LigneCsvBrute[] } | { echec: EchecCsv } {
+  const brutes = texte.split(/\r\n|\r|\n/).filter((ligne) => ligne.trim() !== "");
+  if (brutes.length === 0) return { echec: "fichier_vide" };
+
+  const entetes = (brutes[0] ?? "").split(",").map((c) => c.trim().toLowerCase());
+  const indexMatricule = entetes.indexOf("matricule");
+  const indexMontant = entetes.indexOf("montant");
+  const indexReference = entetes.indexOf("reference");
+  if (indexMatricule === -1 || indexMontant === -1) return { echec: "entete_invalide" };
+
+  const lignes: LigneCsvBrute[] = [];
+  for (let i = 1; i < brutes.length; i += 1) {
+    const champs = (brutes[i] ?? "").split(",").map((c) => c.trim());
+    lignes.push({
+      ligne: i + 1,
+      matriculeOuCourriel: champs[indexMatricule] ?? "",
+      montantTexte: champs[indexMontant] ?? "",
+      reference: indexReference === -1 ? null : (champs[indexReference] || null),
+    });
+  }
+  return { lignes };
+}
+
+export interface LigneLot {
+  ligne: number;
+  matriculeOuCourriel: string;
+  /** `null` si la ligne n'a pu etre resolue a un salarie de cet employeur. */
+  salarieId: string | null;
+  /** `null` si le montant est illisible. */
+  montantCentimes: number | null;
+  reference: string | null;
+  /** Raison de l'echec pour cette ligne, ou `null` si elle est valide. */
+  erreur: string | null;
+}
+
+export interface LotRechargement {
+  id: Identifiant;
+  employeurId: Identifiant;
+  nomFichier: string;
+  /** Empreinte SHA-256 du CONTENU texte du fichier -- voir `sha256`. */
+  empreinte: string;
+  statut: "draft" | "validated" | "rejected";
+  motif: string | null;
+  lignes: LigneLot[];
+  televerseePar: Identifiant;
+  televerseeLe: string;
+  valideeLe: string | null;
+}
+
+/**
+ * Resout une ligne brute contre les salaries de l'employeur.
+ *
+ * `matricule OU courriel` : `csv.rs:1` accepte un courriel comme cle
+ * alternative. On essaie d'abord une correspondance exacte de matricule,
+ * puis, si la valeur contient `@`, une correspondance de courriel -- jamais
+ * les deux en meme temps sur une valeur qui ne ressemble pas a un courriel,
+ * pour ne pas faire correspondre un matricule qui contiendrait par hasard un
+ * `@`.
+ */
+function resoudreLigne(employeurId: string, brute: LigneCsvBrute): LigneLot {
+  const parMatricule = magasin.salaries.find(
+    (s) => s.employeurId === employeurId && s.matricule === brute.matriculeOuCourriel,
+  );
+  const parCourriel = brute.matriculeOuCourriel.includes("@")
+    ? magasin.salaries.find(
+        (s) => s.employeurId === employeurId
+          && s.courriel.toLowerCase() === brute.matriculeOuCourriel.toLowerCase(),
+      )
+    : undefined;
+  const salarie = parMatricule ?? parCourriel;
+
+  const montantCentimes = centimesDepuisSaisie(brute.montantTexte);
+
+  let erreur: string | null = null;
+  if (brute.matriculeOuCourriel === "") {
+    erreur = "Matricule ou courriel manquant.";
+  } else if (!salarie) {
+    erreur = "Aucun salarié ne correspond à ce matricule ou ce courriel pour cet employeur.";
+  } else if (salarie.statut !== "actif") {
+    erreur = "Ce compte n'est pas actif.";
+  } else if (montantCentimes === null) {
+    erreur = "Montant illisible.";
+  }
+
+  return {
+    ligne: brute.ligne,
+    matriculeOuCourriel: brute.matriculeOuCourriel,
+    salarieId: salarie?.id ?? null,
+    montantCentimes,
+    reference: brute.reference,
+    erreur,
+  };
+}
+
+export type EchecMiseEnAttenteLot = EchecCsv | "employeur_introuvable" | "fichier_deja_importe";
+
+/**
+ * Met un fichier en attente : c'est l'ETAGE `parse_and_stage`
+ * (`batch.rs:1`). Le lot est TOUJOURS cree si le fichier est lisible et
+ * inedit -- meme si des lignes sont en erreur : c'est l'apercu qui les
+ * montre, `validerLot` seul les refuse.
+ *
+ * L'empreinte est unique PAR EMPLOYEUR (`uq_batch_file`,
+ * `0001_schema.sql:216`) : le meme fichier importe pour deux employeurs
+ * differents n'est pas un doublon, mais le reimporter deux fois pour le
+ * MEME employeur l'est -- meme si le premier essai n'a jamais ete valide.
+ */
+export function mettreLotEnAttente(
+  employeurId: string,
+  nomFichier: string,
+  contenu: string,
+  motif: string | null,
+  administrateurId: string,
+  maintenant: number,
+): { lot: LotRechargement } | { echec: EchecMiseEnAttenteLot } {
+  if (!trouverEmployeur(employeurId)) return { echec: "employeur_introuvable" };
+
+  const motifNettoye = motif !== null && motif.trim() !== "" ? motif.trim() : null;
+
+  const analyse = analyserCsv(contenu);
+  if ("echec" in analyse) return { echec: analyse.echec };
+
+  const empreinte = sha256(contenu);
+  const doublon = magasin.lots.some(
+    (l) => l.employeurId === employeurId && l.empreinte === empreinte,
+  );
+  if (doublon) return { echec: "fichier_deja_importe" };
+
+  const lignes = analyse.lignes.map((brute) => resoudreLigne(employeurId, brute));
+
+  const lot: LotRechargement = {
+    id: crypto.randomUUID(),
+    employeurId,
+    nomFichier,
+    empreinte,
+    statut: "draft",
+    motif: motifNettoye,
+    lignes,
+    televerseePar: administrateurId,
+    televerseeLe: new Date(maintenant).toISOString(),
+    valideeLe: null,
+  };
+  magasin.lots.push(lot);
+
+  return { lot };
+}
+
+export type EchecValidationLot = "introuvable" | "lignes_en_erreur" | "deja_traite" | "motif_manquant";
+
+/**
+ * Valide un lot : c'est `validate_batch` (`batch.rs:2`), l'ecriture.
+ *
+ * ═══ UN LOT AVEC UNE SEULE ERREUR EST REJETE EN ENTIER ═══
+ *
+ * La regle est repetee mot pour mot dans `funding/batch.rs:2` et
+ * `docs/file-guide.md:210`. Elle est verifiee ICI, cote SERVEUR -- pas
+ * seulement par un bouton grise a l'ecran, qui se contourne. Si une seule
+ * ligne porte une erreur, AUCUNE operation n'est postee : le lot bascule en
+ * `rejected` et la reponse est un refus.
+ *
+ * Rien n'est ecrit avant que TOUTES les lignes soient verifiees : la boucle
+ * de verification est separee de la boucle d'ecriture.
+ */
+export function validerLot(
+  id: string,
+  administrateurId: string,
+  maintenant: number,
+): { lot: LotRechargement; operations: OperationRegistre[] } | { echec: EchecValidationLot } {
+  const lot = magasin.lots.find((l) => l.id === id);
+  if (!lot) return { echec: "introuvable" };
+  if (lot.statut !== "draft") return { echec: "deja_traite" };
+
+  if (lot.motif === null) return { echec: "motif_manquant" };
+
+  if (lot.lignes.some((ligne) => ligne.erreur !== null)) {
+    lot.statut = "rejected";
+    return { echec: "lignes_en_erreur" };
+  }
+
+  const operations: OperationRegistre[] = [];
+  for (const ligne of lot.lignes) {
+    if (ligne.salarieId === null || ligne.montantCentimes === null) {
+      /* Ne peut pas arriver : la garde ci-dessus l'a deja exclu. Rassure le
+         typeur sans dupliquer la logique de validite. */
+      continue;
+    }
+    const operation = posterOperation({
+      kind: "topup",
+      amountCentimes: ligne.montantCentimes,
+      debiter: "ACC-MINISTRY_ISSUANCE",
+      crediter: idCompte(ligne.salarieId),
+      memo: lot.motif,
+      createdBy: administrateurId,
+      occurredAt: new Date(maintenant).toISOString(),
+      quand: maintenant,
+    });
+    magasin.topups.push({
+      operationId: operation.id,
+      batchId: lot.id,
+      employeurId: lot.employeurId,
+      reference: ligne.reference,
+    });
+    operations.push(operation);
+  }
+
+  lot.statut = "validated";
+  lot.valideeLe = new Date(maintenant).toISOString();
+
+  return { lot, operations };
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
  * AMORCE DIFFEREE
  *
  * ⚠ EN FIN DE MODULE, ET C'EST OBLIGATOIRE. `emettreJeton` s'appuie sur
@@ -1794,9 +2418,56 @@ export function changerStatutPartenaire(
  * par `emettreJeton`, le point d'emission ordinaire : rien n'est fabrique a
  * cote.
  */
+/**
+ * Les mises en avant de demonstration, sur les deux emplacements.
+ *
+ * Choisies pour que chaque cas de l'ecran soit atteignable : une mise en avant
+ * AVEC mot du ministre, une SANS, plusieurs positions sur un meme emplacement,
+ * et un partenaire exclusivement en ligne mis en avant -- pour verifier que la
+ * vitrine publique se comporte pour lui comme pour les autres (aucune ville,
+ * `district` a `null`).
+ *
+ * Passe par `ajouterMiseEnAvant`, le point d'ecriture ordinaire : rien n'est
+ * fabrique a cote, et les regles d'eligibilite sont donc bien exercees ici
+ * aussi.
+ */
+function amorcerMisesEnAvant(): void {
+  if (magasin.misesEnAvant.length > 0) return;
+  const t = Date.parse("2026-08-15T09:00:00.000Z");
+
+  ajouterMiseEnAvant(
+    "PRT-001",
+    "minister_pick",
+    null,
+    "Une institution du quartier, et une adhésion parmi les toutes premières du dispositif.",
+    "ADM-001",
+    t,
+  );
+  ajouterMiseEnAvant("PRT-011", "minister_pick", null, null, "ADM-001", t + 60_000);
+
+  ajouterMiseEnAvant(
+    "PRT-009",
+    "public_featured",
+    null,
+    "Un marche qui a joue le jeu des le premier jour.",
+    "ADM-001",
+    t + 120_000,
+  );
+  ajouterMiseEnAvant("PRT-010", "public_featured", null, null, "ADM-001", t + 180_000);
+  ajouterMiseEnAvant(
+    "PRT-016",
+    "public_featured",
+    null,
+    "La lecture accessible partout, sans devanture.",
+    "ADM-001",
+    t + 240_000,
+  );
+}
+
 function amorcerJetonEnCours(): void {
   if (magasin.jetons.size > 0) return;
   emettreJeton("SAL-004", 25_00, Date.now());
 }
 
 amorcerJetonEnCours();
+amorcerMisesEnAvant();

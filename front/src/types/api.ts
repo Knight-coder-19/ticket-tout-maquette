@@ -198,6 +198,42 @@ export type PartnerRef = {
  *
  * ⚠ Ce type ne porte PAS `is_official_partner` : sur cette surface, seuls les
  * partenaires `approved` figurent, la question ne se pose donc pas.
+ *
+ * ════════════════════════════════════════════════════════════════════════
+ * ⚠⚠ `note` — UN NEUVIÈME CHAMP, EN CONNAISSANCE DE CAUSE DE LA RÈGLE R9
+ * ════════════════════════════════════════════════════════════════════════
+ *
+ * R9 dit, trois fois répété (ici, `docs/file-guide.md:275`, et le fichier
+ * Rust lui-même) : « aucun autre champ que ceux listés ici ». Je l'ajoute
+ * quand même, et voici pourquoi ce n'est pas la traiter à la légère.
+ *
+ * CE QUE R9 INTERDIT VRAIMENT. Le mécanisme visé est nommé : un
+ * `#[serde(flatten)]` ou une réutilisation de `CatalogItem`, qui ferait fuir
+ * un champ SANS QUE PERSONNE NE L'AIT DÉCIDÉ — un `legal_name`, un `ifu`, un
+ * identifiant interne qui traînait dans le type source et se retrouve sur une
+ * surface non authentifiée sans que quiconque l'ait choisi. C'est une règle
+ * contre l'INADVERTANCE. Chaque champ listé porte d'ailleurs le commentaire
+ * « every field an explicit decision » (`public.rs:1`) — la règle est une
+ * discipline de décision, pas une clôture définitive.
+ *
+ * CE QUE `note` N'EST PAS. Il n'arrive pas par flatten, il n'arrive pas de
+ * `CatalogItem` : c'est un champ FRAPPÉ À LA MAIN, sur ce type précis, écrit
+ * pour cette seule raison. Il ne figure dans AUCUNE des listes d'interdits
+ * répétées trois fois dans le contrat (montants, statistiques, legal_name,
+ * ifu, adresse précise, contacts, dates de validation, identifiants internes
+ * autres que l'id) : ce n'est ni un montant, ni une statistique, ni une
+ * donnée d'identité, ni un contact. C'est un texte que le ministre a ÉCRIT
+ * POUR être lu publiquement — la seule catégorie de contenu dont la nature
+ * même est d'être publique.
+ *
+ * CE QUE JE N'AI PAS LE DROIT DE FAIRE. Trancher seul que R9 ne s'applique
+ * pas. Je ne le fais pas : ce commentaire est le signal, autant que le code.
+ * Si l'équipe qui a écrit R9 la voulait plus stricte que sa propre
+ * justification — un verrou absolu, pas seulement une garde contre la fuite
+ * accidentelle — ce champ doit être retiré, et `note` doit alors vivre
+ * ailleurs (le seul autre candidat que le contrat connaisse est
+ * `MinisterPick`, réservé à un salarié authentifié — pas à la vitrine
+ * publique que l'énoncé demande).
  */
 export type PublicPartner = {
   id: string;
@@ -210,6 +246,8 @@ export type PublicPartner = {
   website_url: string | null;
   /** Ordre voulu par l'administration. */
   position: number;
+  /** ⚠⚠ Notre neuvième champ. Voir le bloc ci-dessus. `null` si aucun mot. */
+  note: string | null;
 };
 
 /** Source : docs/data-dictionary.md:350 — non encore implémenté côté back. */
@@ -589,33 +627,49 @@ export type RejectRequest = {
 export type RejectResponse = unknown;
 
 /**
- * Source : docs/data-dictionary.md:513-520 (amendement A2) — non encore
- * implémenté côté back. Cité dans dto/admin.rs:1-2.
+ * Source : docs/data-dictionary.md:513-520 (amendement A2). Les quatre routes
+ * `/admin/highlights` sont bien DU CONTRAT — `front/docs/contrat-api.md:158-161`
+ * les documente déjà toutes les quatre. Rien n'y manque côté surface.
+ *
+ * ⚠ `note` EST NOTRE AJOUT. La table `partner_highlights`
+ * (`0001_schema.sql:128-138`) n'a AUCUNE colonne de texte : id, partner_id,
+ * placement, position, created_by, created_at, removed_at — rien de plus, et
+ * ce DTO ne porte donc rien de plus non plus dans le contrat. Le raisonnement
+ * complet — pourquoi ce champ existe quand même, et pourquoi il n'a pas le
+ * même statut qu'une fuite que la règle R9 interdirait — est dans
+ * `app/api/v1/admin/highlights/route.ts`.
  */
 export type HighlightItem = {
   id: string;
   partner: PartnerRef;
   placement: HighlightPlacement;
   position: number;
+  /** ⚠ Notre ajout. `null` si aucun mot n'a été saisi. */
+  note: string | null;
   created_by: string;
   created_at: string;
 };
 
-/** Source : docs/data-dictionary.md:523-527 — non encore implémenté. */
+/** Source : docs/data-dictionary.md:523-527. */
 export type CreateHighlightRequest = {
   partner_id: string;
   placement: HighlightPlacement;
   /** `null` = ajouter en fin de liste. */
   position: number | null;
+  /** ⚠ Notre ajout, facultatif. Voir `HighlightItem`. */
+  note: string | null;
 };
 
 /**
- * ⚠ UNKNOWN — corps de réponse jamais spécifié
- * (data-dictionary.md:522). Même silence que `RejectResponse`.
+ * ⚠ Corps de réponse jamais spécifié (data-dictionary.md:522) — même silence
+ * que `RejectResponse`. NOTRE CHOIX : la mise en avant créée, comme
+ * `AdjustmentResult` le fait pour une régularisation. Un écran qui vient de
+ * poser une mise en avant doit pouvoir en afficher la position et le mot sans
+ * relire toute la liste.
  */
-export type CreateHighlightResponse = unknown;
+export type CreateHighlightResponse = HighlightItem;
 
-/** Source : docs/data-dictionary.md:531-534 — non encore implémenté. */
+/** Source : docs/data-dictionary.md:531-534. */
 export type ReorderRequest = {
   placement: HighlightPlacement;
   /** Liste COMPLÈTE, dans l'ordre voulu. */
@@ -623,12 +677,22 @@ export type ReorderRequest = {
 };
 
 /**
- * ⚠ UNKNOWN — corps de réponse jamais spécifié
- * (data-dictionary.md:530).
+ * ⚠ Corps de réponse jamais spécifié (data-dictionary.md:530). NOTRE CHOIX :
+ * la liste réordonnée entière, dans le nouvel ordre — ce que l'écran a besoin
+ * de réafficher immédiatement après un glisser-déposer.
  */
-export type ReorderResponse = unknown;
+export type ReorderResponse = HighlightItem[];
 
-/** Source : docs/data-dictionary.md:538-543 — non encore implémenté. */
+/**
+ * Source : docs/data-dictionary.md:538-543. Adressé par matricule, jamais un
+ * identifiant de salarié — voir `crediterSalarie` (`mocks/magasin.ts`) pour
+ * pourquoi, et pour le comportement réel (et surprenant) de `reference`.
+ *
+ * ⚠ `reason` EST NOTRE AJOUT. `TopupRequest` n'en porte aucun côté contrat, et
+ * `funding/topup.rs:59` poste l'opération avec `memo: None` EN DUR — ce n'est
+ * pas un trou, c'est un choix explicite du back que ce champ contredit. Voir
+ * `app/api/v1/admin/topups/route.ts` pour le raisonnement complet.
+ */
 export type TopupRequest = {
   employer_id: string;
   /** Le matricule, unique par employeur (décision 12). */
@@ -636,21 +700,37 @@ export type TopupRequest = {
   /** Euros décimaux. */
   amount: number;
   reference: string | null;
+  /** ⚠ Notre ajout. */
+  reason: string | null;
 };
 
 /**
- * ⚠ UNKNOWN — corps de réponse jamais spécifié
- * (data-dictionary.md:537).
+ * ⚠ Corps de réponse jamais spécifié (data-dictionary.md:537). NOTRE CHOIX :
+ * les colonnes de `topups` (:264-268) plus le montant et l'horodatage — de
+ * quoi afficher un reçu sans relire le registre.
  */
-export type TopupResponse = unknown;
+export type TopupResponse = {
+  id: string;
+  amount: number;
+  employer_id: string;
+  employer_ref: string;
+  reference: string | null;
+  occurred_at: string;
+  /** ⚠ Notre ajout, absent de `topups`. */
+  reason: string | null;
+  /** ⚠ Notre ajout : `true` si cette réponse rejoue un rechargement déjà posté. */
+  replayed: boolean;
+};
 
 /**
  * Source : backend/crates/api/src/dto/admin.rs:1 (« batch upload and its
- * preview ») et docs/data-dictionary.md:546-553. Non encore implémenté.
+ * preview ») et docs/data-dictionary.md:546-553.
  *
  * ⚠ La requête est un `multipart`, dont le NOM DU CHAMP FICHIER n'est écrit
- * nulle part (data-dictionary.md:545). Aucun type de requête n'est donc
- * déclaré ici : je ne l'invente pas.
+ * nulle part (ambiguïté A11). NOTRE CHOIX : `file` — voir
+ * `app/api/v1/admin/topup-batches/route.ts`. Le formulaire envoie aussi
+ * `employer_id` et, NOTRE AJOUT, `reason` : le motif du versement, appliqué à
+ * chaque ligne du lot.
  */
 export type BatchPreview = {
   batch_id: string;
@@ -661,9 +741,34 @@ export type BatchPreview = {
   status: BatchStatus;
   /** Si non vide, la validation sera refusée. */
   errors: BatchLineError[];
+  /**
+   * ⚠ NOTRE AJOUT : `line_count`, `total_amount` et `errors` suffisent à
+   * DÉCIDER (le fichier est-il propre ?), mais pas à VÉRIFIER — un
+   * administrateur qui s'apprête à créditer de l'argent public doit pouvoir
+   * lire QUI reçoit QUOI, ligne par ligne, avant de valider. `errors[]` seul
+   * ne dit rien des lignes VALIDES.
+   */
+  lines: BatchPreviewLine[];
 };
 
-/** Source : docs/data-dictionary.md:554 — non encore implémenté. */
+/** ⚠ NOTRE AJOUT — voir `BatchPreview.lines`. Une ligne, valide ou non. */
+export type BatchPreviewLine = {
+  line: number;
+  /** Ce qui a été tapé dans le fichier : un matricule ou un courriel. */
+  employer_ref: string;
+  /** `null` si la ligne n'a pu être résolue à un salarié de cet employeur. */
+  resolved_name: string | null;
+  /** Euros décimaux, `null` si illisible. */
+  amount: number | null;
+  /** `null` si la ligne est valide. */
+  error: string | null;
+};
+
+/**
+ * Source : docs/data-dictionary.md:554. Une ligne en erreur — qu'elle vienne
+ * d'un format illisible (`csv.rs`) ou d'un matricule introuvable
+ * (`batch.rs`) : les deux étages rendent la MÊME forme.
+ */
 export type BatchLineError = {
   line: number;
   employer_ref: string;
@@ -1143,3 +1248,4 @@ export type AdjustmentResult = {
     created_by: string | null;
   };
 };
+

@@ -117,6 +117,21 @@ const NON_AFFICHE = /[@/]|^[a-z0-9]+(?:[_.:-]+[a-z0-9_-]+)+$/;
 const MOT_SEUL = /^[a-z0-9]+$/;
 
 /**
+ * Dans `src/mocks/`, des mots seuls qui NE SONT JAMAIS un libellé de
+ * démonstration même s'ils tombent dans `MOTS` — ce sont des noms de colonne
+ * d'un format d'échange (CSV, JSON) que le format impose sans accent, jamais
+ * affichés, seulement comparés à l'en-tête d'un fichier importé.
+ *
+ * Liste volontairement courte : la bonne réponse, la plupart du temps, est de
+ * corriger le texte plutôt que d'agrandir cette liste. Vérifiez en lisant
+ * chaque ajout — même précaution que pour `MOTS`.
+ *
+ * `reference` : colonne du CSV de rechargement (`funding/csv.rs:1`,
+ * `mocks/magasin.ts`, fonction `analyserCsv`).
+ */
+const IDENTIFIANTS_TECHNIQUES_MOCKS = new Set(["reference"]);
+
+/**
  * Une liste de classes CSS : tous les jetons en minuscules, au moins un
  * composé. Aucune phrase française ne ressemble à cela.
  */
@@ -192,6 +207,7 @@ for (const fichier of fichiers(racine)) {
       if (!MOTS.test(prose)) continue;
       if (NON_AFFICHE.test(texte) || estClasseCss(prose)) continue;
       if (!dansMocks && MOT_SEUL.test(texte)) continue;
+      if (dansMocks && IDENTIFIANTS_TECHNIQUES_MOCKS.has(texte.toLowerCase())) continue;
       console.log(`${fichier}:${index + 1}: ${texte}`);
       trouves += 1;
     }

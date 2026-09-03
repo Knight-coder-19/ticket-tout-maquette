@@ -1,0 +1,85 @@
+/*
+ * Le credit des comptes salaries.
+ *
+ * Trois pieces propres a cet ecran : le solde rappele sous le selecteur de
+ * salarie, l'aide de l'import CSV, et le resume chiffre de l'apercu d'un
+ * lot. Le tableau, les filtres, les etats et le journal des ecritures
+ * viennent tous de `primitives.css` et de `components/tableaux/`.
+ */
+
+.recharges {
+  container-type: inline-size;
+  container-name: recharges;
+}
+
+.recharges__titre {
+  margin-block: 0 var(--espace-2);
+  font-family: var(--police-titre);
+  font-size: var(--taille-2xl);
+}
+
+.recharges__intro {
+  max-inline-size: var(--largeur-contenu);
+  margin-block-end: var(--espace-6);
+  color: var(--couleur-texte-secondaire);
+}
+
+.recharges__soustitre {
+  margin-block: var(--espace-8) var(--espace-3);
+  font-family: var(--police-titre);
+  font-size: var(--taille-lg);
+}
+
+/* == Le rechargement individuel ============================================ */
+
+.rechargement-individuel {
+  max-inline-size: var(--largeur-contenu);
+}
+
+/* Le disponible rappele des qu'un salarie est choisi : ce n'est pas un
+   plafond ici (un rechargement ne peut jamais rendre un solde negatif, il ne
+   fait que l'augmenter), seulement un repere pour verifier qu'on credite la
+   bonne personne. */
+.rechargement-individuel__solde {
+  margin-block: 0 var(--espace-4);
+  padding: var(--espace-2) var(--espace-3);
+  background: var(--couleur-fond-secondaire);
+  border-radius: var(--rayon-sm);
+  font-size: var(--taille-sm);
+  color: var(--couleur-texte-secondaire);
+}
+
+/* == L'import CSV =========================================================== */
+
+.import-lot {
+  max-inline-size: var(--largeur-contenu);
+}
+
+.import-lot__aide {
+  margin-block: 0 var(--espace-4);
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-sm);
+}
+
+.import-lot__aide code {
+  padding: 0 var(--espace-1);
+  background: var(--couleur-fond-secondaire);
+  border-radius: var(--rayon-sm);
+  font-size: 0.9em;
+}
+
+/* == L'apercu d'un lot ======================================================
+ *
+ * Plus large que le reste de l'ecran : cinq colonnes a lire d'un coup d'oeil
+ * avant de valider un versement d'argent public, ca ne tient pas dans
+ * `--largeur-contenu`.
+ * ========================================================================= */
+
+.apercu-lot {
+  margin-block-start: var(--espace-6);
+}
+
+.apercu-lot__resume {
+  max-inline-size: var(--largeur-contenu);
+  margin-block-end: var(--espace-4);
+}

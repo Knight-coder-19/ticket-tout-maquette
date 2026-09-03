@@ -463,3 +463,101 @@ export interface Regularisation {
     auteur: Identifiant | null;
   };
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * MISES EN AVANT — VITRINE PUBLIQUE
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/** `highlight_placement` (`0001_schema.sql:16`). */
+export type Emplacement = "minister_pick" | "public_featured";
+
+/** Une mise en avant, telle que l'administration la consulte. */
+export interface MiseEnAvant {
+  id: Identifiant;
+  partenaireId: Identifiant;
+  enseigne: string;
+  categorie: string;
+  emplacement: Emplacement;
+  /** Ordre d'affichage, 1-indexé. */
+  position: number;
+  /** Les mots du ministre, tels qu'ils paraîtront sur la vitrine. `null` si aucun. */
+  mot: string | null;
+  creePar: Identifiant;
+  /** Date ISO 8601. */
+  creeLe: string;
+}
+
+/**
+ * Un partenaire mis en avant, tel que la vitrine publique le montre.
+ *
+ * ⚠ `mot` est un neuvième champ sur un DTO que la règle R9 verrouille à huit.
+ * Voir `types/api.ts`, `PublicPartner`, pour le raisonnement complet.
+ */
+export interface PartenaireVitrine {
+  id: Identifiant;
+  enseigne: string;
+  categorie: string;
+  modeService: ModeDeService;
+  ville: string | null;
+  departement: string | null;
+  quartier: string | null;
+  siteWeb: string | null;
+  position: number;
+  mot: string | null;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * RECHARGEMENTS — CRÉDIT DES COMPTES SALARIÉS
+ *
+ * Un FINANCEMENT, pas une correction : à distinguer de `Regularisation`, qui
+ * répare une erreur. Ici on verse un droit — le compte d'émission
+ * `MINISTRY_ISSUANCE` est toujours le débiteur.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/** Le reçu d'un rechargement individuel. */
+export interface Rechargement {
+  operationId: Identifiant;
+  montant: MontantCentimes;
+  reference: string | null;
+  motif: string | null;
+  survenueLe: string;
+  /** `true` si cette réponse rejoue un rechargement déjà posté (même référence). */
+  rejoue: boolean;
+}
+
+/** `batch_status` (`0001_schema.sql:15`). */
+export type StatutLot = "draft" | "validated" | "rejected";
+
+/** Une ligne en erreur d'un fichier importé. */
+export interface LigneEnErreur {
+  ligne: number;
+  matriculeOuCourriel: string;
+  raison: string;
+}
+
+/**
+ * Une ligne de l'aperçu, valide ou non — voir `types/api.ts`, `BatchPreviewLine`.
+ */
+export interface LigneApercu {
+  ligne: number;
+  matriculeOuCourriel: string;
+  /** `null` si la ligne n'a pu être résolue. */
+  nomResolu: string | null;
+  /** `null` si le montant est illisible. */
+  montant: MontantCentimes | null;
+  /** `null` si la ligne est valide. */
+  erreur: string | null;
+}
+
+/** L'aperçu d'un lot avant validation. */
+export interface ApercuLot {
+  id: Identifiant;
+  nomFichier: string;
+  nombreLignes: number;
+  /** Cumul de TOUTES les lignes, même celles en erreur (elles ne comptent que
+   *  pour 0 si leur montant est illisible — voir `mocks/magasin.ts`). */
+  montantTotal: MontantCentimes;
+  statut: StatutLot;
+  erreurs: LigneEnErreur[];
+  lignes: LigneApercu[];
+}

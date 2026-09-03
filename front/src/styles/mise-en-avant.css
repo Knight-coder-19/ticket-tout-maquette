@@ -1,0 +1,223 @@
+/*
+ * La selection du Ministre.
+ *
+ * Trois pieces propres a cet ecran : le commutateur d'emplacement, les cartes
+ * d'apercu de la vitrine, et l'interrupteur du tableau de bascule. Le
+ * tableau, les etats et les dialogues viennent de `primitives.css`.
+ */
+
+.selection-ministre {
+  container-type: inline-size;
+  container-name: ministre;
+}
+
+.selection-ministre__titre {
+  margin-block: 0 var(--espace-2);
+  font-family: var(--police-titre);
+  font-size: var(--taille-2xl);
+}
+
+.selection-ministre__intro {
+  max-inline-size: var(--largeur-contenu);
+  margin-block-end: var(--espace-6);
+  color: var(--couleur-texte-secondaire);
+}
+
+.selection-ministre__soustitre {
+  margin-block: var(--espace-8) var(--espace-3);
+  font-family: var(--police-titre);
+  font-size: var(--taille-lg);
+}
+
+/* == Le commutateur d'emplacement ==========================================
+ *
+ * Deux boutons, jamais plus : le schema n'a que deux emplacements
+ * (`highlight_placement`). `aria-pressed` porte l'etat pour les technologies
+ * d'assistance ; le filet et le fond ne font que le repeter a l'oeil.
+ * ========================================================================= */
+
+.selection-ministre__emplacements {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+  margin-block-end: var(--espace-2);
+}
+
+.selection-ministre__emplacements .bouton[aria-pressed="true"] {
+  background: var(--couleur-rail-actif-fond);
+  border-color: var(--couleur-primaire);
+  color: var(--couleur-primaire);
+}
+
+.selection-ministre__description {
+  margin-block: 0 var(--espace-4);
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-sm);
+}
+
+/* == Les cartes d'apercu de la vitrine =====================================
+ *
+ * Une grille, une carte par mise en avant active, dans l'ordre exact que la
+ * vitrine publique sert. C'est l'aperçu qu'un administrateur regarde avant
+ * de publier -- il doit ressembler a ce que le public voit, pas au registre
+ * interne du partenaire.
+ * ========================================================================= */
+
+.vitrine-apercu {
+  display: grid;
+  gap: var(--espace-4);
+  margin-block-end: var(--espace-6);
+}
+
+@container ministre (min-width: 44rem) {
+  .vitrine-apercu {
+    grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  }
+}
+
+.carte-vitrine {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+  padding: var(--espace-4);
+  background: var(--couleur-carte-fond);
+  border: 1px solid var(--couleur-carte-bordure);
+  border-radius: var(--rayon-md);
+}
+
+.carte-vitrine__ordre {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  align-self: flex-start;
+}
+
+.carte-vitrine__ordre .bouton {
+  padding: var(--espace-1) var(--espace-2);
+  font-size: var(--taille-xs);
+  line-height: 1;
+}
+
+.carte-vitrine__position {
+  font-family: var(--police-titre);
+  font-size: var(--taille-sm);
+  color: var(--couleur-texte-secondaire);
+  min-inline-size: 1.5em;
+  text-align: center;
+}
+
+.carte-vitrine__enseigne {
+  margin: 0;
+  font-family: var(--police-titre);
+  font-size: var(--taille-lg);
+}
+
+.carte-vitrine__categorie {
+  margin: var(--espace-1) 0 0;
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-sm);
+}
+
+/* Le mot du ministre : une citation, visuellement distincte du reste de la
+   carte, parce que c'est un texte d'une autre origine que les faits qui
+   l'entourent -- pas un attribut du partenaire, la parole du ministre a son
+   sujet. */
+.carte-vitrine__mot {
+  margin: var(--espace-2) 0 0;
+  padding: var(--espace-2) var(--espace-3);
+  background: var(--couleur-fond-secondaire);
+  border-inline-start: var(--espace-1) solid var(--couleur-primaire);
+  border-radius: var(--rayon-sm);
+}
+
+.carte-vitrine__mot p {
+  margin: 0;
+  font-style: italic;
+}
+
+.carte-vitrine__mot cite {
+  display: block;
+  margin-block-start: var(--espace-1);
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-xs);
+  font-style: normal;
+}
+
+.carte-vitrine__sans-mot {
+  margin: var(--espace-2) 0 0;
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-sm);
+  font-style: italic;
+}
+
+/* == L'interrupteur du tableau de bascule ==================================
+ *
+ * Un bouton, jamais une case a cocher : le geste bascule immediatement l'etat
+ * sans ouvrir de formulaire pour retirer. `role="switch"` et `aria-checked`
+ * portent l'etat aux technologies d'assistance ; le texte du libelle le
+ * repete pour tout le monde -- aucune information n'est portee par la seule
+ * position du curseur.
+ *
+ * Le remplissage « actif » est `--couleur-action`, jamais le bleu
+ * institutionnel : c'est un bouton, et la charte le lui interdit
+ * (`tokens.css:13`).
+ * ========================================================================= */
+
+.bascule {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espace-2);
+  padding: var(--espace-1) var(--espace-2) var(--espace-1) var(--espace-1);
+  background: none;
+  border: 1px solid var(--couleur-champ-bordure);
+  border-radius: 999px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--couleur-texte);
+}
+
+.bascule:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Bordee, comme tout controle de formulaire du projet (`.dialogue textarea`,
+   par exemple) : un fond seul, entre un gris tres clair et le blanc de la
+   page, ne suffit pas a marquer la limite de la piste au seuil de contraste
+   non textuel -- mesure au banc, corrige ici plutot que suppose. */
+.bascule__piste {
+  position: relative;
+  inline-size: 2.25rem;
+  block-size: 1.25rem;
+  background: var(--couleur-neutre-fond);
+  border: 1px solid var(--couleur-champ-bordure);
+  border-radius: 999px;
+  transition: background-color 0.15s ease;
+}
+
+/* Pas d'ombre : aucun autre composant du projet n'en porte, et une ombre
+   introduirait une couleur qu'aucun jeton ne nomme. Le curseur blanc sur la
+   piste vert ou grise se distingue deja assez sans elle. */
+.bascule__curseur {
+  position: absolute;
+  inset-block-start: 1px;
+  inset-inline-start: 1px;
+  inline-size: calc(1.25rem - 4px);
+  block-size: calc(1.25rem - 4px);
+  background: var(--couleur-fond);
+  border-radius: 50%;
+  transition: transform 0.15s ease;
+}
+
+.bascule--active .bascule__piste {
+  background: var(--couleur-action);
+}
+
+.bascule--active .bascule__curseur {
+  transform: translateX(calc(2.25rem - 1.25rem));
+}
+
+.bascule__libelle {
+  font-size: var(--taille-sm);
+  font-family: var(--police-titre);
+}

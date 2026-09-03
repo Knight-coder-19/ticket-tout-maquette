@@ -41,14 +41,9 @@
  * charge pas cette feuille. Voir `components/partenaires/PastilleStatut`.
  * ======================================================================== */
 
-/* == L'avertissement du dialogue de fermeture ============================= */
+/* == L'avertissement du dialogue A REMONTE =================================
+ *
+ * `.dialogue__avertissement` est dans `primitives.css`, avec le reste de
+ * `.dialogue*` : meme raison, meme remontee.
+ * ========================================================================= */
 
-.dialogue__avertissement {
-  margin-block: 0 var(--espace-4);
-  padding: var(--espace-3);
-  background: var(--couleur-alerte-fond);
-  color: var(--couleur-texte);
-  border-inline-start: var(--espace-1) solid var(--couleur-alerte);
-  border-radius: var(--rayon-sm);
-  font-size: var(--taille-sm);
-}
