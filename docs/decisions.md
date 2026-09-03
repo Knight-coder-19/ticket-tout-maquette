@@ -190,7 +190,7 @@ lue, sans jamais supposer que les rangs se suivent.
 ## Écarts par rapport au plan de construction
 
 `file-guide.md` et `TASK-DISTRIBUTION-BACKEND.md` ont été écrits avant la première ligne de code.
-Sur quinze points, ce que j'ai écrit s'en écarte. Je les consigne ici parce qu'un écart non
+Sur vingt points, ce que j'ai écrit s'en écarte. Je les consigne ici parce qu'un écart non
 justifié se lit comme une négligence, et parce que trois d'entre eux corrigent une erreur des
 documents eux-mêmes — un relecteur qui suivrait le plan à la lettre réintroduirait le bug.
 
