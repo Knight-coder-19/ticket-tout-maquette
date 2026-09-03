@@ -39,5 +39,5 @@ pub fn verify_password(plain: &str, phc_hash: &str) -> Result<bool, PasswordErro
 }
 
 pub fn dummy_hash() -> &'static str {
-    "argon2id$v=19$m=65536,t=3,p=4$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "argon2id$v=19$m=65536,t=3,p=4$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 }
