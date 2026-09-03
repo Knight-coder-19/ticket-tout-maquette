@@ -1,6 +1,9 @@
 /*
  * L'ecran de validation des adhesions.
  *
+ * Les etats et les boutons ne sont plus ici : ils ont remonte dans
+ * `primitives.css`, partages avec l'espace partenaire.
+ *
  * Container queries, pas media queries : la file passe d'une a deux colonnes
  * selon la largeur du CONTENEUR. Le seuil `46rem` est ecrit en dur -- une
  * condition `@container` n'accepte pas `var(--...)`, les proprietes
@@ -39,57 +42,6 @@
   color: var(--couleur-texte-secondaire);
   font-size: var(--taille-sm);
 }
-
-/* == Les quatre etats ===================================================== */
-
-.etat {
-  border: 1px solid var(--couleur-bordure);
-  border-radius: var(--rayon-md);
-  padding: var(--espace-6);
-  max-width: var(--largeur-contenu);
-}
-
-/* Chargement : des silhouettes, pas un ecran blanc. */
-.etat--chargement {
-  display: grid;
-  gap: var(--espace-3);
-}
-
-.silhouette {
-  background: var(--couleur-fond-secondaire);
-  border-radius: var(--rayon-sm);
-  height: var(--espace-4);
-}
-
-.silhouette--titre { height: var(--espace-6); width: 60%; }
-.silhouette--ligne { width: 85%; }
-.silhouette--courte { width: 40%; }
-
-/* Liste vide : une bonne nouvelle, pas une erreur. Ni rouge, ni icone
-   d'avertissement -- le fond de succes et rien d'autre. */
-.etat--vide {
-  background: var(--couleur-succes-fond);
-  border-color: var(--couleur-succes);
-}
-
-.etat--vide h3 {
-  margin-block: 0 var(--espace-2);
-  color: var(--couleur-succes);
-}
-
-/* Echec : ce qui a echoue, et ce que l'agent peut faire. */
-.etat--echec {
-  background: var(--couleur-alerte-fond);
-  border-color: var(--couleur-alerte);
-}
-
-.etat--echec h3 {
-  margin-block: 0 var(--espace-2);
-  color: var(--couleur-alerte);
-}
-
-.etat p { margin-block: 0 var(--espace-3); }
-.etat p:last-child { margin-block-end: 0; }
 
 /* == La file ============================================================== */
 
@@ -158,6 +110,12 @@
  * donnait l'air de deborder. Marge basse seulement -- la marge haute est
  * portee par la liste de faits qui la precede.
  */
+/* Les boutons se posent en bas de la carte : c'est ce qui les aligne d'une
+   carte a l'autre. Sans effet ailleurs -- `auto` vaut zero hors flexbox. */
+.demande .actions {
+  margin-block-start: auto;
+}
+
 .demande__note {
   margin-block: 0 var(--espace-4);
   padding: var(--espace-2) var(--espace-3);
@@ -221,63 +179,6 @@
 .pastille--refusee {
   background: var(--couleur-alerte-fond);
   color: var(--couleur-alerte);
-}
-
-/* == Les boutons ========================================================== */
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--espace-2);
-}
-
-/* Les boutons se posent en bas de la carte : c'est ce qui les aligne d'une
-   carte a l'autre. Sans effet ailleurs -- `auto` vaut zero hors flexbox. */
-.demande .actions {
-  margin-block-start: auto;
-}
-
-.bouton {
-  font-family: var(--police-titre);
-  font-size: var(--taille-sm);
-  padding: var(--espace-2) var(--espace-4);
-  border-radius: var(--rayon-sm);
-  border: 2px solid transparent;
-  cursor: pointer;
-}
-
-.bouton:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
-/* Accepter : la couleur d'action, jamais le bleu institutionnel. */
-.bouton--action {
-  background: var(--couleur-action);
-  color: var(--couleur-action-texte);
-}
-
-.bouton--action:hover:not(:disabled) {
-  background: var(--couleur-action-survol);
-}
-
-/* Refuser : un contour, pas un aplat. La bordure est ici une frontiere de
-   controle, donc soumise au seuil de 3:1 -- d'ou l'alerte et non le filet
-   decoratif des cartes. */
-.bouton--refus {
-  background: var(--couleur-carte-fond);
-  color: var(--couleur-alerte);
-  border-color: currentcolor;
-}
-
-.bouton--refus:hover:not(:disabled) {
-  background: var(--couleur-alerte-fond);
-}
-
-.bouton--discret {
-  background: transparent;
-  color: var(--couleur-texte);
-  border-color: var(--couleur-champ-bordure);
 }
 
 /* == Le dialogue de refus ================================================= */

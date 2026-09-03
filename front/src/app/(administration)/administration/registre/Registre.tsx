@@ -16,9 +16,8 @@
  * l'idée qu'il choisit le moment où l'on regarde.
  */
 
-import "@/styles/comptes.css";
+import "@/styles/primitives.css";
 import "@/styles/registre.css";
-import "@/styles/validations.css";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 

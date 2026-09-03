@@ -1,0 +1,164 @@
+/*
+ * Le comptoir : l'encaissement partenaire.
+ *
+ * Un ecran de caisse se lit de loin, vite, souvent d'une main. Les montants
+ * sont grands, les zones tactiles larges, et rien n'y clignote.
+ *
+ * Les etats et les boutons viennent de `primitives.css`, partages avec
+ * l'administration. Ce fichier ne porte que le comptoir.
+ *
+ * Container queries, pas media queries. Seuil `40rem`, ecrit en dur : une
+ * condition `@container` n'accepte pas `var(--...)`.
+ *
+ * Toutes les couleurs viennent de tokens.css. Aucun fond nouveau.
+ */
+
+.encaissement {
+  container-type: inline-size;
+  container-name: comptoir;
+  max-width: var(--largeur-contenu);
+  margin-inline: auto;
+  padding-block: var(--espace-6);
+}
+
+.encaissement__titre {
+  font-size: var(--taille-2xl);
+  margin-block: 0 var(--espace-2);
+}
+
+.encaissement__aide {
+  margin-block: 0 var(--espace-4);
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-sm);
+}
+
+/*
+ * Le montant.
+ *
+ * C'est la seule chose que le caissier et le client regardent ensemble, et il
+ * est lu a distance, par-dessus un comptoir. D'ou `--taille-3xl` : ce n'est pas
+ * de l'emphase, c'est une contrainte de lecture.
+ */
+.encaissement__somme {
+  margin-block: var(--espace-4) var(--espace-4);
+  font-family: var(--police-titre);
+  font-size: var(--taille-3xl);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.encaissement__faits {
+  display: grid;
+  gap: var(--espace-1) var(--espace-4);
+  grid-template-columns: max-content minmax(0, 1fr);
+  margin-block: 0 var(--espace-6);
+}
+
+@container comptoir (max-width: 40rem) {
+  /* Etroit : les intitules passent au-dessus de leur valeur plutot que de
+     serrer les deux colonnes. */
+  .encaissement__faits {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .encaissement__faits dd {
+    margin-block-end: var(--espace-3);
+  }
+}
+
+.encaissement__faits dt {
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-sm);
+}
+
+.encaissement__faits dd {
+  margin: 0;
+}
+
+/* Un code se relit caractere par caractere : chasse fixe, jamais de ligature. */
+.encaissement__code {
+  font-family: ui-monospace, "SFMono-Regular", "Consolas", monospace;
+  letter-spacing: 0.08em;
+}
+
+/*
+ * Le compte a rebours.
+ *
+ * Il compte sur l'echeance servie par le serveur. Quand il tombe a zero, le
+ * bouton se desactive -- premier etage de la defense. Le second est le serveur,
+ * qui refuse contre sa propre horloge.
+ */
+.encaissement__minuteur {
+  margin-block: 0 var(--espace-4);
+  padding: var(--espace-2) var(--espace-3);
+  background: var(--couleur-succes-fond);
+  color: var(--couleur-texte);
+  border-inline-start: var(--espace-1) solid var(--couleur-succes);
+  border-radius: var(--rayon-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.encaissement__minuteur--expire {
+  background: var(--couleur-alerte-fond);
+  border-inline-start-color: var(--couleur-alerte);
+}
+
+/* == Les champs ============================================================ */
+
+.etape label {
+  display: block;
+  margin-block-end: var(--espace-2);
+  font-family: var(--police-titre);
+}
+
+.etape input {
+  inline-size: 100%;
+  padding: var(--espace-3);
+  font: inherit;
+  /* Un code se tape sur un comptoir, parfois d'une main : le champ est plus
+     grand que la normale, et la chasse fixe evite les confusions de lecture. */
+  font-family: ui-monospace, "SFMono-Regular", "Consolas", monospace;
+  font-size: var(--taille-lg);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--couleur-texte);
+  background: var(--couleur-fond);
+  border: 1px solid var(--couleur-champ-bordure);
+  border-radius: var(--rayon-sm);
+}
+
+.etape input:disabled {
+  background: var(--couleur-fond-secondaire);
+}
+
+/* == Le recu =============================================================== */
+
+.recu {
+  border: 1px solid var(--couleur-bordure);
+  border-radius: var(--rayon-md);
+  padding: var(--espace-6);
+  background: var(--couleur-fond);
+}
+
+/*
+ * La mention de simulation, repetee sur le recu.
+ *
+ * Le bandeau du layout la porte deja, mais un recu se photographie et
+ * s'imprime : detache de son ecran, il doit rester ce qu'il est.
+ */
+.encaissement__mention {
+  margin-block: var(--espace-4) var(--espace-6);
+  padding: var(--espace-2) var(--espace-3);
+  background: var(--couleur-simulation-fond);
+  color: var(--couleur-simulation-texte);
+  border-inline-start: var(--espace-1) solid var(--couleur-simulation-filet);
+  border-radius: var(--rayon-sm);
+  font-size: var(--taille-sm);
+}
+
+@media print {
+  .encaissement__mention {
+    border: 1px solid var(--couleur-simulation-filet);
+  }
+}

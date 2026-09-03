@@ -974,16 +974,35 @@ export function trouverJetonParJti(jti: string): JetonMagasin | undefined {
 }
 
 /**
- * Retrouve un jeton par son code court, parmi les **actifs** seulement.
+ * Retrouve un jeton par son code court.
+ *
+ * ⚠ L'ACTIF D'ABORD, puis le plus recent des termines.
  *
  * L'unicite du code court ne porte que sur les jetons actifs (index partiel
- * `uq_active_short_code`) : un code deja consomme peut avoir ete reattribue,
- * et le chercher parmi les jetons termines rendrait une reponse arbitraire.
+ * `uq_active_short_code`, `0001_schema.sql:156`) : un code consomme peut avoir
+ * ete reattribue, et l'actif doit donc gagner. Mais s'arreter la etait un
+ * defaut : un jeton EXPIRE n'est plus actif, et le comptoir recevait
+ * « ce code est introuvable » la ou le vrai motif est « ce code a expire ».
+ * Le caissier verifiait sa saisie au lieu de demander un nouveau code.
+ *
+ * Le back, lui, sait les distinguer : `payments/mod.rs:2-3` impose que
+ * `PaymentError` garde `UnknownToken`, `TokenExpired` et `TokenAlreadyUsed`
+ * DISTINCTS -- « the offline client depends on it ». Une recherche qui ne
+ * rendrait que les actifs ecraserait deux de ces trois cas sur le troisieme.
+ *
+ * On rend donc le jeton, quel que soit son statut, et c'est a l'appelant de
+ * dire pourquoi il refuse.
  */
 export function trouverJetonParCode(saisie: string): JetonMagasin | undefined {
   const code = normaliserShortCode(saisie);
-  return [...magasin.jetons.values()].find(
-    (jeton) => jeton.statut === "active" && jeton.shortCode === code,
+  const memeCode = [...magasin.jetons.values()].filter(
+    (jeton) => jeton.shortCode === code,
+  );
+  return (
+    memeCode.find((jeton) => jeton.statut === "active") ??
+    /* Aucun actif : le plus recemment emis, pour que le message porte sur le
+       dernier geste du client et non sur un jeton oublie de la veille. */
+    memeCode.sort((a, b) => b.issuedAt.localeCompare(a.issuedAt))[0]
   );
 }
 
@@ -1435,69 +1454,4 @@ export function changerStatutPartenaire(
   });
 
   return { partenaire, entree };
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
- * ANCIEN MODÈLE — conserve uniquement pour les deux routes historiques
- * ═══════════════════════════════════════════════════════════════════════════
- *
- * `POST /api/payment-tokens` et `GET /api/payment-tokens/{token}` servent le
- * modele ou le caissier saisissait le montant. Les ecrans d'encaissement en
- * dependent encore (`EtapeMontant.tsx` demande le montant a la caisse), et la
- * consigne est de ne toucher a aucun ecran.
- *
- * ⚠ Ces structures sont a supprimer en meme temps que ces deux routes, le jour
- * ou le parcours partenaire sera refait sur le modele du back — c'est la
- * divergence D4 de `front/docs/contrat-api.md`. Ne rien ajouter ici.
- */
-
-/** ANCIEN MODÈLE. Voir l'avertissement ci-dessus. */
-export interface JetonPaiement {
-  token: string;
-  employeeId: Identifiant;
-  issuedAt: string;
-  expiresAt: string;
-  usedAt: string | null;
-}
-
-const CLE_JETONS_HERITES = "__carteproJetonsHerites__";
-type PorteeHeritee = typeof globalThis &
-  Record<typeof CLE_JETONS_HERITES, Map<string, JetonPaiement> | undefined>;
-const porteeHeritee = globalThis as PorteeHeritee;
-
-const jetonsHerites: Map<string, JetonPaiement> =
-  porteeHeritee[CLE_JETONS_HERITES] ??
-  (porteeHeritee[CLE_JETONS_HERITES] = new Map<string, JetonPaiement>());
-
-/** ANCIEN MODÈLE. */
-export function trouverJeton(token: string): JetonPaiement | undefined {
-  return jetonsHerites.get(token);
-}
-
-/** ANCIEN MODÈLE. */
-export function jetonExiste(token: string): boolean {
-  return jetonsHerites.has(token);
-}
-
-/** ANCIEN MODÈLE. */
-export function enregistrerJeton(jeton: JetonPaiement): JetonPaiement {
-  jetonsHerites.set(jeton.token, jeton);
-  return jeton;
-}
-
-/** ANCIEN MODÈLE. */
-export function marquerJetonUtilise(
-  token: string,
-  utiliseLe: string,
-): JetonPaiement | undefined {
-  const jeton = jetonsHerites.get(token);
-  if (!jeton) return undefined;
-  const consomme: JetonPaiement = { ...jeton, usedAt: utiliseLe };
-  jetonsHerites.set(token, consomme);
-  return consomme;
-}
-
-/** ANCIEN MODÈLE. */
-export function jetonEstExpire(jeton: JetonPaiement, maintenant: number): boolean {
-  return Date.parse(jeton.expiresAt) <= maintenant;
 }

@@ -8,6 +8,7 @@
  * on suspend, on réactive, on ferme.
  */
 
+import "@/styles/primitives.css";
 import "@/styles/validations.css";
 import "@/styles/comptes.css";
 

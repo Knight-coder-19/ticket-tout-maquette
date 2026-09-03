@@ -41,13 +41,18 @@ import type {
   EmployeeTransaction,
   IssuedTokenResponse,
   ChainVerification,
+  DailyRevenueItem,
   LedgerEntryItem,
   LigneJournal,
   PartnerAccountItem,
+  PartnerAccountStatus,
   PartnerReviewItem,
   PartnerStatus,
+  PartnerSummary,
+  PartnerTransactionItem,
   PaymentResponse,
   PublicPartner,
+  ResolvedTokenItem,
   SirhBalance,
 } from "@/types/api";
 import type {
@@ -57,6 +62,7 @@ import type {
   EcritureRegistre,
   DemandeAdhesion,
   DemandePartenaire,
+  MonCompte,
   Partenaire,
   NatureEcriture,
   SensDecision,
@@ -68,7 +74,11 @@ import type {
 } from "@/types/domaine";
 import type {
   EncaissementAccepte,
+  JetonResolu,
+  JourneeRecettes,
+  LigneEncaissement,
   MontantCentimes,
+  ResumeActivite,
 } from "@/types/encaissement";
 import { ErreurService } from "@/types/erreurs";
 
@@ -892,42 +902,180 @@ export function depuisVerification(
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+ * 8 quinquies. MON COMPTE — ESPACE PARTENAIRE
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * `PartnerAccountStatus` → `MonCompte`.
+ *
+ * ⚠ Le type d'entrée vient d'une route que NOUS proposons : le contrat n'a
+ * aucune route disant à un partenaire l'état de son compte. Voir
+ * `types/api.ts`.
+ *
+ * Le statut passe par `statutDepuisPartnerStatus`, la traduction unique du
+ * projet — celle-là même que la file de validation et le registre des comptes
+ * utilisent. Un statut est un statut, quel que soit l'écran qui le lit.
+ */
+export function depuisMonCompte(brut: PartnerAccountStatus): MonCompte {
+  return {
+    id: brut.id,
+    enseigne: brut.trade_name,
+    statut: statutDepuisPartnerStatus(brut.status),
+    motif: brut.review_reason,
+    decideeLe:
+      brut.reviewed_at === null ? null : horodatageIso(brut.reviewed_at, "reviewed_at"),
+    deposeeLe: horodatageIso(brut.submitted_at, "submitted_at"),
+    courrielContact: brut.contact_email,
+    ville: brut.city === null ? null : brut.city.name,
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * 8 sexies. TABLEAU DE BORD DU COMMERÇANT
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * `PartnerSummary` → `ResumeActivite`.
+ *
+ * ✅ Le type d'entrée est celui du CONTRAT (`data-dictionary.md:418-425`).
+ *
+ * `total` repasse en CENTIMES : le back sert des euros décimaux, le domaine ne
+ * connaît que des entiers, et le formatage n'arrive qu'à l'affichage.
+ */
+export function depuisResumeActivite(brut: PartnerSummary): ResumeActivite {
+  return {
+    total: centimesDepuis(brut, "total_received"),
+    nombre: brut.transaction_count,
+    depuis: horodatageIso(brut.period_from, "period_from"),
+    jusqua: horodatageIso(brut.period_to, "period_to"),
+    estOfficiel: brut.is_official_partner,
+  };
+}
+
+/**
+ * `DailyRevenueItem` → `JourneeRecettes`.
+ *
+ * ⚠ Le type d'entrée vient d'une route que NOUS proposons — le contrat n'a
+ * aucune série journalière. Voir `types/api.ts`.
+ *
+ * `jour` reste une chaîne `YYYY-MM-DD` et n'est PAS converti en horodatage : ce
+ * n'est pas un instant, c'est une journée. La convertir en millisecondes
+ * introduirait un fuseau là où il n'y en a pas, et deux postes réglés
+ * différemment n'afficheraient pas les mêmes barres.
+ */
+export function depuisJourneeRecettes(brut: DailyRevenueItem): JourneeRecettes {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(brut.day)) {
+    throw new ErreurService(
+      "reponse_illisible",
+      `Réponse du serveur illisible : day n'est pas une date YYYY-MM-DD (${brut.day}).`,
+      { champ: "day" },
+    );
+  }
+  return {
+    jour: brut.day,
+    total: centimesDepuis(brut, "total_received"),
+    nombre: brut.transaction_count,
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * 8 septies. JOURNAL DU COMMERÇANT
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * `PartnerTransactionItem` → `LigneEncaissement`.
+ *
+ * ✅ Les six premiers champs viennent du CONTRAT ; `status` et
+ * `compensation_reason` sont notre ajout — voir `types/api.ts`.
+ *
+ * `montant` repasse en CENTIMES entiers, comme partout dans le domaine.
+ *
+ * Un `status` inconnu lève : le journal d'un commerçant n'est pas l'endroit où
+ * ranger un état qu'on ne sait pas nommer.
+ */
+export function depuisLigneEncaissement(brut: PartnerTransactionItem): LigneEncaissement {
+  const etat =
+    brut.status === "settled"
+      ? ("regle" as const)
+      : brut.status === "compensated"
+        ? ("annule" as const)
+        : null;
+  if (etat === null) {
+    throw new ErreurService(
+      "reponse_illisible",
+      `Réponse du serveur illisible : état d'encaissement inconnu (${String(brut.status)}).`,
+      { champ: "status" },
+    );
+  }
+
+  return {
+    reference: brut.id,
+    montant: centimesDepuis(brut, "amount"),
+    modeSaisie: brut.entry_mode,
+    survenueLe: horodatageIso(brut.occurred_at, "occurred_at"),
+    synchroniseeLe: horodatageIso(brut.synced_at, "synced_at"),
+    beneficiaire: brut.customer_label,
+    etat,
+    motifAnnulation: brut.compensation_reason,
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
  * 9. ENCAISSEMENT
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 /**
+ * `ResolvedTokenItem` → `JetonResolu`.
+ *
+ * ⚠ Le type d'entrée vient d'une route que NOUS proposons — le contrat n'a
+ * aucune lecture de jeton sans consommation (divergence D6). Voir
+ * `types/api.ts`.
+ *
+ * `montant` repasse en CENTIMES : le back sert des euros décimaux
+ * (`money.rs:145`), le domaine ne connaît que des entiers.
+ *
+ * `expireA` devient un NOMBRE de millisecondes. C'est la seule conversion qui
+ * permette au compte à rebours de compter, et `horodatage` lève si le serveur
+ * envoie autre chose qu'une date — un compte à rebours alimenté par `NaN`
+ * afficherait un jeton éternellement valide.
+ */
+export function depuisJetonResolu(brut: ResolvedTokenItem): JetonResolu {
+  return {
+    jti: brut.jti,
+    codeCourt: brut.short_code,
+    montant: centimesDepuis(brut, "amount"),
+    beneficiaire: brut.customer_label,
+    expireA: horodatage(brut.expires_at, "expires_at"),
+  };
+}
+
+/**
  * `PaymentResponse` → `EncaissementAccepte`.
  *
- * `ref` ← `id`, l'identifiant du paiement, et non `jti` : le `jti` identifie
- * le JETON consommé, pas l'écriture. Un caissier qui cite une référence cite
- * la transaction.
+ * ✅ Le type d'entrée est celui du CONTRAT (`data-dictionary.md:443-451`).
  *
- * `complement.employee` : le back ne sert PAS l'identité du salarié au
- * partenaire, et c'est une décision, pas un oubli — il n'expose qu'un
- * `customer_label` valant « K. A. », « jamais le nom complet »
- * (data-dictionary.md:434), et `PaymentResponse` ne porte même pas ce
- * label-là (:443-451). L'écran d'encaissement du front affiche aujourd'hui
- * `employee.name` : c'est la divergence D14 de l'audit, et elle se règle sur
- * l'écran, pas ici.
+ * `complement` porte les deux choses que le serveur ne dit pas :
  *
- * `complement.rejoue` : `PaymentResponse` ne porte aucun marqueur de rejeu.
- * Un règlement rejoué par le même partenaire renvoie `200` avec exactement la
- * même forme et `status: "settled"` (data-dictionary.md:645) — rien ne le
- * distingue d'un premier encaissement. Seul l'appelant sait s'il rejouait.
- * Divergence D13.
+ *   - `beneficiaire` — `PaymentResponse` ne renvoie ni identité ni
+ *     `customer_label`. L'écran le tient du jeton résolu, un pas plus tôt.
+ *   - `rejoue` — un règlement rejoué rend `200` avec exactement la même forme
+ *     et `status: "settled"` (:645). Rien ne le distingue. Seul l'appelant sait
+ *     s'il rejouait, parce que c'est lui qui a renvoyé.
+ *
+ * Le paramètre est obligatoire : la signature dit « ce que le serveur ne
+ * fournit pas, dis-le-moi » plutôt que d'inventer une valeur par défaut.
  */
 export function depuisEncaissement(
   brut: PaymentResponse,
-  complement: {
-    employee: { id: string; name: string };
-    rejoue: boolean;
-  },
+  complement: { beneficiaire: string; rejoue: boolean },
 ): EncaissementAccepte {
   return {
-    ref: brut.id,
-    amount: centimesDepuis(brut, "amount"),
-    createdAt: horodatage(brut.occurred_at, "occurred_at"),
-    employee: complement.employee,
+    reference: brut.id,
+    jti: brut.jti,
+    montant: centimesDepuis(brut, "amount"),
+    regleA: horodatage(brut.occurred_at, "occurred_at"),
+    modeSaisie: brut.entry_mode,
+    beneficiaire: complement.beneficiaire,
     rejoue: complement.rejoue,
   };
 }

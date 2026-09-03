@@ -1,0 +1,77 @@
+/*
+ * Le journal des encaissements du commercant.
+ *
+ * La barre de filtres, le tableau defilant et les etats viennent de
+ * `primitives.css`, partages avec les deux registres de l'administration. Ce
+ * fichier ne porte que ce qui lui est propre : l'en-tete, les raccourcis de
+ * periode et le bloc d'export.
+ *
+ * Container queries, pas media queries. Le conteneur s'appelle `registre` --
+ * c'est le nom que les regles partagees attendent.
+ *
+ * Toutes les couleurs viennent de tokens.css. Aucun fond nouveau.
+ */
+
+.journal-partenaire {
+  container-type: inline-size;
+  container-name: registre;
+}
+
+.journal-partenaire__titre {
+  font-size: var(--taille-3xl);
+  margin-block: 0 var(--espace-2);
+}
+
+.journal-partenaire__intro {
+  margin-block: 0 var(--espace-6);
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-sm);
+  max-width: var(--largeur-contenu);
+}
+
+/* == Les raccourcis de periode ============================================= */
+
+/* Meme forme que le `label` des autres champs, mais ce n'en est pas un : ces
+   boutons ne pilotent aucun champ unique, ils en remplissent deux. D'ou un
+   `span` nomme par `aria-labelledby`, et non un `label`. */
+.filtres__intitule {
+  font-family: var(--police-titre);
+  font-size: var(--taille-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--couleur-texte-secondaire);
+}
+
+.filtres__raccourcis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+}
+
+.filtres__raccourcis .bouton {
+  font-size: var(--taille-xs);
+  padding: var(--espace-1) var(--espace-2);
+}
+
+/* == L'export ============================================================== */
+
+.export {
+  margin-block-start: var(--espace-6);
+  padding: var(--espace-4);
+  background: var(--couleur-fond-secondaire);
+  border: 1px solid var(--couleur-bordure);
+  border-radius: var(--rayon-md);
+}
+
+/*
+ * La portee de l'export, dite avant le clic.
+ *
+ * Un export qui ne contiendrait que la premiere page sans le dire serait la
+ * meme tromperie qu'un tableau tronque en silence -- en pire, parce que le
+ * fichier survit a l'ecran et qu'on ne peut plus verifier.
+ */
+.export__portee {
+  margin-block: var(--espace-2) 0;
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-sm);
+}

@@ -414,17 +414,6 @@ export type PartnerTransaction = {
 };
 
 /**
- * ⚠ UNKNOWN — enveloppe indéterminée.
- *
- * `GET /api/v1/partner/transactions?from=&to=&cursor=` accepte un curseur
- * (data-dictionary.md:427) mais sa réponse n'est PAS annotée `Paginated<T>`,
- * contrairement à `/me/transactions` (:392) et `/catalog` (:481). Liste nue,
- * ou enveloppe implicite ? Le dictionnaire se tait, et aucune ligne de Rust
- * ne tranche. Je ne devine pas.
- */
-export type PartnerTransactionList = unknown;
-
-/**
  * Source : docs/data-dictionary.md:438-442 — non encore implémenté côté back.
  *
  * ⚠ CONFLIT DE NOMMAGE NON RÉSOLU. Le dictionnaire décrit deux champs
@@ -849,4 +838,115 @@ export type LedgerEntryItem = {
 
 /** Enveloppe de la même route. `Paginated<T>` du contrat (:319-322). */
 export type LedgerEntryList = Paginated<LedgerEntryItem>;
+
+/**
+ * L'état du compte d'un partenaire, vu par son titulaire.
+ *
+ * ⚠ NOTRE PROPOSITION, servie par `GET /api/v1/partner/account`. La section 4.5
+ * du contrat n'expose aucune route de ce genre, alors que la section 3.6 dit
+ * `review_reason` « visible du partenaire en cas de rejet » (:158) : l'intention
+ * est écrite, la route manque.
+ *
+ * Les noms sont les colonnes de `partners` (`0001_schema.sql:98-124`).
+ */
+export type PartnerAccountStatus = {
+  id: string;
+  trade_name: string;
+  status: PartnerStatus;
+  review_reason: string | null;
+  reviewed_at: string | null;
+  submitted_at: string;
+  contact_email: string;
+  city: CityRef | null;
+};
+
+/**
+ * Un jeton résolu au comptoir, sans être consommé.
+ *
+ * ⚠ NOTRE PROPOSITION, servie par
+ * `GET /api/v1/partner/payment-tokens/{reference}`. Le contrat n'a AUCUNE route
+ * qui lise un jeton sans le régler : ni la section 4.5, ni
+ * `crates/api/src/routes/partner.rs`. C'est la divergence D6 de
+ * `front/docs/contrat-api.md`.
+ *
+ * Sans elle, un caissier qui saisit un code à la main règle à l'aveugle : il ne
+ * voit ni le montant réservé, ni le bénéficiaire, ni l'échéance. Dans le modèle
+ * du back, où le montant vient du jeton et non de la caisse, cette lecture
+ * n'est pas un confort — c'est la seule façon de savoir ce qu'on encaisse.
+ *
+ * `customer_label` suit la règle du contrat : « K. A. », jamais le nom complet
+ * (`data-dictionary.md:434`).
+ */
+export type ResolvedTokenItem = {
+  jti: string;
+  /** Huit caractères au format `XXXX-XXXX`. */
+  short_code: string;
+  /** Euros décimaux, comme tout montant du contrat. */
+  amount: number;
+  customer_label: string;
+  expires_at: string;
+};
+
+/**
+ * Une journée de recettes.
+ *
+ * ⚠ NOTRE PROPOSITION, servie par `GET /api/v1/partner/daily-revenue`. Le
+ * contrat n'a aucune série journalière : `PartnerSummary` (:419-425) rend
+ * quatre agrégats sur UNE période, et le tableau de bord national agrège par
+ * ville (:568), pas par jour.
+ *
+ * Les noms sont ceux de `PartnerSummary`, repris par jour, pour donner au back
+ * un vocabulaire déjà écrit s'il adopte la route.
+ */
+export type DailyRevenueItem = {
+  /** `YYYY-MM-DD`, le type `DATE` du dictionnaire (:41). */
+  day: string;
+  /** Euros décimaux. Zéro les jours sans recette — ils sont servis. */
+  total_received: number;
+  transaction_count: number;
+};
+
+/** Enveloppe de la même route. */
+export type DailyRevenueList = { days: DailyRevenueItem[] };
+
+/**
+ * Un encaissement du journal partenaire.
+ *
+ * ✅ Les six premiers champs sont ceux du CONTRAT, `PartnerTransaction`
+ * (`data-dictionary.md:427-435`).
+ *
+ * ⚠ Les deux derniers sont NOTRE AJOUT. Le DTO ne porte aucun état, alors qu'un
+ * encaissement peut avoir été annulé par une compensation
+ * (`corrections/mod.rs:1-3`). Un journal qui présenterait une ligne annulée
+ * comme un encaissement ordinaire mentirait au commerçant sur ce qu'il a
+ * réellement encaissé.
+ */
+export type PartnerTransactionItem = {
+  id: string;
+  /** Euros décimaux. */
+  amount: number;
+  entry_mode: EntryMode;
+  /** `= scanned_at`, ce que le commerçant reconnaît. */
+  occurred_at: string;
+  /** Moment d'arrivée au serveur. */
+  synced_at: string;
+  /** « K. A. » — jamais le nom complet. */
+  customer_label: string;
+  /** NOTRE AJOUT. */
+  status: "settled" | "compensated";
+  /** NOTRE AJOUT. Motif de l'annulation, `null` si la ligne tient. */
+  compensation_reason: string | null;
+};
+
+/**
+ * Enveloppe de la même route.
+ *
+ * ⚠ NOTRE CHOIX, et il tranche une ambiguïté du contrat : la route accepte un
+ * `cursor` (:427) mais sa réponse n'est pas annotée `Paginated<T>`,
+ * contrairement à `/me/transactions` (:392) et `/catalog` (:481). Un curseur en
+ * entrée sans curseur en sortie ne se poursuit pas — on retient donc
+ * l'enveloppe du contrat. Ambiguïté A7 de `front/docs/contrat-api.md`, à
+ * confirmer avec l'équipe back.
+ */
+export type PartnerTransactionList = Paginated<PartnerTransactionItem>;
 

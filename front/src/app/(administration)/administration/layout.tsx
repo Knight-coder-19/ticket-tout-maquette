@@ -1,4 +1,5 @@
-import "@/styles/administration.css";
+import "@/styles/espace.css";
+import "@/styles/primitives.css";
 
 import { BandeauSimulation } from "@/components/simulation/BandeauSimulation";
 import { RailAdministration } from "./RailAdministration";
@@ -10,6 +11,9 @@ import { RailAdministration } from "./RailAdministration";
  * contenu. Aucun ecran n'est code ici — les dix pages restent ce qu'elles
  * sont.
  *
+ * La coquille et le rail viennent de `styles/espace.css`, partages avec
+ * l'espace partenaire ; les etats et les boutons de `styles/primitives.css`.
+ *
  * L'element qui porte `container-type` est cette `div` : c'est par rapport a
  * SA largeur que le rail bascule entre barre horizontale et colonne, et non
  * par rapport a la fenetre. Le layout se comporte donc pareil dans un cadre
@@ -17,11 +21,11 @@ import { RailAdministration } from "./RailAdministration";
  */
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="espace-administration">
+    <div className="espace">
       <BandeauSimulation />
-      <div className="espace-administration__grille">
+      <div className="espace__grille">
         <RailAdministration />
-        <main className="espace-administration__contenu">{children}</main>
+        <main className="espace__contenu">{children}</main>
       </div>
     </div>
   );

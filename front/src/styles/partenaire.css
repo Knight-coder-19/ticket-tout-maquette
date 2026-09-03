@@ -1,0 +1,85 @@
+/*
+ * L'espace partenaire.
+ *
+ * La coquille (`espace.css`), les etats et les boutons (`primitives.css`) sont
+ * partages avec l'administration : ce fichier ne porte que ce qui est propre au
+ * partenaire, c'est-a-dire le message d'adhesion refusee.
+ *
+ * Toutes les couleurs viennent de tokens.css. Aucun fond nouveau : les trois
+ * teintes employees ici sont celles deja mesurees pour les etats et les
+ * pastilles de statut.
+ */
+
+.adhesion {
+  max-width: var(--largeur-contenu);
+  border: 1px solid var(--couleur-bordure);
+  border-radius: var(--rayon-md);
+  padding: var(--espace-6);
+  margin-block: var(--espace-6);
+}
+
+/*
+ * Le filet lateral porte la teinte du statut. Le TEXTE, lui, reste en
+ * `--couleur-texte` sur un fond clair : un message qu'on lit dans un mauvais
+ * moment doit etre lisible, pas colore.
+ */
+.adhesion--refuse {
+  background: var(--couleur-alerte-fond);
+  border-inline-start: var(--espace-1) solid var(--couleur-alerte);
+}
+
+.adhesion--suspendu {
+  background: var(--couleur-alerte-fond);
+  border-inline-start: var(--espace-1) solid var(--couleur-alerte);
+}
+
+.adhesion--ferme {
+  background: var(--couleur-neutre-fond);
+  border-inline-start: var(--espace-1) solid var(--couleur-texte-secondaire);
+}
+
+.adhesion--en_attente {
+  background: var(--couleur-attente-fond);
+  border-inline-start: var(--espace-1) solid var(--couleur-attente-texte);
+}
+
+.adhesion__titre {
+  margin-block: 0 var(--espace-3);
+  font-size: var(--taille-xl);
+}
+
+.adhesion p {
+  margin-block: 0 var(--espace-4);
+}
+
+.adhesion p:last-child {
+  margin-block-end: 0;
+}
+
+/*
+ * Le motif, cite tel qu'il a ete enregistre.
+ *
+ * En `blockquote` et non en paragraphe : ce ne sont pas nos mots, ce sont ceux
+ * de l'administration. Le commercant doit pouvoir les recopier dans un courrier
+ * sans avoir a deviner ou ils commencent.
+ */
+.adhesion__motif {
+  margin: 0 0 var(--espace-4);
+  padding: var(--espace-3) var(--espace-4);
+  background: var(--couleur-fond);
+  border-radius: var(--rayon-sm);
+  border-inline-start: 2px solid var(--couleur-bordure);
+}
+
+.adhesion__motif p {
+  margin: 0;
+}
+
+.adhesion__date {
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-sm);
+}
+
+.adhesion__suite {
+  font-size: var(--taille-sm);
+}
