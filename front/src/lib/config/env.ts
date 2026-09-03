@@ -15,5 +15,5 @@ export const env = {
   apiUrl: requis("NEXT_PUBLIC_API_URL", process.env.NEXT_PUBLIC_API_URL),
   utiliserMocks: process.env.NEXT_PUBLIC_USE_MOCKS === "true",
   qrTtlSecondes: Number(process.env.NEXT_PUBLIC_QR_TTL_SECONDS ?? 300),
-  nomApplication: process.env.NEXT_PUBLIC_APP_NAME ?? "CartePro",
+  nomApplication: process.env.NEXT_PUBLIC_APP_NAME ?? "Ticket Tout",
 } as const;

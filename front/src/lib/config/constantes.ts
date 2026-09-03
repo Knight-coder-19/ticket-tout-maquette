@@ -7,7 +7,7 @@
 export const QR_TTL_MAX_SECONDES = 300;
 
 /** Mention affichee partout ou un montant apparait (F. Pontaillac). */
-export const MENTION_SIMULATION = "Simulation - aucune valeur reelle";
+export const MENTION_SIMULATION = "Simulation : aucune valeur réelle";
 
 /** Nombre d'elements par page dans le catalogue partenaires. */
 export const TAILLE_PAGE_CATALOGUE = 20;
