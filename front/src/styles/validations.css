@@ -181,65 +181,16 @@
   color: var(--couleur-alerte);
 }
 
-/* == Le dialogue de refus ================================================= */
-
-.dialogue {
-  border: 1px solid var(--couleur-champ-bordure);
-  border-radius: var(--rayon-md);
-  padding: var(--espace-6);
-  max-width: min(46rem, 92vw);
-  color: var(--couleur-texte);
-  background: var(--couleur-fond);
-}
-
-.dialogue::backdrop {
-  background: var(--couleur-voile);
-}
-
-.dialogue__titre {
-  margin-block: 0 var(--espace-2);
-  font-size: var(--taille-lg);
-}
-
-.dialogue__rappel {
-  margin-block: 0 var(--espace-4);
-  color: var(--couleur-texte-secondaire);
-  font-size: var(--taille-sm);
-}
-
-.dialogue label {
-  display: block;
-  margin-block-end: var(--espace-2);
-  font-family: var(--police-titre);
-  font-size: var(--taille-sm);
-}
-
-.dialogue textarea {
-  width: 100%;
-  min-height: 7rem;
-  padding: var(--espace-2);
-  font: inherit;
-  color: var(--couleur-texte);
-  background: var(--couleur-fond);
-  border: 1px solid var(--couleur-champ-bordure);
-  border-radius: var(--rayon-sm);
-  resize: vertical;
-}
-
-.dialogue__aide {
-  margin-block: var(--espace-1) var(--espace-4);
-  font-size: var(--taille-xs);
-  color: var(--couleur-texte-secondaire);
-}
-
-.dialogue__erreur {
-  margin-block: 0 var(--espace-4);
-  padding: var(--espace-2) var(--espace-3);
-  background: var(--couleur-alerte-fond);
-  color: var(--couleur-alerte);
-  border-radius: var(--rayon-sm);
-  font-size: var(--taille-sm);
-}
+/* == Le dialogue de refus A REMONTE =======================================
+ *
+ * `.dialogue*` est dans `primitives.css`. Le composant `DialogueMotif` vit a
+ * la racine de l'espace administration et sert desormais QUATRE ecrans --
+ * Validations, Comptes, la fiche d'un beneficiaire, la selection du Ministre
+ * -- alors que cette feuille n'est chargee que par un seul d'entre eux. Le
+ * meme defaut que `.nature--*` et `.filtres__intitule` avant lui : une classe
+ * absente ne fait pas d'erreur, elle ne fait rien, et un dialogue rendait sans
+ * bordure ni voile sur au moins deux des quatre ecrans qui l'ouvrent.
+ * ========================================================================= */
 
 /* == Le journal =========================================================== */
 

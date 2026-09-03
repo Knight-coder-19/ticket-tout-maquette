@@ -38,6 +38,7 @@
 import type {
   AdjustmentResult,
   AdminTransactionItem,
+  BatchPreview,
   AdminTransactionList,
   BalanceResponse,
   CatalogItem,
@@ -49,6 +50,7 @@ import type {
   EmployeeStatus,
   EmployeeTransaction,
   EmployerItem,
+  HighlightItem,
   IssuedTokenResponse,
   ChainVerification,
   DailyRevenueItem,
@@ -63,6 +65,7 @@ import type {
   PaymentResponse,
   PublicPartner,
   ResolvedTokenItem,
+  TopupResponse,
   ServiceMode,
   SirhBalance,
 } from "@/types/api";
@@ -82,7 +85,11 @@ import type {
   MonCompte,
   NatureEcriture,
   Partenaire,
+  MiseEnAvant,
+  PartenaireVitrine,
   SensDecision,
+  ApercuLot,
+  Rechargement,
   Regularisation,
   Solde,
   StatutBeneficiaire,
@@ -1357,5 +1364,84 @@ export function depuisRegularisation(brut: AdjustmentResult): Regularisation {
       survenueLe: horodatageIso(brut.entry.occurred_at, "occurred_at"),
       auteur: brut.entry.created_by,
     },
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * 8 undecies. MISES EN AVANT — VITRINE PUBLIQUE
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/** `HighlightItem` → `MiseEnAvant`. */
+export function depuisMiseEnAvant(brut: HighlightItem): MiseEnAvant {
+  return {
+    id: brut.id,
+    partenaireId: brut.partner.id,
+    enseigne: brut.partner.trade_name,
+    categorie: brut.partner.category,
+    emplacement: brut.placement,
+    position: brut.position,
+    mot: brut.note,
+    creePar: brut.created_by,
+    creeLe: horodatageIso(brut.created_at, "created_at"),
+  };
+}
+
+/**
+ * `PublicPartner` → `PartenaireVitrine`.
+ *
+ * `mot` passe tel quel : voir `types/api.ts` pour ce que ce neuvième champ
+ * doit à la règle R9.
+ */
+export function depuisPartenaireVitrine(brut: PublicPartner): PartenaireVitrine {
+  return {
+    id: brut.id,
+    enseigne: brut.trade_name,
+    categorie: brut.category,
+    modeService: modeDeService(brut.service_mode),
+    ville: brut.city === null ? null : brut.city.name,
+    departement: brut.city === null ? null : brut.city.department,
+    quartier: brut.district,
+    siteWeb: brut.website_url,
+    position: brut.position,
+    mot: brut.note,
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * 8 duodecies. RECHARGEMENTS — CRÉDIT DES COMPTES SALARIÉS
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/** `TopupResponse` → `Rechargement`. */
+export function depuisRechargement(brut: TopupResponse): Rechargement {
+  return {
+    operationId: brut.id,
+    montant: centimesDepuisEuros(brut.amount, "amount"),
+    reference: brut.reference,
+    motif: brut.reason,
+    survenueLe: horodatageIso(brut.occurred_at, "occurred_at"),
+    rejoue: brut.replayed,
+  };
+}
+
+/** `BatchPreview` → `ApercuLot`. */
+export function depuisApercuLot(brut: BatchPreview): ApercuLot {
+  return {
+    id: brut.batch_id,
+    nomFichier: brut.file_name,
+    nombreLignes: brut.line_count,
+    montantTotal: centimesDepuisEuros(brut.total_amount, "total_amount"),
+    statut: brut.status,
+    erreurs: brut.errors.map((e) => ({
+      ligne: e.line,
+      matriculeOuCourriel: e.employer_ref,
+      raison: e.reason,
+    })),
+    lignes: brut.lines.map((l) => ({
+      ligne: l.line,
+      matriculeOuCourriel: l.employer_ref,
+      nomResolu: l.resolved_name,
+      montant: l.amount === null ? null : centimesDepuisEuros(l.amount, "amount"),
+      erreur: l.error,
+    })),
   };
 }
