@@ -1,4 +1,4 @@
-import type { ServicePartenaire } from "@/lib/services/partenaire.service";
+import type { ServicePartenaire } from "@/lib/services/partenaire-salarie.service";
 import type { Categorie, Partenaire } from "@/types/domaine";
 import { TAILLE_PAGE_CATALOGUE } from "@/lib/config/constantes";
 import { categoriesDemo } from "../fixtures/categories";

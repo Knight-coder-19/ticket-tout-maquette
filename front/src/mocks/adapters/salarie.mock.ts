@@ -1,5 +1,5 @@
 import type { ServiceSalarie } from "@/lib/services/salarie.service";
-import { magasin } from "../magasin";
+import { magasin } from "../magasin-salarie";
 
 /** Petite latence pour rendre visibles les etats de chargement. */
 function latence<T>(valeur: T, ms = 260): Promise<T> {

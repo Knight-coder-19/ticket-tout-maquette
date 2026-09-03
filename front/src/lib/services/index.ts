@@ -7,7 +7,7 @@
  */
 import { env } from "@/lib/config/env";
 import type { ServiceSalarie } from "./salarie.service";
-import type { ServicePartenaire } from "./partenaire.service";
+import type { ServicePartenaire } from "./partenaire-salarie.service";
 import { salarieMock, partenaireMock } from "@/mocks/adapters";
 
 if (!env.utiliserMocks) {
