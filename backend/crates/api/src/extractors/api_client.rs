@@ -94,7 +94,8 @@ impl FromRequestParts<AppState> for ApiClientAuth {
             }
         };
 
-        match verify_password(&secret, &secret_hash) {
+        let result : Result<bool, ApiError> = verify_password(&secret, &secret_hash);
+        match result {
             Ok(true) => Ok(ApiClientAuth { client_id, employer_id }),
             Ok(false) => Err(ApiError::from(CoreError::Unauthorized)),
             Err(error) => {
