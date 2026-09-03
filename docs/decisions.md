@@ -427,6 +427,118 @@ pub async fn approved_account(tx: &mut PgTransaction<'_>, id: PartnerId)
 Le filtre `status = 'approved'` doit vivre dans sa requête, pas chez l'appelant : c'est elle qui
 porte la règle « un commerçant non validé ne reçoit pas d'argent public ».
 
+### 16. `topup` reçoit une horloge et une référence optionnelle
+
+**Le plan** (§4.1) annonce `topup(tx, admin, employer_id, account_id, amount, reference)`.
+
+**Ce que j'ai fait** : j'ai intercalé `clock: &dyn Clock` en deuxième position et typé la
+référence `Option<&str>`.
+
+**Pourquoi** : l'`occurred_at` de l'opération doit venir de l'horloge injectée, comme partout
+ailleurs sur le chemin monétaire — sinon un test ne peut pas dater un rechargement, et la
+démonstration de l'expiration à horloge fixe s'arrête au premier crédit. La référence est
+nullable en base (`topups.reference`), le type Rust le dit.
+
+### 17. L'idempotence du rechargement s'appuie sur le verrou de chaîne
+
+**Le plan** décrit la référence comme « la clé d'idempotence naturelle », en priorité P3.
+
+**Ce que j'ai fait** : `topup` prend `lock_chain` en première instruction, puis cherche un
+rechargement existant pour le couple `(employer_id, reference)` et le renvoie tel quel s'il
+existe.
+
+**Pourquoi pas un index unique** : `uq_topup_reference` n'existe pas dans `0001_schema.sql`, et
+la migration est déjà appliquée sur les postes de l'équipe. Ajouter une migration `0003` pour
+une contrainte de priorité P3 revient à faire porter au schéma un risque de rejeu de migration
+la veille du rendu.
+
+**Ce qui rend le contrôle correct malgré tout** : le verrou consultatif 42 est pris par tout
+chemin qui écrit dans le journal — `topup`, `settle`, et toute écriture future. Deux
+rechargements simultanés portant la même référence ne peuvent donc pas s'exécuter en parallèle :
+le second attend, puis lit la ligne écrite par le premier. La faille résiduelle est un `INSERT`
+direct dans `topups` qui contournerait la fonction ; c'est le genre de chose que l'index unique
+interdirait pour de bon, et c'est la raison de le poser un jour.
+
+### 18. Le compte système est refusé au crédit
+
+**Le plan** ne dit rien du cas.
+
+**Ce que j'ai fait** : `topup` renvoie `SystemAccountCredited` quand le compte destinataire porte
+`owner_type = 'system'`.
+
+**Pourquoi** : `post_operation` refuse déjà le virement d'un compte vers lui-même, donc recharger
+`MINISTRY_ISSUANCE` depuis lui-même échouait de toute façon. Mais recharger `CLOSURE_FORFEIT`
+depuis l'émission passait sans rien signaler, et produisait une ligne de `topups` qui n'a aucun
+sens : un forfait de clôture n'est pas une dotation. Autant nommer le refus.
+
+### 19. Seul `topup.rs` est livré, et il ne compile pas encore
+
+`TASK-DISTRIBUTION-BACKEND.md` §2 ne me confie que `funding/topup.rs` : `mod.rs` et `repo.rs`
+tombent dans le « tout le reste » de Giscard. J'avais écrit les trois ; je n'ai gardé que le
+mien. `topup.rs` appelle donc des choses qui n'existent pas encore, exactement comme `settle`
+appelle `approved_account` au point 15.
+
+**Ce que Giscard doit fournir**, exactement :
+
+```rust
+// crates/core/src/lib.rs
+pub mod funding;
+
+// crates/core/src/funding/mod.rs
+pub mod repo;
+pub mod topup;
+
+#[derive(Debug, Clone, PartialEq, Eq, sqlx::FromRow)]
+pub struct Topup {
+    pub operation_id: OperationId,
+    pub batch_id: Option<BatchId>,
+    pub employer_id: EmployerId,
+    pub to_account: AccountId,
+    pub reference: Option<String>,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum FundingError {
+    SystemAccountMissing(&'static str),
+    SystemAccountCredited,
+    AccountInactive,
+    Ledger(#[from] LedgerError),
+    Db(#[from] sqlx::Error),
+}
+
+// crates/core/src/funding/repo.rs
+pub async fn find_topup_by_reference(
+    conn: &mut PgConnection, employer_id: EmployerId, reference: &str,
+) -> Result<Option<Topup>, sqlx::Error>;
+
+pub async fn insert_topup(
+    conn: &mut PgConnection, operation_id: OperationId, batch_id: Option<BatchId>,
+    employer_id: EmployerId, to_account: AccountId, reference: Option<&str>,
+) -> Result<Topup, sqlx::Error>;
+```
+
+Deux points qui ne se devinent pas. `find_topup_by_reference` ne doit filtrer que sur
+`(employer_id, reference)`, sans condition supplémentaire : c'est ce qui porte l'idempotence du
+point 17, et un filtre de plus la casserait. Et `insert_topup` doit renvoyer la ligne insérée par
+`RETURNING`, pas un `()` : `topup` rend le `Topup` à son appelant.
+
+`TopupBatch` et `BatchStatus` sont annoncés par `file-guide.md` §3.8 dans le même `mod.rs`. Le lot
+CSV étant coupé au §1 du plan de répartition, ils ne me manquent pas — mais la table
+`topup_batches` existe et `Topup.batch_id` la référence déjà, donc autant les écrire tant qu'il
+y est.
+
+### 20. Les tests de `funding` ne sont pas livrés
+
+`topup` a été vérifié par cinq tests contre un PostgreSQL réel : le rechargement nominal et les
+deux soldes qui bougent en sens inverse, la référence rejouée qui ne crédite pas deux fois, le
+compte suspendu refusé, le compte système refusé au crédit, et deux rechargements sans référence
+qui s'appliquent tous les deux. Ils passent, et ils ne sont pas dans le dépôt.
+
+**Pourquoi** : ils ont besoin de tout ce que liste le point 19, et livrer un fichier de test qui
+ne compile pas casserait le paquet `crates/tests` en entier, donc aussi `invariants.rs`. Ils
+reviendront quand Giscard aura livré — dans un `funding_topup.rs` à part, parce que ce ne sont
+pas des invariants et que `payments_flow.rs` est réservé au chemin `authorize` → `settle`.
+
 ### 21. `BatchSettleResult.jti` est nullable
 
 **Le contrat publié** (`data-dictionary.md` §4.5) donne `jti: string` dans chaque résultat du lot de
@@ -460,6 +572,8 @@ la base au DTO aurait mis une requête dans une couche qui n'en fait jamais.
 La deuxième valeur est fournie par l'appelant, qui l'a déjà sous la main : `settle` renvoie le
 `Payment`, et le montant est celui du jeton qu'il vient de consommer.
 
+**Cet écart est levé par le §25.**
+
 ### 23. `AuthorizeRequest` refuse le montant nul
 
 **Ce que j'ai ajouté** : une validation de schéma sur `AuthorizeRequest`, qui rejette un `amount`
@@ -489,3 +603,29 @@ implémentations coïncident, et silencieusement fausse le jour où l'une des de
 Le DTO ne valide donc pas la forme du code court non plus. Il plafonne seulement sa longueur, pour
 qu'une saisie absurde ne voyage pas jusqu'à la base. Un code mal formé ressort en `TOKEN_NOT_FOUND`,
 comme un code inconnu, ce qui est la même chose du point de vue du comptoir.
+
+### 25. `settle` renvoie un `Settlement`, pas un `Payment`
+
+**Ce que j'ai fait** : `settle` rend désormais `Settlement { payment, amount }`, et `payments/repo.rs`
+gagne `find_settlement_by_jti`, `operation_amount` et `list_partner_settlements`, cette dernière
+remplaçant `list_partner_payments`.
+
+**Pourquoi** : la table `payments` ne porte pas de montant, et c'est délibéré — le montant vit dans
+`ledger_operations`, parce que le journal est ce qui fait autorité sur les sommes. Mais le contrat
+publié demande `amount` dans la réponse de `POST /partner/payments` **et** dans chaque ligne de
+`GET /partner/transactions`. Le handler devait donc aller le chercher lui-même, c'est-à-dire mettre
+une requête dans la couche HTTP, exactement ce que la règle R1 interdit.
+
+Le coût est nul sur le chemin nominal : `settle` tient déjà `token.amount` au moment où il écrit
+l'opération, il n'a rien à relire. Sur le chemin idempotent — le commerçant qui rejoue — la relecture
+du montant coûte une requête de plus, sur un chemin qui n'est pas le chemin chaud.
+
+**Ce que ça règle au passage** : le §22. `PaymentResponse` se construit à nouveau par un
+`impl From<&Settlement>`, comme la règle du guide §4.4 le demande pour tout DTO de réponse. Ce n'était
+pas possible tant que le type du domaine ne portait pas le montant.
+
+**Pourquoi une composition et pas une structure plate** : `Payment` est la ligne de la table, et
+`Settlement` est le résultat métier d'un encaissement. Aplatir les deux aurait dupliqué les sept
+champs de `Payment`, et il aurait fallu les maintenir en double le jour où la table change. La
+composition ne coûte qu'une implémentation manuelle de `FromRow`, huit lignes, qui sert aussi bien à
+la lecture unitaire qu'à la liste jointe.

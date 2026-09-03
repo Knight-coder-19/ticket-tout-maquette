@@ -5,7 +5,7 @@ use validator::{Validate, ValidationError};
 
 use cartepro_core::ids::{Jti, OperationId};
 use cartepro_core::money::Money;
-use cartepro_core::payments::{EntryMode, Payment, TokenRef};
+use cartepro_core::payments::{EntryMode, Settlement, TokenRef};
 
 use crate::dto::Paginated;
 
@@ -104,16 +104,16 @@ pub struct PaymentResponse {
     pub status: PaymentStatus,
 }
 
-impl PaymentResponse {
-    pub fn settled(payment: &Payment, amount: Money) -> Self
+impl From<&Settlement> for PaymentResponse {
+    fn from(settlement: &Settlement) -> Self
     {
         PaymentResponse {
-            id: payment.operation_id,
-            jti: payment.token_jti,
-            amount,
-            entry_mode: payment.entry_mode,
-            occurred_at: payment.scanned_at,
-            synced_at: payment.synced_at,
+            id: settlement.payment.operation_id,
+            jti: settlement.payment.token_jti,
+            amount: settlement.amount,
+            entry_mode: settlement.payment.entry_mode,
+            occurred_at: settlement.payment.scanned_at,
+            synced_at: settlement.payment.synced_at,
             status: PaymentStatus::Settled
         }
     }

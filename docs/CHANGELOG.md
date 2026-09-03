@@ -3,34 +3,42 @@
 [//]: # (This is a changelog file)
 [//]: # (Each time you make a minor or minor change in the project, repertoriate it here according to the following format. So each changes equals to an affectation of this file with all the sections.)
 
-## 1.4.0 03.09.2026
+## 1.7.0 03.09.2026
+
+### Changed
+
+- **`settle` renvoie un `Settlement { payment, amount }` au lieu d'un `Payment`.** La table `payments`
+  ne porte pas de montant — il vit dans `ledger_operations`, qui fait autorité sur les sommes — alors
+  que le contrat publié le réclame dans la réponse de `POST /partner/payments` et dans chaque ligne de
+  `GET /partner/transactions`. Sans ce changement, le handler aurait dû aller le chercher lui-même,
+  c'est-à-dire porter une requête dans la couche HTTP. Le détail est dans `decisions.md` §25.
+- `payments/repo.rs` : `list_partner_payments` devient `list_partner_settlements` et joint
+  `ledger_operations` pour rendre le montant de chaque ligne. Deux nouvelles lectures,
+  `find_settlement_by_jti` et `operation_amount`.
+- `dto/partner.rs` : `PaymentResponse::settled` devient `impl From<&Settlement>`. **Cela lève l'écart
+  §22** — la règle du guide §4.4, un `From<DomainType>` par DTO de réponse, redevient tenable.
+- `payments/mod.rs` réexporte `cancel` à côté de `settle`. `DELETE /me/payment-tokens/{jti}` en a
+  besoin, et le §12 en fait déjà un point d'entrée métier.
 
 ### Added
 
-- `core/src/funding/topup.rs` : `topup`, le troisième et dernier segment du chemin monétaire.
-  Verrou de chaîne, contrôle d'idempotence sur la référence, lecture du compte
-  `MINISTRY_ISSUANCE`, verrou des deux comptes, opération de partie double, insertion dans
-  `topups`. La constante `ISSUANCE_ACCOUNT` vit dans ce fichier plutôt que dans `mod.rs`, pour
-  réduire d'autant ce que j'attends de Giscard.
+- `crates/tests/tests/payments_flow.rs` : un vingtième test,
+  `a_partner_reads_back_its_settlements_with_their_amounts`, qui couvre la lecture jointe — deux
+  encaissements chez un commerçant, un chez un autre, ordre décroissant et cloisonnement vérifiés. Les
+  tests existants affirment désormais le montant rendu, y compris sur le chemin idempotent, où il est
+  relu depuis l'opération du ledger et non depuis le jeton.
 
 ### Notes
 
-- **L'idempotence du rechargement ne repose pas sur un index unique.** Le schéma ne contraint
-  pas `(employer_id, reference)`, et je n'ai pas voulu modifier une migration déjà appliquée.
-  La protection tient au fait que `topup` prend `lock_chain` avant de chercher la référence :
-  tout chemin qui écrit dans le journal passe par ce verrou consultatif, donc deux
-  rechargements concurrents portant la même référence se sérialisent et le second lit la ligne
-  du premier. C'est correct tant que personne n'insère dans `topups` sans passer par cette
-  fonction.
-- `topup` reçoit un `AccountId` déjà résolu. C'est la route `POST /admin/topups` qui appellera
-  `directory::resolve_account_by_ref` pour traduire le matricule, et cette route appartient à
-  Giscard.
-- Le compte système est refusé au crédit d'un rechargement. `MINISTRY_ISSUANCE` se débite, il
-  ne se recharge pas, et `CLOSURE_FORFEIT` reçoit des soldes de clôture, pas de l'émission.
-- `funding` reste du code mort tant que Giscard n'a pas livré `funding/mod.rs`,
-  `funding/repo.rs` et la déclaration `pub mod funding;` — le détail du contrat est dans
-  `decisions.md` §19. J'ai vérifié `topup` en posant ces trois éléments localement, le temps de
-  faire tourner cinq tests contre un PostgreSQL réel, puis je les ai retirés.
+- **`crypto/password.rs` ne compile pas.** Le fichier arrivé par la PR #9 porte une virgule surnuméraire
+  après la valeur de retour de `dummy_hash` (ligne 42), ce qui casse `cargo build` sur `develop` pour
+  tout le monde. Par ailleurs le condensat factice qu'il renvoie ne commence pas par `$`, donc il n'est
+  pas un PHC valide : `PasswordHash::new` le rejettera, et `verify_password` rendra `MalformedHash` là
+  où l'on attend `false`. C'est précisément la vérification à temps constant sur utilisateur inconnu
+  qui tombe, donc la protection contre l'énumération des comptes. Le fichier appartient à Giscard, je
+  n'y touche pas ; j'ai vérifié mon travail en le neutralisant localement, puis je l'ai remis en
+  l'état.
+
 ## 1.6.0 03.09.2026
 
 ### Added
@@ -115,6 +123,34 @@
   `pub mod payments;` dans `core/src/lib.rs`. J'ai vérifié les deux fichiers en posant ces éléments
   localement, puis je les ai retirés.
 
+## 1.4.0 03.09.2026
+
+### Added
+
+- `core/src/funding/topup.rs` : `topup`, le troisième et dernier segment du chemin monétaire.
+  Verrou de chaîne, contrôle d'idempotence sur la référence, lecture du compte
+  `MINISTRY_ISSUANCE`, verrou des deux comptes, opération de partie double, insertion dans
+  `topups`. La constante `ISSUANCE_ACCOUNT` vit dans ce fichier plutôt que dans `mod.rs`, pour
+  réduire d'autant ce que j'attends de Giscard.
+
+### Notes
+
+- **L'idempotence du rechargement ne repose pas sur un index unique.** Le schéma ne contraint
+  pas `(employer_id, reference)`, et je n'ai pas voulu modifier une migration déjà appliquée.
+  La protection tient au fait que `topup` prend `lock_chain` avant de chercher la référence :
+  tout chemin qui écrit dans le journal passe par ce verrou consultatif, donc deux
+  rechargements concurrents portant la même référence se sérialisent et le second lit la ligne
+  du premier. C'est correct tant que personne n'insère dans `topups` sans passer par cette
+  fonction.
+- `topup` reçoit un `AccountId` déjà résolu. C'est la route `POST /admin/topups` qui appellera
+  `directory::resolve_account_by_ref` pour traduire le matricule, et cette route appartient à
+  Giscard.
+- Le compte système est refusé au crédit d'un rechargement. `MINISTRY_ISSUANCE` se débite, il
+  ne se recharge pas, et `CLOSURE_FORFEIT` reçoit des soldes de clôture, pas de l'émission.
+- `funding` reste du code mort tant que Giscard n'a pas livré `funding/mod.rs`,
+  `funding/repo.rs` et la déclaration `pub mod funding;` — le détail du contrat est dans
+  `decisions.md` §19. J'ai vérifié `topup` en posant ces trois éléments localement, le temps de
+  faire tourner cinq tests contre un PostgreSQL réel, puis je les ai retirés.
 ## 1.3.0 02.09.2026
 
 ### Added

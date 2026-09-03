@@ -8,7 +8,7 @@
 use chrono::{DateTime, Utc};
 use sqlx::PgConnection;
 
-use super::{repo, Payment, PaymentError, TokenRef, TokenStatus};
+use super::{repo, PaymentError, Settlement, TokenRef, TokenStatus};
 use crate::clock::Clock;
 use crate::config::CoreConfig;
 use crate::crypto::short_code;
@@ -23,13 +23,13 @@ pub async fn settle(
     partner: PartnerId,
     reference: &TokenRef,
     scanned_at: DateTime<Utc>,
-) -> Result<Payment, PaymentError>
+) -> Result<Settlement, PaymentError>
 {
     let jti = resolve(&mut *tx, reference).await?;
 
-    if let Some(payment) = repo::find_payment_by_jti(&mut *tx, jti).await? {
-        if payment.partner_id == partner {
-            return Ok(payment);
+    if let Some(settlement) = repo::find_settlement_by_jti(&mut *tx, jti).await? {
+        if settlement.payment.partner_id == partner {
+            return Ok(settlement);
         }
         return Err(PaymentError::TokenAlreadyUsed);
     }
@@ -48,7 +48,7 @@ pub async fn settle(
 
     match token.status {
         TokenStatus::Active => (),
-        TokenStatus::Consumed => return settled_payment(&mut *tx, jti, partner).await,
+        TokenStatus::Consumed => return existing_settlement(&mut *tx, jti, partner).await,
         TokenStatus::Expired => return Err(PaymentError::TokenExpired),
         TokenStatus::Cancelled => return Err(PaymentError::TokenCancelled)
     }
@@ -92,7 +92,7 @@ pub async fn settle(
     )
     .await?;
 
-    Ok(payment)
+    Ok(Settlement { payment, amount: token.amount })
 }
 
 pub async fn cancel(
@@ -122,14 +122,14 @@ pub async fn cancel(
     Ok(())
 }
 
-async fn settled_payment(
+async fn existing_settlement(
     conn: &mut PgConnection,
     jti: Jti,
     partner: PartnerId,
-) -> Result<Payment, PaymentError>
+) -> Result<Settlement, PaymentError>
 {
-    match repo::find_payment_by_jti(conn, jti).await? {
-        Some(payment) if payment.partner_id == partner => Ok(payment),
+    match repo::find_settlement_by_jti(conn, jti).await? {
+        Some(settlement) if settlement.payment.partner_id == partner => Ok(settlement),
         _ => Err(PaymentError::TokenAlreadyUsed)
     }
 }
