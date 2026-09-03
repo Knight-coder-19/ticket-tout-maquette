@@ -342,3 +342,42 @@
   font-size: var(--taille-xs);
   white-space: nowrap;
 }
+
+/* Le vocabulaire d'adhesion -- agree, suspendu, ferme.
+ *
+ * ⚠ CES REGLES ONT REMONTE depuis `comptes.css`. Deux espaces les partagent
+ * desormais : le registre des comptes de l'administration, et la fiche
+ * d'etablissement du commercant. La forme etait deja ici ; le vocabulaire l'a
+ * rejointe le jour ou un second espace en a eu besoin.
+ *
+ * Le texte dit le statut ; la couleur ne fait que le repeter. Chaque pastille
+ * porte son libelle en toutes lettres, et une capture en noir et blanc reste
+ * donc exacte. */
+.statut--en_attente {
+  background: var(--couleur-attente-fond);
+  color: var(--couleur-attente-texte);
+}
+
+.statut--agree {
+  background: var(--couleur-succes-fond);
+  color: var(--couleur-succes);
+}
+
+.statut--refuse {
+  background: var(--couleur-alerte-fond);
+  color: var(--couleur-alerte);
+}
+
+.statut--suspendu {
+  background: var(--couleur-alerte-fond);
+  color: var(--couleur-alerte);
+  /* Suspendu et refuse partagent la teinte d'alerte : ce sont deux etats
+     defavorables. Le filet les distingue sans compter sur la couleur seule,
+     et le libelle les distingue tout court. */
+  border-inline-start: var(--espace-1) solid var(--couleur-alerte);
+}
+
+.statut--ferme {
+  background: var(--couleur-neutre-fond);
+  color: var(--couleur-texte);
+}

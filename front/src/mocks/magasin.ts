@@ -583,6 +583,34 @@ function donneesInitiales(): Magasin {
         reviewReason: "Cessation d'activité déclarée par le gérant. Fermeture définitive du compte.",
         historiqueTransactions: 22,
       },
+      {
+        /*
+         * Un commerce EN LIGNE et AGRÉÉ.
+         *
+         * Il manquait au jeu de démonstration, et son absence rendait
+         * l'amendement A1 indémontrable : « an online partner comes back
+         * whatever the city filter says » (`catalog.rs:2`). Sans agréé en
+         * ligne, le catalogue n'affichait jamais le cas, et la règle ne
+         * pouvait être ni montrée au jury ni vérifiée à l'exécution.
+         */
+        id: "PRT-016",
+        contactEmail: "libraires@lireenligne.bj",
+        legalName: "SARL Lire en Ligne",
+        tradeName: "Lire en Ligne",
+        category: "culture",
+        ifu: "3201904112233",
+        serviceMode: "online",
+        websiteUrl: "https://lire-en-ligne.bj",
+        cityId: null,
+        district: null,
+        addressLine: null,
+        statut: "approved",
+        submittedAt: "2026-05-20T09:00:00.000Z",
+        reviewedBy: "ADM-002",
+        reviewedAt: "2026-05-23T14:00:00.000Z",
+        reviewReason: null,
+        historiqueTransactions: 12,
+      },
     ],
     journal: [
       {
@@ -756,6 +784,7 @@ function amorcerRegistre(): void {
   reprise("PRT-012", 803_10, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
   reprise("PRT-013", 18_00, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
   reprise("PRT-015", 259_40, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
+  reprise("PRT-016", 94_80, "2026-08-01T08:00:00.000Z", "Reprise d'antériorité");
 
   for (const [salarie, montant, quand] of [
     ["SAL-001", 12_50, "2026-08-28T09:14:00.000Z"],

@@ -239,13 +239,84 @@ export interface VerificationIntegrite {
 export interface MonCompte {
   id: Identifiant;
   enseigne: string;
+  /** Raison sociale : le nom légal, distinct de l'enseigne affichée. */
+  raisonSociale: string;
+  /** Identifiant fiscal. `null` si le dossier a été agréé sans (`:105`). */
+  identifiantFiscal: string | null;
+  /** Libellé venu des données. Aucune liste de catégories dans l'interface. */
+  categorie: string;
+  /** Distingue une ville absente d'une ville qui n'a pas lieu d'être. */
+  modeService: ModeDeService;
   statut: StatutPartenaire;
   /** Motif de la dernière décision. `null` si aucune. */
   motif: string | null;
-  /** Date ISO 8601 de la décision, `null` si aucune. */
+  /**
+   * Date ISO 8601 de la DERNIÈRE décision, `null` si aucune.
+   *
+   * Pour un compte agréé, c'est la décision qui a ouvert les encaissements —
+   * ou qui les a rouverts après une suspension. La date du tout premier
+   * agrément n'est récupérable nulle part : `partners.reviewed_at` est écrasée
+   * à chaque décision, et le journal d'audit qui la garde n'a aucune route de
+   * lecture. C'est pourquoi la fiche l'intitule « Décision d'agrément » et non
+   * « Membre depuis ».
+   */
   decideeLe: string | null;
   deposeeLe: string;
   courrielContact: string;
   ville: string | null;
+}
+
+/**
+ * Comment un établissement sert ses clients.
+ *
+ * Nommée plutôt qu'écrite en ligne dans chaque type qui en a besoin : la
+ * fiche du catalogue et la fiche d'établissement du commerçant portent le
+ * MÊME concept. Deux unions pour un concept, c'est la certitude qu'un jour
+ * l'une gagnera une valeur que l'autre ignorera.
+ *
+ * En français, comme tout le domaine : `ServiceMode` est la forme du réseau,
+ * et `modeDeService` (`lib/api/adaptateurs.ts`) est le seul endroit qui
+ * traduise l'une vers l'autre.
+ */
+export type ModeDeService = "physique" | "en_ligne" | "les_deux";
+
+/**
+ * Une fiche du catalogue, telle qu'un partenaire ou un salarié la consulte.
+ *
+ * Distincte de `Partenaire` : celle-ci porte l'adresse complète et le mode de
+ * service, dont le catalogue a besoin, et pas `estMisEnAvant`, qui relève des
+ * mises en avant décidées par l'administration.
+ *
+ * ⚠ Aucun montant, aucune statistique, aucun contact — le catalogue n'expose
+ * que ce que le contrat lui donne (`data-dictionary.md:470-480`), et il ne
+ * ressert QUE des partenaires agréés (`catalog.rs:1`).
+ */
+export interface FicheCatalogue {
+  id: Identifiant;
+  enseigne: string;
+  /** Libellé venu des données. Aucune liste de catégories dans l'interface. */
+  categorie: string;
+  /** `null` pour un commerce exclusivement en ligne. */
+  ville: string | null;
+  departement: string | null;
+  quartier: string | null;
+  adresse: string | null;
+  siteWeb: string | null;
+  modeService: ModeDeService;
+  /** Dérivé de `status === "approved"` (A4), jamais stocké. */
+  estOfficiel: boolean;
+}
+
+/** Une catégorie du référentiel, avec son effectif. */
+export interface CategorieCatalogue {
+  nom: string;
+  nombreDePartenaires: number;
+}
+
+/** Une ville du référentiel. */
+export interface VilleCatalogue {
+  id: Identifiant;
+  nom: string;
+  departement: string;
 }
 

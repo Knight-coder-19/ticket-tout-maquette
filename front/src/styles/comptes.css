@@ -34,45 +34,12 @@
   max-width: var(--largeur-contenu);
 }
 
-/*
- * Les variantes de statut d'un PARTENAIRE.
+/* == Le vocabulaire de statut a REMONTE ==================================
  *
- * La pastille elle-meme est dans `primitives.css` : c'est une forme, elle sert
- * a tout. Ce qui suit est du vocabulaire d'adhesion -- agree, suspendu, ferme --
- * et n'a de sens que la ou l'on parle d'un partenaire.
- *
- * Le texte dit le statut ; la couleur ne fait que le repeter. Chaque pastille
- * porte son libelle en toutes lettres, et une capture en noir et blanc reste
- * donc exacte.
- */
-.statut--en_attente {
-  background: var(--couleur-attente-fond);
-  color: var(--couleur-attente-texte);
-}
-
-.statut--agree {
-  background: var(--couleur-succes-fond);
-  color: var(--couleur-succes);
-}
-
-.statut--refuse {
-  background: var(--couleur-alerte-fond);
-  color: var(--couleur-alerte);
-}
-
-.statut--suspendu {
-  background: var(--couleur-alerte-fond);
-  color: var(--couleur-alerte);
-  /* Suspendu et refuse partagent la teinte d'alerte : ce sont deux etats
-     defavorables. Le filet les distingue sans compter sur la couleur seule,
-     et le libelle les distingue tout court. */
-  border-inline-start: var(--espace-1) solid var(--couleur-alerte);
-}
-
-.statut--ferme {
-  background: var(--couleur-neutre-fond);
-  color: var(--couleur-texte);
-}
+ * Les pastilles `.statut--*` sont dans `primitives.css` : la fiche
+ * d'établissement du commerçant les affiche aussi, et l'espace partenaire ne
+ * charge pas cette feuille. Voir `components/partenaires/PastilleStatut`.
+ * ======================================================================== */
 
 /* == L'avertissement du dialogue de fermeture ============================= */
 

@@ -194,7 +194,7 @@ function comptesInitiaux(): CompteRegistre[] {
     utilisateur("employee", "SAL-003"),
     ...["PRT-001", "PRT-002", "PRT-003", "PRT-004", "PRT-005", "PRT-006", "PRT-007",
         "PRT-008", "PRT-009", "PRT-010", "PRT-011", "PRT-012", "PRT-013", "PRT-014",
-        "PRT-015"].map((id) => utilisateur("partner", id)),
+        "PRT-015", "PRT-016"].map((id) => utilisateur("partner", id)),
   ];
 }
 
