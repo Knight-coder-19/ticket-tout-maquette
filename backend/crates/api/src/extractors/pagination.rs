@@ -4,6 +4,8 @@ use serde::Deserialize;
 
 use crate::error::ApiError;
 
+pub use crate::dto::Paginated;
+
 pub const DEFAULT_LIMIT: u32 = 20;
 pub const MAX_LIMIT: u32 = 100;
 
