@@ -804,3 +804,53 @@ sans ces deux conversions aucun handler ne sait de qui il parle. Et `ApiError` d
 resynchronisation doit nommer l'erreur de chaque ligne sans fabriquer de réponse HTTP, donc le
 code stable appartient au domaine. `api/src/error.rs` n'a plus qu'à y ajouter le statut.
 
+### 31. Le jeton de session est comparé haché en SQL, avec `digest()`
+
+**Le plan** (`TASK-DISTRIBUTION-BACKEND.md` §4.2) dit que le jeton de session est haché en base et
+que le clair ne vit que dans le cookie, sans nommer l'algorithme ni l'endroit où le hachage est
+calculé.
+
+**Ce que j'ai fait** : `extractors/auth.rs` cherche la session avec
+`WHERE s.token_hash = digest($1, 'sha256')`, en liant le jeton en clair. Le hachage est donc
+calculé par PostgreSQL, pas par le code Rust.
+
+**Pourquoi** : `sha2` n'est pas dans les dépendances de `crates/api`, et `api/Cargo.toml`
+appartient à Giscard — je ne l'ouvre pas pour une ligne. `pgcrypto` est en revanche déjà activé
+par `0001_schema.sql`, et `digest()` sur un jeton aléatoire de haute entropie ne demande ni sel ni
+étirement : ce n'est pas un mot de passe, c'est une clé de recherche. Le clair ne quitte pas le
+paramètre lié, il n'apparaît ni dans un journal ni dans une chaîne construite.
+
+**Ce que ça exige de l'autre bout** : `identity::create_session` doit stocker exactement
+`sha256(jeton)` en `BYTEA` — le `digest($1, 'sha256')` de la même migration, ou l'équivalent Rust.
+Un algorithme différent ne casse rien bruyamment : aucune session ne serait simplement jamais
+trouvée, et toutes les requêtes authentifiées répondraient `401`. C'est le genre de panne qu'on
+cherche une heure, donc autant l'écrire ici.
+
+**Ce que j'ai laissé de côté** : la mise à jour de `last_seen_at` à chaque requête. Elle
+transformerait chaque lecture authentifiée en écriture, pour un besoin qui n'apparaît nulle part
+dans le cahier des charges.
+
+### 32. `From<AuthenticatedUser>` recopie l'identifiant de `users`, pas celui d'`employees`
+
+**Le contrat** (§30 ci-dessus) demande `From<AuthenticatedUser>` vers `EmployeeId` et vers
+`PartnerId` : sans ces deux conversions, aucun handler ne sait de qui il parle.
+
+**Le problème** : dans le schéma, `employees.id` et `partners.id` sont des clés propres, distinctes
+de `users.id` — la table porte un `user_id UNIQUE` qui fait le lien. Passer d'un
+`AuthenticatedUser` au véritable `EmployeeId` demande donc une requête, et une requête ne rentre
+pas dans un `From`, qui est synchrone et infaillible.
+
+**Ce que j'ai fait** : la conversion recopie l'UUID de l'utilisateur. `EmployeeId::from(user)` rend
+donc un identifiant qui vaut `users.id`, pas `employees.id`.
+
+**Ce que ça exige de l'autre bout** : `directory::employees::active_account` et
+`partners::repo::approved_account` doivent résoudre par `user_id`, pas par la clé primaire de leur
+table. Les deux fonctions appartiennent à Giscard et ne sont pas encore écrites, c'est donc le bon
+moment pour le dire.
+
+**L'alternative que j'écarte** : faire de l'extracteur le résolveur, c'est-à-dire lui faire charger
+la fiche employé ou partenaire et poser un `AuthUser` qui porte déjà le bon identifiant. C'est plus
+juste, mais ça ajoute une requête à chaque appel authentifié et ça change la forme du contrat gelé
+à H+0, que mes neuf handlers consomment déjà. Si Giscard préfère cette forme, la correction est
+mécanique et tient dans l'extracteur : ce sont ses deux fonctions de résolution qui disparaissent,
+pas mes routes.

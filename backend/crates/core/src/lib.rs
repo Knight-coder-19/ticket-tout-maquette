@@ -1,6 +1,9 @@
-// Declare and re-export the crate modules (ledger, payments, identity, ...).
-// Nothing else lives here: no type, no logic.
-// Priority: P0
+//
+// EPITECH PROJECT, 2026
+// G-SVR-500-COT-5-1-survivor-21
+// File description:
+// lib
+//
 
 pub mod clock;
 pub mod config;
