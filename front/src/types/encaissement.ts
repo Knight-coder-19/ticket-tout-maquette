@@ -76,3 +76,30 @@ export type EncaissementAccepte = {
    */
   rejoue: boolean;
 };
+
+/**
+ * Le résumé d'activité d'un partenaire sur une période.
+ *
+ * `total` n'est PAS un solde : c'est un cumul encaissé, non dépensable
+ * (décision 9, glossaire `data-dictionary.md:661`). Le nommer « solde » à
+ * l'écran serait la confusion que le glossaire demande d'éviter.
+ */
+export interface ResumeActivite {
+  /** Cumul encaissé sur la période, en centimes entiers. */
+  total: MontantCentimes;
+  nombre: number;
+  /** Bornes ISO 8601 de la période résumée. */
+  depuis: string;
+  jusqua: string;
+  estOfficiel: boolean;
+}
+
+/** Une journée de recettes, pour la série. */
+export interface JourneeRecettes {
+  /** `YYYY-MM-DD`. */
+  jour: string;
+  /** Recettes du jour, en centimes entiers. Zéro les jours sans encaissement. */
+  total: MontantCentimes;
+  nombre: number;
+}
+

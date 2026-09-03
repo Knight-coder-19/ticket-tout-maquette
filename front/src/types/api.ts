@@ -898,3 +898,25 @@ export type ResolvedTokenItem = {
   expires_at: string;
 };
 
+/**
+ * Une journée de recettes.
+ *
+ * ⚠ NOTRE PROPOSITION, servie par `GET /api/v1/partner/daily-revenue`. Le
+ * contrat n'a aucune série journalière : `PartnerSummary` (:419-425) rend
+ * quatre agrégats sur UNE période, et le tableau de bord national agrège par
+ * ville (:568), pas par jour.
+ *
+ * Les noms sont ceux de `PartnerSummary`, repris par jour, pour donner au back
+ * un vocabulaire déjà écrit s'il adopte la route.
+ */
+export type DailyRevenueItem = {
+  /** `YYYY-MM-DD`, le type `DATE` du dictionnaire (:41). */
+  day: string;
+  /** Euros décimaux. Zéro les jours sans recette — ils sont servis. */
+  total_received: number;
+  transaction_count: number;
+};
+
+/** Enveloppe de la même route. */
+export type DailyRevenueList = { days: DailyRevenueItem[] };
+

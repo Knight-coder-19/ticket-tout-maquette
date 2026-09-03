@@ -41,12 +41,14 @@ import type {
   EmployeeTransaction,
   IssuedTokenResponse,
   ChainVerification,
+  DailyRevenueItem,
   LedgerEntryItem,
   LigneJournal,
   PartnerAccountItem,
   PartnerAccountStatus,
   PartnerReviewItem,
   PartnerStatus,
+  PartnerSummary,
   PaymentResponse,
   PublicPartner,
   ResolvedTokenItem,
@@ -72,7 +74,9 @@ import type {
 import type {
   EncaissementAccepte,
   JetonResolu,
+  JourneeRecettes,
   MontantCentimes,
+  ResumeActivite,
 } from "@/types/encaissement";
 import { ErreurService } from "@/types/erreurs";
 
@@ -921,6 +925,54 @@ export function depuisMonCompte(brut: PartnerAccountStatus): MonCompte {
     deposeeLe: horodatageIso(brut.submitted_at, "submitted_at"),
     courrielContact: brut.contact_email,
     ville: brut.city === null ? null : brut.city.name,
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * 8 sexies. TABLEAU DE BORD DU COMMERÇANT
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * `PartnerSummary` → `ResumeActivite`.
+ *
+ * ✅ Le type d'entrée est celui du CONTRAT (`data-dictionary.md:418-425`).
+ *
+ * `total` repasse en CENTIMES : le back sert des euros décimaux, le domaine ne
+ * connaît que des entiers, et le formatage n'arrive qu'à l'affichage.
+ */
+export function depuisResumeActivite(brut: PartnerSummary): ResumeActivite {
+  return {
+    total: centimesDepuis(brut, "total_received"),
+    nombre: brut.transaction_count,
+    depuis: horodatageIso(brut.period_from, "period_from"),
+    jusqua: horodatageIso(brut.period_to, "period_to"),
+    estOfficiel: brut.is_official_partner,
+  };
+}
+
+/**
+ * `DailyRevenueItem` → `JourneeRecettes`.
+ *
+ * ⚠ Le type d'entrée vient d'une route que NOUS proposons — le contrat n'a
+ * aucune série journalière. Voir `types/api.ts`.
+ *
+ * `jour` reste une chaîne `YYYY-MM-DD` et n'est PAS converti en horodatage : ce
+ * n'est pas un instant, c'est une journée. La convertir en millisecondes
+ * introduirait un fuseau là où il n'y en a pas, et deux postes réglés
+ * différemment n'afficheraient pas les mêmes barres.
+ */
+export function depuisJourneeRecettes(brut: DailyRevenueItem): JourneeRecettes {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(brut.day)) {
+    throw new ErreurService(
+      "reponse_illisible",
+      `Réponse du serveur illisible : day n'est pas une date YYYY-MM-DD (${brut.day}).`,
+      { champ: "day" },
+    );
+  }
+  return {
+    jour: brut.day,
+    total: centimesDepuis(brut, "total_received"),
+    nombre: brut.transaction_count,
   };
 }
 

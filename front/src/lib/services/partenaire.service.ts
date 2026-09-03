@@ -16,9 +16,18 @@
  */
 
 import { appelApi } from "@/lib/api/client";
-import { depuisMonCompte } from "@/lib/api/adaptateurs";
-import type { PartnerAccountStatus } from "@/types/api";
+import {
+  depuisJourneeRecettes,
+  depuisMonCompte,
+  depuisResumeActivite,
+} from "@/lib/api/adaptateurs";
+import type {
+  DailyRevenueList,
+  PartnerAccountStatus,
+  PartnerSummary,
+} from "@/types/api";
 import type { MonCompte } from "@/types/domaine";
+import type { JourneeRecettes, ResumeActivite } from "@/types/encaissement";
 
 /**
  * L'état de mon compte : statut, motif de la dernière décision, contact.
@@ -32,4 +41,56 @@ export async function lireMonCompte(): Promise<MonCompte> {
     cache: "no-store",
   });
   return depuisMonCompte(brut);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * TABLEAU DE BORD
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * Le résumé d'activité sur une période.
+ *
+ * ✅ Route du CONTRAT, `GET /api/v1/partner/summary`
+ * (`data-dictionary.md:418-425`).
+ *
+ * Les bornes sont des instants ISO 8601, incluses. Sans elles, la route rend le
+ * mois courant.
+ */
+export async function lireResume(
+  depuis?: string,
+  jusqua?: string,
+): Promise<ResumeActivite> {
+  const parametres = new URLSearchParams();
+  if (depuis !== undefined && depuis !== "") parametres.set("from", depuis);
+  if (jusqua !== undefined && jusqua !== "") parametres.set("to", jusqua);
+  const requete = parametres.toString();
+
+  const brut = await appelApi<PartnerSummary>(
+    `/v1/partner/summary${requete === "" ? "" : `?${requete}`}`,
+    { cache: "no-store" },
+  );
+  return depuisResumeActivite(brut);
+}
+
+/**
+ * La série journalière des recettes, du plus ancien au plus récent.
+ *
+ * ⚠ S'appuie sur une route que NOUS proposons : le contrat n'a aucune série
+ * journalière. Voir `types/api.ts`, type `DailyRevenueItem`.
+ *
+ * Les jours sans recette sont présents, à zéro — c'est au graphique de montrer
+ * les creux, pas à la donnée de les cacher.
+ */
+export async function lireRecettesJournalieres(
+  jours = 14,
+  jusqua?: string,
+): Promise<JourneeRecettes[]> {
+  const parametres = new URLSearchParams({ days: String(jours) });
+  if (jusqua !== undefined && jusqua !== "") parametres.set("to", jusqua);
+
+  const brut = await appelApi<DailyRevenueList>(
+    `/v1/partner/daily-revenue?${parametres.toString()}`,
+    { cache: "no-store" },
+  );
+  return brut.days.map(depuisJourneeRecettes);
 }
