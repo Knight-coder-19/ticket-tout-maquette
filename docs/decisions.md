@@ -426,3 +426,66 @@ pub async fn approved_account(tx: &mut PgTransaction<'_>, id: PartnerId)
 
 Le filtre `status = 'approved'` doit vivre dans sa requête, pas chez l'appelant : c'est elle qui
 porte la règle « un commerçant non validé ne reçoit pas d'argent public ».
+
+### 21. `BatchSettleResult.jti` est nullable
+
+**Le contrat publié** (`data-dictionary.md` §4.5) donne `jti: string` dans chaque résultat du lot de
+resynchronisation.
+
+**Ce que j'ai fait** : `Option<Jti>`, donc `string | null` côté front.
+
+**Pourquoi** : une ligne du lot peut être saisie par code court. Si ce code est inconnu — le
+commerçant s'est trompé de chiffre au comptoir, la veille, hors ligne — il n'existe aucun `jti` à
+renvoyer, et le contrat exige pourtant d'en écrire un. Les deux échappatoires étaient d'inventer un
+UUID nul, qui se lit comme un identifiant valide, ou de retirer la ligne de la réponse, ce qui
+décale la correspondance avec la file du commerçant.
+
+Le front corrèle par le rang : `results[i]` répond à `items[i]`, et le lot conserve l'ordre reçu.
+Le `jti` est un confort d'affichage, pas la clé de corrélation. Un `null` sur une ligne `failed`
+dit exactement ce qui s'est passé : nous n'avons pas pu nommer ce jeton.
+
+### 22. `PaymentResponse` ne se construit pas par `From<Payment>`
+
+**La règle** (`file-guide.md` §4.4) demande un `impl From<DomainType> for ResponseDto` par DTO de
+réponse.
+
+**Ce que j'ai fait** : `PaymentResponse::settled(&Payment, Money)`.
+
+**Pourquoi** : `Payment` ne porte pas le montant. Il porte `operation_id`, et le montant vit dans
+`ledger_operations.amount` — c'est le journal qui fait autorité sur les sommes, pas la table des
+paiements, et c'est voulu. Un `From<Payment>` seul ne peut donc pas remplir le champ `amount` du
+contrat. Le rendre optionnel aurait fait porter au front une absence qui n'existe pas ; faire lire
+la base au DTO aurait mis une requête dans une couche qui n'en fait jamais.
+
+La deuxième valeur est fournie par l'appelant, qui l'a déjà sous la main : `settle` renvoie le
+`Payment`, et le montant est celui du jeton qu'il vient de consommer.
+
+### 23. `AuthorizeRequest` refuse le montant nul
+
+**Ce que j'ai ajouté** : une validation de schéma sur `AuthorizeRequest`, qui rejette un `amount`
+non strictement positif.
+
+**Pourquoi** : `Money` refuse le négatif et les décimales surnuméraires dès la désérialisation, mais
+il accepte zéro — c'est un montant légitime pour le type, `Money::zero()` existe. Un jeton de 0 €
+n'a en revanche aucun sens, et sans ce contrôle il descendait jusqu'à `place_hold`, remontait en
+`LedgerError::NonPositiveAmount`, que la conversion range dans `CoreError::Internal`, c'est-à-dire
+un **500**. Une saisie utilisateur invalide serait sortie en erreur serveur.
+
+Le refus appartient donc au bord : c'est un `422 VALIDATION_FAILED`, ce que le dictionnaire annonce
+déjà pour un montant mal formé.
+
+### 24. Le code court sort formaté et rentre brut
+
+**Ce que j'ai fait** : `IssuedTokenResponse` applique `format_for_display` au code du domaine, donc
+`86RB57CT` sort en `86RB-57CT`. Dans l'autre sens, `SettleRequest::token_ref` transmet la saisie du
+commerçant **telle quelle** dans `TokenRef::ShortCode`, sans la normaliser.
+
+**Pourquoi l'asymétrie** : l'affichage est une décision d'exposition, elle appartient au DTO. La
+normalisation, elle, est une règle de résolution : `settle::resolve` appelle déjà `normalize` puis
+`is_valid` avant de chercher en base, et c'est le seul endroit qui doit le faire. Normaliser aussi
+dans le DTO créerait une seconde autorité sur la même règle — inoffensive tant que les deux
+implémentations coïncident, et silencieusement fausse le jour où l'une des deux change.
+
+Le DTO ne valide donc pas la forme du code court non plus. Il plafonne seulement sa longueur, pour
+qu'une saisie absurde ne voyage pas jusqu'à la base. Un code mal formé ressort en `TOKEN_NOT_FOUND`,
+comme un code inconnu, ce qui est la même chose du point de vue du comptoir.
