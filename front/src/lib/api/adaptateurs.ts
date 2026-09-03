@@ -49,6 +49,7 @@ import type {
   PartnerStatus,
   PaymentResponse,
   PublicPartner,
+  ResolvedTokenItem,
   SirhBalance,
 } from "@/types/api";
 import type {
@@ -70,6 +71,7 @@ import type {
 } from "@/types/domaine";
 import type {
   EncaissementAccepte,
+  JetonResolu,
   MontantCentimes,
 } from "@/types/encaissement";
 import { ErreurService } from "@/types/erreurs";
@@ -927,38 +929,57 @@ export function depuisMonCompte(brut: PartnerAccountStatus): MonCompte {
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 /**
+ * `ResolvedTokenItem` → `JetonResolu`.
+ *
+ * ⚠ Le type d'entrée vient d'une route que NOUS proposons — le contrat n'a
+ * aucune lecture de jeton sans consommation (divergence D6). Voir
+ * `types/api.ts`.
+ *
+ * `montant` repasse en CENTIMES : le back sert des euros décimaux
+ * (`money.rs:145`), le domaine ne connaît que des entiers.
+ *
+ * `expireA` devient un NOMBRE de millisecondes. C'est la seule conversion qui
+ * permette au compte à rebours de compter, et `horodatage` lève si le serveur
+ * envoie autre chose qu'une date — un compte à rebours alimenté par `NaN`
+ * afficherait un jeton éternellement valide.
+ */
+export function depuisJetonResolu(brut: ResolvedTokenItem): JetonResolu {
+  return {
+    jti: brut.jti,
+    codeCourt: brut.short_code,
+    montant: centimesDepuis(brut, "amount"),
+    beneficiaire: brut.customer_label,
+    expireA: horodatage(brut.expires_at, "expires_at"),
+  };
+}
+
+/**
  * `PaymentResponse` → `EncaissementAccepte`.
  *
- * `ref` ← `id`, l'identifiant du paiement, et non `jti` : le `jti` identifie
- * le JETON consommé, pas l'écriture. Un caissier qui cite une référence cite
- * la transaction.
+ * ✅ Le type d'entrée est celui du CONTRAT (`data-dictionary.md:443-451`).
  *
- * `complement.employee` : le back ne sert PAS l'identité du salarié au
- * partenaire, et c'est une décision, pas un oubli — il n'expose qu'un
- * `customer_label` valant « K. A. », « jamais le nom complet »
- * (data-dictionary.md:434), et `PaymentResponse` ne porte même pas ce
- * label-là (:443-451). L'écran d'encaissement du front affiche aujourd'hui
- * `employee.name` : c'est la divergence D14 de l'audit, et elle se règle sur
- * l'écran, pas ici.
+ * `complement` porte les deux choses que le serveur ne dit pas :
  *
- * `complement.rejoue` : `PaymentResponse` ne porte aucun marqueur de rejeu.
- * Un règlement rejoué par le même partenaire renvoie `200` avec exactement la
- * même forme et `status: "settled"` (data-dictionary.md:645) — rien ne le
- * distingue d'un premier encaissement. Seul l'appelant sait s'il rejouait.
- * Divergence D13.
+ *   - `beneficiaire` — `PaymentResponse` ne renvoie ni identité ni
+ *     `customer_label`. L'écran le tient du jeton résolu, un pas plus tôt.
+ *   - `rejoue` — un règlement rejoué rend `200` avec exactement la même forme
+ *     et `status: "settled"` (:645). Rien ne le distingue. Seul l'appelant sait
+ *     s'il rejouait, parce que c'est lui qui a renvoyé.
+ *
+ * Le paramètre est obligatoire : la signature dit « ce que le serveur ne
+ * fournit pas, dis-le-moi » plutôt que d'inventer une valeur par défaut.
  */
 export function depuisEncaissement(
   brut: PaymentResponse,
-  complement: {
-    employee: { id: string; name: string };
-    rejoue: boolean;
-  },
+  complement: { beneficiaire: string; rejoue: boolean },
 ): EncaissementAccepte {
   return {
-    ref: brut.id,
-    amount: centimesDepuis(brut, "amount"),
-    createdAt: horodatage(brut.occurred_at, "occurred_at"),
-    employee: complement.employee,
+    reference: brut.id,
+    jti: brut.jti,
+    montant: centimesDepuis(brut, "amount"),
+    regleA: horodatage(brut.occurred_at, "occurred_at"),
+    modeSaisie: brut.entry_mode,
+    beneficiaire: complement.beneficiaire,
     rejoue: complement.rejoue,
   };
 }

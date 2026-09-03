@@ -22,10 +22,15 @@ import type { MonCompte, StatutPartenaire } from "@/types/domaine";
  *
  * ─── Les quatre états ───
  *
- * `agree` est le seul état opérationnel ; les quatre autres passent par ici. Le
- * nom du composant ne couvre que le refus — c'est celui de la maquette — mais
- * un partenaire en attente, suspendu ou fermé a lui aussi besoin d'un message,
- * et le laisser entrer dans un espace où rien ne fonctionne serait pire.
+ * `agree` est le seul état opérationnel ; les quatre autres passent par ici :
+ * en attente, refusé, suspendu, fermé. Chacun a son titre, sa situation et sa
+ * suite — un partenaire dont le dossier est encore à l'examen n'a pas à lire un
+ * message de refus, et le laisser entrer dans un espace où rien ne fonctionne
+ * serait pire encore.
+ *
+ * Le composant s'est d'abord appelé `AdhesionRefusee`. Le nom n'annonçait qu'un
+ * des quatre états : renommé, parce qu'un nom qui ment sur son contenu finit
+ * par tromper quelqu'un.
  */
 
 const TITRES: Record<StatutPartenaire, string> = {
@@ -62,7 +67,7 @@ const SUITES: Record<StatutPartenaire, string> = {
     "Si cette fermeture ne correspond pas à votre situation, signalez-le : un compte fermé par erreur se traite au cas par cas.",
 };
 
-export function AdhesionRefusee({ compte }: { compte: MonCompte }) {
+export function EtatDuCompte({ compte }: { compte: MonCompte }) {
   return (
     <section
       className={`adhesion adhesion--${compte.statut}`}

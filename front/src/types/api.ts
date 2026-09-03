@@ -871,3 +871,30 @@ export type PartnerAccountStatus = {
   city: CityRef | null;
 };
 
+/**
+ * Un jeton résolu au comptoir, sans être consommé.
+ *
+ * ⚠ NOTRE PROPOSITION, servie par
+ * `GET /api/v1/partner/payment-tokens/{reference}`. Le contrat n'a AUCUNE route
+ * qui lise un jeton sans le régler : ni la section 4.5, ni
+ * `crates/api/src/routes/partner.rs`. C'est la divergence D6 de
+ * `front/docs/contrat-api.md`.
+ *
+ * Sans elle, un caissier qui saisit un code à la main règle à l'aveugle : il ne
+ * voit ni le montant réservé, ni le bénéficiaire, ni l'échéance. Dans le modèle
+ * du back, où le montant vient du jeton et non de la caisse, cette lecture
+ * n'est pas un confort — c'est la seule façon de savoir ce qu'on encaisse.
+ *
+ * `customer_label` suit la règle du contrat : « K. A. », jamais le nom complet
+ * (`data-dictionary.md:434`).
+ */
+export type ResolvedTokenItem = {
+  jti: string;
+  /** Huit caractères au format `XXXX-XXXX`. */
+  short_code: string;
+  /** Euros décimaux, comme tout montant du contrat. */
+  amount: number;
+  customer_label: string;
+  expires_at: string;
+};
+

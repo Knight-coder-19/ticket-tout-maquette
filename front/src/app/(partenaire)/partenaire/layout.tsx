@@ -6,7 +6,7 @@ import "@/styles/partenaire.css";
 
 import { useCallback, useEffect, useState } from "react";
 
-import { AdhesionRefusee } from "./AdhesionRefusee";
+import { EtatDuCompte } from "./EtatDuCompte";
 import { RailPartenaire } from "./RailPartenaire";
 import { BandeauSimulation } from "@/components/simulation/BandeauSimulation";
 import { lireMonCompte } from "@/lib/services/partenaire.service";
@@ -24,7 +24,7 @@ import type { MonCompte } from "@/types/domaine";
  * ─── Pourquoi ce layout est un composant client ───
  *
  * Il décide quoi montrer selon l'état du compte, et cet état vient du serveur.
- * Un partenaire refusé, suspendu ou fermé reçoit `AdhesionRefusee` À LA PLACE de
+ * Un partenaire refusé, suspendu ou fermé reçoit `EtatDuCompte` À LA PLACE de
  * l'espace — pas une redirection : il a tapé l'adresse de son espace, il doit
  * recevoir une réponse à cette adresse.
  *
@@ -107,7 +107,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {etat.phase === "prete" && !ouvert && (
         <main className="espace__contenu">
-          <AdhesionRefusee compte={etat.compte} />
+          <EtatDuCompte compte={etat.compte} />
         </main>
       )}
 

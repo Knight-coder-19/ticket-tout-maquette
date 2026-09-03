@@ -21,9 +21,13 @@
  *   - un AUTRE partenaire sur un jeton deja consomme recoit
  *     `409 TOKEN_ALREADY_USED`.
  *
- * Le jeton EST la cle. C'est ce qui est implemente ici. Le champ
- * `idempotencyKey` que `encaissement.service.ts` envoie n'a pas de
- * destinataire dans ce contrat — divergence D12 de `front/docs/contrat-api.md`.
+ * Le jeton EST la cle. C'est ce qui est implemente ici.
+ *
+ * ⚠ Le front envoyait autrefois un champ `idempotencyKey` que personne ne lit.
+ * Il a ete retire du service : donner l'illusion d'une protection qui vient en
+ * realite d'ailleurs vaut moins que pas de protection du tout, parce qu'on
+ * cesse alors de chercher ou elle est. Divergence D12 de
+ * `front/docs/contrat-api.md`, desormais close cote front.
  */
 
 import { erreur, euros, identite, succes } from "@/mocks/enveloppe";
