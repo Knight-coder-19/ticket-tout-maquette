@@ -1,26 +1,18 @@
 "use client";
 
 import { LegendeCompletude } from "@/components/tableaux/LegendeCompletude";
+import { LIBELLES_NATURE as NATURES } from "@/components/tableaux/JournalEcritures";
 import { TableauDefilant } from "@/components/tableaux/TableauDefilant";
 import { formaterCentimes } from "@/lib/montant";
 import { formaterDate } from "@/lib/utils/date";
-import type { EcritureRegistre, NatureEcriture } from "@/types/domaine";
+import type { EcritureRegistre } from "@/types/domaine";
 
 /**
  * Le libellé de chaque nature.
  *
- * Énumération fermée du contrat (`operation_kind`, `data-dictionary.md:61`),
- * traduite pour l'écran — à ne pas confondre avec les catégories de
- * partenaires, qui viennent des données et ne s'écrivent jamais dans un
- * composant.
+ * ⚠ REMONTÉ dans `components/tableaux/JournalEcritures.tsx` (`LIBELLES_NATURE`) :
+ * il était recopié à l'identique ici et sur la fiche d'un bénéficiaire.
  */
-const NATURES: Record<NatureEcriture, string> = {
-  rechargement: "Rechargement",
-  paiement: "Paiement",
-  annulation: "Annulation",
-  decheance: "Déchéance",
-  regularisation: "Régularisation",
-};
 
 /** Le titulaire, dit en français plutôt qu'en identifiant de colonne. */
 const TITULAIRES: Record<EcritureRegistre["typeTitulaire"], string> = {

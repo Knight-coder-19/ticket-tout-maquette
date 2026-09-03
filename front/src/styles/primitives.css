@@ -240,6 +240,85 @@
   font-size: var(--taille-xs);
 }
 
+/* == Le dialogue de refus / de motif =======================================
+ *
+ * ⚠ REMONTE depuis `validations.css` (le corps) et `comptes.css`
+ * (`.dialogue__avertissement`). Le composant `DialogueMotif`
+ * (`app/(administration)/administration/DialogueMotif.tsx`) vit a la racine
+ * de l'espace admin et sert Validations, Comptes, la fiche d'un beneficiaire
+ * et la selection du Ministre -- quatre ecrans, chacun avec sa propre feuille
+ * de style. Sa forme n'a plus de raison d'etre eparpillee.
+ * ========================================================================= */
+
+.dialogue {
+  border: 1px solid var(--couleur-champ-bordure);
+  border-radius: var(--rayon-md);
+  padding: var(--espace-6);
+  max-width: min(46rem, 92vw);
+  color: var(--couleur-texte);
+  background: var(--couleur-fond);
+}
+
+.dialogue::backdrop {
+  background: var(--couleur-voile);
+}
+
+.dialogue__titre {
+  margin-block: 0 var(--espace-2);
+  font-size: var(--taille-lg);
+}
+
+.dialogue__rappel {
+  margin-block: 0 var(--espace-4);
+  color: var(--couleur-texte-secondaire);
+  font-size: var(--taille-sm);
+}
+
+.dialogue label {
+  display: block;
+  margin-block-end: var(--espace-2);
+  font-family: var(--police-titre);
+  font-size: var(--taille-sm);
+}
+
+.dialogue textarea {
+  width: 100%;
+  min-height: 7rem;
+  padding: var(--espace-2);
+  font: inherit;
+  color: var(--couleur-texte);
+  background: var(--couleur-fond);
+  border: 1px solid var(--couleur-champ-bordure);
+  border-radius: var(--rayon-sm);
+  resize: vertical;
+}
+
+.dialogue__aide {
+  margin-block: var(--espace-1) var(--espace-4);
+  font-size: var(--taille-xs);
+  color: var(--couleur-texte-secondaire);
+}
+
+.dialogue__erreur {
+  margin-block: 0 var(--espace-4);
+  padding: var(--espace-2) var(--espace-3);
+  background: var(--couleur-alerte-fond);
+  color: var(--couleur-alerte);
+  border-radius: var(--rayon-sm);
+  font-size: var(--taille-sm);
+}
+
+
+.dialogue__avertissement {
+  margin-block: 0 var(--espace-4);
+  padding: var(--espace-3);
+  background: var(--couleur-alerte-fond);
+  color: var(--couleur-texte);
+  border-inline-start: var(--espace-1) solid var(--couleur-alerte);
+  border-radius: var(--rayon-sm);
+  font-size: var(--taille-sm);
+}
+
 
 .filtres__actif {
   font-weight: 700;
