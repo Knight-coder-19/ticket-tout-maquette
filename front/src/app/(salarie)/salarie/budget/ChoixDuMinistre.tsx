@@ -6,18 +6,24 @@ import { Carte } from "@/components/ui/Carte";
 import { Pastille } from "@/components/ui/Pastille";
 import { Chargement } from "@/components/ui/Chargement";
 import { EtatVide } from "@/components/ui/EtatVide";
-import { servicePartenaire } from "@/lib/services";
+import { lireChoixDuMinistre } from "@/lib/services/salarie.service";
 import styles from "../salarie.module.css";
 
+/**
+ * ✅ Branché sur `GET /me/minister-picks` (amendement A2, data-dictionary.md:
+ * 394-399) depuis que la route est câblée côté back — plus le filtre
+ * `estMisEnAvant` sur le catalogue entier, qui interrogeait la mauvaise
+ * route pour la mauvaise question (une liste de partenaires n'est pas une
+ * liste de mises en avant).
+ */
 export function ChoixDuMinistre() {
   const [partenaires, setPartenaires] = useState<Partenaire[] | null>(null);
 
   useEffect(() => {
     let vivant = true;
-    servicePartenaire
-      .listerPartenaires({ page: 1 })
-      .then((page) => {
-        if (vivant) setPartenaires(page.elements.filter((p) => p.estMisEnAvant));
+    lireChoixDuMinistre()
+      .then((liste) => {
+        if (vivant) setPartenaires(liste);
       })
       .catch(() => {
         if (vivant) setPartenaires([]);

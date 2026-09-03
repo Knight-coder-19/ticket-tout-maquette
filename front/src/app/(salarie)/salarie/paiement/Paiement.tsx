@@ -9,7 +9,7 @@ import { EtatErreur } from "@/components/ui/EtatErreur";
 import { Icone } from "@/components/ui/Icone";
 import { useCodePaiement } from "@/lib/hooks/useCodePaiement";
 import { env } from "@/lib/config/env";
-import { salariePrincipal } from "@/mocks/fixtures/salaries";
+import { centimesDepuisSaisie, formaterCentimes } from "@/lib/montant";
 import styles from "../salarie.module.css";
 import { CodeAffiche } from "./CodeAffiche";
 import { MinuteurValidite } from "./MinuteurValidite";
@@ -19,10 +19,17 @@ import { PaiementAccepte } from "./PaiementAccepte";
 const TTL = Math.min(env.qrTtlSecondes, 300);
 
 export function Paiement() {
-  const { code, restant, expire, chargement, erreur, generer } = useCodePaiement(
-    salariePrincipal.id,
-  );
+  const { code, restant, expire, chargement, erreur, generer } = useCodePaiement();
   const [accepte, setAccepte] = useState(false);
+  /*
+   * ⚠ C'est le salarié qui fixe le montant à l'émission, pas le partenaire à
+   * la caisse (`AuthorizeRequest.amount`, data-dictionary.md:401-410 ; D4).
+   * Sans ce champ, le back n'a rien à réserver : `POST /me/payment-tokens`
+   * refuse un montant absent ou nul (`422 VALIDATION_FAILED`).
+   */
+  const [saisieMontant, setSaisieMontant] = useState("");
+  const montant = centimesDepuisSaisie(saisieMontant);
+  const montantInvalide = saisieMontant.trim() !== "" && montant === null;
 
   if (accepte) {
     return (
@@ -45,17 +52,48 @@ export function Paiement() {
       <div className={styles.paiement}>
         <BandeauSimulation />
 
-        {erreur ? <EtatErreur message={erreur} onReessayer={generer} /> : null}
+        {erreur ? (
+          <EtatErreur
+            message={erreur}
+            onReessayer={() => {
+              if (montant !== null) void generer(montant);
+            }}
+          />
+        ) : null}
 
         {!code ? (
           <Carte>
             <p>
-              Un code à usage unique est généré à la demande. Il expire
-              automatiquement au bout de {TTL / 60} minutes, conformément aux
-              règles de sécurité.
+              Un code à usage unique est généré à la demande, pour le montant
+              que vous choisissez ci-dessous. Il expire automatiquement au
+              bout de {TTL / 60} minutes, conformément aux règles de sécurité.
             </p>
+            <div className={styles.champMontant}>
+              <label htmlFor="paiement-montant">Montant à payer</label>
+              <input
+                id="paiement-montant"
+                type="text"
+                inputMode="decimal"
+                placeholder="0,00"
+                value={saisieMontant}
+                aria-invalid={montantInvalide}
+                aria-describedby="paiement-montant-aide"
+                onChange={(e) => setSaisieMontant(e.target.value)}
+              />
+              <p className={styles.demo} id="paiement-montant-aide">
+                {montantInvalide
+                  ? "Montant invalide : deux décimales au plus, strictement positif."
+                  : "En euros, réservé sur votre solde disponible dès la génération."}
+              </p>
+            </div>
             <div style={{ marginTop: "var(--espace-4)" }}>
-              <Bouton onClick={generer} disabled={chargement} pleine>
+              <Bouton
+                onClick={() => {
+                  if (montant !== null) void generer(montant);
+                }}
+                disabled={chargement || montant === null}
+                pleine
+              >
                 <Icone nom="paiement" taille={18} />
                 {chargement ? "Génération…" : "Générer un code de paiement"}
               </Bouton>
@@ -69,6 +107,7 @@ export function Paiement() {
                   <CodeAffiche valeur={code.valeur} expire={expire} />
                 </div>
                 <NumeroJeton valeur={code.valeur} />
+                <p className={styles.demo}>{formaterCentimes(montant ?? 0)}</p>
                 <MinuteurValidite restant={restant} total={TTL} />
                 {expire ? (
                   <p role="status" style={{ color: "var(--couleur-accent-ambre)", fontWeight: 700 }}>
@@ -79,7 +118,13 @@ export function Paiement() {
             </CarteVisuelle>
 
             <div className={styles.actions}>
-              <Bouton onClick={generer} variante="secondaire" disabled={chargement}>
+              <Bouton
+                onClick={() => {
+                  if (montant !== null) void generer(montant);
+                }}
+                variante="secondaire"
+                disabled={chargement || montant === null}
+              >
                 <Icone nom="actualiser" taille={16} />
                 {expire ? "Nouveau code" : "Régénérer"}
               </Bouton>

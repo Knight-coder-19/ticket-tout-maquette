@@ -8,15 +8,22 @@ import { Bouton } from "@/components/ui/Bouton";
 import { Chargement } from "@/components/ui/Chargement";
 import { EtatErreur } from "@/components/ui/EtatErreur";
 import { EtatVide } from "@/components/ui/EtatVide";
-import { serviceSalarie } from "@/lib/services";
+import { listerTransactions } from "@/lib/services/salarie.service";
 import { usePagination } from "@/lib/hooks/usePagination";
 import { clefMois } from "@/lib/utils/date";
-import { salariePrincipal } from "@/mocks/fixtures/salaries";
 import styles from "../salarie.module.css";
 import { ListeOperations } from "./ListeOperations";
 import { FiltreMois } from "./FiltreMois";
 
 const PAR_PAGE = 6;
+const TAILLE_LOT_RESEAU = 20;
+/**
+ * Garde-fou sur le nombre de lignes ramenées avant de filtrer par mois côté
+ * client. `Paginated<T>` ne porte aucun `total` (D10) : impossible de savoir
+ * à l'avance combien de lots un relevé complet demande, donc on plafonne
+ * plutôt que de marcher le curseur indéfiniment sur un compte très actif.
+ */
+const PLAFOND_LIGNES = 500;
 
 export function Historique() {
   const [toutes, setToutes] = useState<Transaction[] | null>(null);
@@ -27,14 +34,14 @@ export function Historique() {
     setErreur(null);
     setToutes(null);
     try {
-      const premiere = await serviceSalarie.recupererTransactions(salariePrincipal.id, 1);
-      const pages = Math.max(1, Math.ceil(premiere.total / premiere.taillePage));
-      const suite = await Promise.all(
-        Array.from({ length: pages - 1 }, (_, i) =>
-          serviceSalarie.recupererTransactions(salariePrincipal.id, i + 2),
-        ),
-      );
-      setToutes([premiere, ...suite].flatMap((p) => p.elements));
+      const lignes: Transaction[] = [];
+      let curseur: string | undefined;
+      do {
+        const page = await listerTransactions(curseur, TAILLE_LOT_RESEAU);
+        lignes.push(...page.lignes);
+        curseur = page.curseurSuivant ?? undefined;
+      } while (curseur !== undefined && lignes.length < PLAFOND_LIGNES);
+      setToutes(lignes);
     } catch {
       setErreur("L'historique n'a pas pu être chargé.");
     }

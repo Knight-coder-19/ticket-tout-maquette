@@ -6,8 +6,7 @@ import { Carte } from "@/components/ui/Carte";
 import { Bouton } from "@/components/ui/Bouton";
 import { Chargement } from "@/components/ui/Chargement";
 import { EtatVide } from "@/components/ui/EtatVide";
-import { serviceSalarie } from "@/lib/services";
-import { salariePrincipal } from "@/mocks/fixtures/salaries";
+import { listerTransactions } from "@/lib/services/salarie.service";
 import { LigneOperation } from "../LigneOperation";
 import styles from "../salarie.module.css";
 
@@ -16,10 +15,9 @@ export function DernieresOperations() {
 
   useEffect(() => {
     let vivant = true;
-    serviceSalarie
-      .recupererTransactions(salariePrincipal.id, 1)
+    listerTransactions(undefined, 4)
       .then((page) => {
-        if (vivant) setOperations(page.elements.slice(0, 4));
+        if (vivant) setOperations(page.lignes);
       })
       .catch(() => {
         if (vivant) setOperations([]);

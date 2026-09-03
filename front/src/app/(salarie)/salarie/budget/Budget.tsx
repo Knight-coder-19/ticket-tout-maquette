@@ -10,7 +10,7 @@ import { DernieresOperations } from "./DernieresOperations";
 import { ChoixDuMinistre } from "./ChoixDuMinistre";
 
 export function Budget() {
-  const { solde, chargement, erreur, rafraichir } = useSolde(salariePrincipal.id);
+  const { solde, chargement, erreur, rafraichir } = useSolde();
 
   return (
     <>

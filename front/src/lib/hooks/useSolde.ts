@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { Solde } from "@/types/domaine";
-import { serviceSalarie } from "@/lib/services";
+import { lireSolde } from "@/lib/services/salarie.service";
 
 type EtatSolde = {
   solde: Solde | null;
@@ -15,8 +15,12 @@ type EtatSolde = {
  * Le solde doit refleter la realite apres chaque operation.
  * Ce hook centralise la strategie de rafraichissement, de facon a ne pas
  * la disperser dans les composants.
+ *
+ * Aucun identifiant en paramètre : `GET /me/balance` est scopé à la session,
+ * pas à un salarié passé en argument (le back n'a d'ailleurs aucune route
+ * qui accepte un `salarieId` dans l'URL côté espace employé).
  */
-export function useSolde(salarieId: string): EtatSolde {
+export function useSolde(): EtatSolde {
   const [solde, setSolde] = useState<Solde | null>(null);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -25,13 +29,13 @@ export function useSolde(salarieId: string): EtatSolde {
     setChargement(true);
     setErreur(null);
     try {
-      setSolde(await serviceSalarie.recupererSolde(salarieId));
+      setSolde(await lireSolde());
     } catch {
       setErreur("Le solde n'a pas pu être récupéré. Réessayez.");
     } finally {
       setChargement(false);
     }
-  }, [salarieId]);
+  }, []);
 
   useEffect(() => {
     // Chargement initial : le setState est ici volontaire (recuperation de

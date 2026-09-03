@@ -1,23 +1,32 @@
 /**
  * Point d'entree des services.
- * Selon NEXT_PUBLIC_USE_MOCKS, l'application recoit soit l'implementation
- * reelle, soit l'implementation simulee. Les deux respectent la meme
- * interface, ce qui permet a l'equipe front d'avancer sans backend
- * sans construire une architecture differente de celle de production.
+ *
+ * ⚠ `serviceSalarie` n'existe plus ici. `salarie.service.ts` appelle
+ * directement `appelApi` (comme `partenaire.service.ts` et
+ * `encaissement.service.ts`) : c'est `env.baseApi` qui bascule entre mocks et
+ * API réelle, au niveau du client HTTP, pas d'une interface à deux
+ * implémentations choisie ici. Importer les fonctions depuis
+ * `@/lib/services/salarie.service` directement.
+ *
+ * `servicePartenaire` reste sur l'ancien schéma (interface + implémentation
+ * simulée choisie ici) : c'est le service de RECHERCHE catalogue côté
+ * salarié (`PartenairesSalarie.tsx`, `ChoixDuMinistre.tsx`), qui n'a aucune
+ * route back à appeler pour l'instant — `GET /catalog` existe côté DTO et
+ * logique de recherche (`core/src/partners/catalog.rs`), mais
+ * `routes/catalog.rs` n'est toujours pas câblé. Rien à brancher tant que
+ * cette route n'existe pas.
  */
 import { env } from "@/lib/config/env";
-import type { ServiceSalarie } from "./salarie.service";
 import type { ServicePartenaire } from "./partenaire-salarie.service";
-import { salarieMock, partenaireMock } from "@/mocks/adapters";
+import { partenaireMock } from "@/mocks/adapters";
 
 if (!env.utiliserMocks) {
-  // Les implementations HTTP reelles se brancheront ici quand l'API sera
-  // disponible. En attendant, une bascule vers l'API doit echouer
-  // franchement plutot que d'appeler des routes inexistantes.
+  // La bascule reelle de servicePartenaire se branchera ici quand
+  // `GET /catalog` sera cablee cote back. En attendant, un `NEXT_PUBLIC_USE_MOCKS=false`
+  // doit echouer franchement plutot que d'appeler une route inexistante.
   throw new Error(
-    "API réelle non branchée. Laissez NEXT_PUBLIC_USE_MOCKS=true pour l'instant.",
+    "API réelle non branchée pour servicePartenaire (GET /catalog non câblée côté back). Laissez NEXT_PUBLIC_USE_MOCKS=true.",
   );
 }
 
-export const serviceSalarie: ServiceSalarie = salarieMock;
 export const servicePartenaire: ServicePartenaire = partenaireMock;
