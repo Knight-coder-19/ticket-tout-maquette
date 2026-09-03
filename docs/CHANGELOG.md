@@ -3,6 +3,50 @@
 [//]: # (This is a changelog file)
 [//]: # (Each time you make a minor or minor change in the project, repertoriate it here according to the following format. So each changes equals to an affectation of this file with all the sections.)
 
+## 1.5.0 03.09.2026
+
+### Added
+
+- `api/src/dto/employee.rs` : `BalanceResponse`, `EmployeeTransaction`, `MinisterPick`,
+  `AuthorizeRequest` et `IssuedTokenResponse`. Le solde se construit depuis `Account` par un
+  `TryFrom`, parce que les trois montants sont des `i64` en base — la conversion peut échouer, et
+  elle doit le dire plutôt que de fabriquer un `Money` invalide.
+- `api/src/dto/partner.rs` : `PartnerSummary`, `PartnerTransaction`, `SettleRequest`,
+  `PaymentResponse` et le lot de resynchronisation, `BatchSettleRequest`, `BatchSettleResult` et
+  `BatchSettleResponse`. `SettleRequest::token_ref` traduit le couple `(jti, short_code)` en
+  `TokenRef`, la validation de schéma garantissant qu'exactement un des deux est renseigné.
+
+### Changed
+
+- **Le lot de resynchronisation renvoie un `jti` nullable.** Une ligne saisie par code court et
+  refusée pour code inconnu n'a pas de `jti` à nommer. Le contrat publié annonçait `string` ;
+  il devient `string | null`, et la corrélation avec la file du commerçant se fait par le rang.
+  Le détail est dans `decisions.md` §21.
+
+### Fixed
+
+- **Un montant nul est refusé au bord.** `Money` accepte zéro, `place_hold` le refuse, et la
+  conversion range ce refus dans `CoreError::Internal` : une demande de jeton à 0 € serait sortie
+  en **500** au lieu d'un `422`. `AuthorizeRequest` porte désormais la validation.
+
+### Notes
+
+- Le code court sort formaté pour l'affichage (`86RB-57CT`) et rentre tel que le commerçant l'a
+  tapé. La normalisation reste au seul endroit qui l'a toujours faite, `settle::resolve` — deux
+  implémentations de la même règle finissent toujours par diverger.
+- Les montants de ces DTO sont des `Money`, donc des euros décimaux en JSON. Le commentaire du
+  fichier de départ annonçait « amounts stay plain integers », écrit avant l'amendement A5 ; c'est
+  la §4 du dictionnaire qui fait foi.
+- `utoipa` ne sait rien de `Money` ni des newtypes d'identifiant. Plutôt que de dériver `ToSchema`
+  dans `core`, chaque champ concerné porte un `#[schema(value_type = ...)]` : la documentation
+  OpenAPI reste juste sans que la couche HTTP déborde sur le métier.
+- Ces deux fichiers sont du code mort tant que `dto/mod.rs` ne les déclare pas. Il me manque de
+  Giscard, exactement : `pub mod employee;` et `pub mod partner;` dans `crates/api/src/dto/mod.rs`,
+  l'enveloppe commune `Paginated<T> { items, next_cursor }` de la §4.1 du dictionnaire au même
+  endroit, `CatalogItem` dans `dto/catalog.rs` — dont dépend `MinisterPick` — et toujours
+  `pub mod payments;` dans `core/src/lib.rs`. J'ai vérifié les deux fichiers en posant ces éléments
+  localement, puis je les ai retirés.
+
 ## 1.3.0 02.09.2026
 
 ### Added
