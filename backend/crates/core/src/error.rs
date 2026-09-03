@@ -48,6 +48,9 @@ pub enum CoreError {
     #[error("resynchronisation past the allowed delay")]
     ResyncTooLate,
 
+    #[error("internal invariant violation")]
+    Internal,
+
     #[error(transparent)]
     Money(#[from] InvalidMoneyError),
 
