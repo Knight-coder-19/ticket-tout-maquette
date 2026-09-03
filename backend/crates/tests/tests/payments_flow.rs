@@ -10,7 +10,7 @@ use cartepro_core::crypto::{short_code, token_sig};
 use cartepro_core::ids::{AccountId, Jti, PartnerId};
 use cartepro_core::money::Money;
 use cartepro_core::payments::{
-    self, EntryMode, IssuedToken, Payment, PaymentError, TokenRef, TokenStatus,
+    self, EntryMode, IssuedToken, PaymentError, Settlement, TokenRef, TokenStatus,
 };
 use common::{account, credit, epoch, euros, make_employee, make_partner};
 
@@ -60,14 +60,14 @@ async fn settle_on(
     partner: PartnerId,
     reference: &TokenRef,
     scanned_at: DateTime<Utc>,
-) -> Result<Payment, PaymentError>
+) -> Result<Settlement, PaymentError>
 {
     let mut tx = pool.begin().await.unwrap();
-    let payment =
+    let settlement =
         payments::settle(&mut tx, clock, &config(), partner, reference, scanned_at).await?;
 
     tx.commit().await.unwrap();
-    Ok(payment)
+    Ok(settlement)
 }
 
 async fn cancel_on(
@@ -145,7 +145,7 @@ async fn a_scanned_token_moves_the_money_to_the_partner(pool: PgPool)
         "issuing a token reserves the funds without moving them"
     );
 
-    let payment = settle_on(
+    let settled = settle_on(
         &pool,
         &clock,
         partner.partner,
@@ -155,10 +155,15 @@ async fn a_scanned_token_moves_the_money_to_the_partner(pool: PgPool)
     .await
     .unwrap();
 
-    assert_eq!(payment.token_jti, issued.jti);
-    assert_eq!(payment.partner_id, partner.partner);
-    assert_eq!(payment.from_account, employee.account);
-    assert_eq!(payment.entry_mode, EntryMode::QrScan);
+    assert_eq!(settled.payment.token_jti, issued.jti);
+    assert_eq!(settled.payment.partner_id, partner.partner);
+    assert_eq!(settled.payment.from_account, employee.account);
+    assert_eq!(settled.payment.entry_mode, EntryMode::QrScan);
+    assert_eq!(
+        settled.amount,
+        euros("12.50"),
+        "the settlement carries the amount, which the payment row does not hold"
+    );
     assert_eq!(
         account(&pool, employee.account).await,
         (8750, 0),
@@ -290,7 +295,12 @@ async fn the_same_partner_settling_twice_gets_the_same_payment(pool: PgPool)
         .await
         .unwrap();
 
-    assert_eq!(first.operation_id, second.operation_id);
+    assert_eq!(first.payment.operation_id, second.payment.operation_id);
+    assert_eq!(
+        second.amount,
+        euros("24.90"),
+        "the replayed settlement reads the amount back from the ledger operation"
+    );
     assert_eq!(
         account(&pool, employee.account).await,
         balances,
@@ -341,7 +351,7 @@ async fn a_short_code_typed_by_hand_settles_the_payment(pool: PgPool)
         .await
         .unwrap();
 
-    let payment = settle_on(
+    let settled = settle_on(
         &pool,
         &clock,
         partner.partner,
@@ -351,9 +361,10 @@ async fn a_short_code_typed_by_hand_settles_the_payment(pool: PgPool)
     .await
     .unwrap();
 
-    assert_eq!(payment.token_jti, issued.jti);
+    assert_eq!(settled.payment.token_jti, issued.jti);
+    assert_eq!(settled.amount, euros("7.30"));
     assert_eq!(
-        payment.entry_mode,
+        settled.payment.entry_mode,
         EntryMode::ShortCode,
         "the entry mode records how the token was presented"
     );
@@ -707,4 +718,49 @@ async fn the_sweep_expires_stale_tokens_and_frees_the_funds(pool: PgPool)
         matches!(refused, Err(PaymentError::TokenExpired)),
         "expected TokenExpired, got {refused:?}"
     );
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_partner_reads_back_its_settlements_with_their_amounts(pool: PgPool)
+{
+    let clock = FixedClock::new(epoch());
+    let employee = make_employee(&pool, "claire@example.test").await;
+    let paul = make_partner(&pool, "chez-paul@example.test", "Chez Paul").await;
+    let ada = make_partner(&pool, "chez-ada@example.test", "Chez Ada").await;
+
+    credit(&pool, employee.account, euros("100.00")).await;
+
+    let first = authorize_on(&pool, &clock, employee.account, euros("4.20"))
+        .await
+        .unwrap();
+
+    settle_on(&pool, &clock, paul.partner, &TokenRef::Jti(first.jti), clock.now())
+        .await
+        .unwrap();
+    clock.advance(Duration::seconds(60));
+
+    let second = authorize_on(&pool, &clock, employee.account, euros("18.00"))
+        .await
+        .unwrap();
+
+    settle_on(&pool, &clock, paul.partner, &TokenRef::Jti(second.jti), clock.now())
+        .await
+        .unwrap();
+
+    let third = authorize_on(&pool, &clock, employee.account, euros("9.99"))
+        .await
+        .unwrap();
+
+    settle_on(&pool, &clock, ada.partner, &TokenRef::Jti(third.jti), clock.now())
+        .await
+        .unwrap();
+
+    let listed = payments::repo::list_partner_settlements(&pool, paul.partner, 10)
+        .await
+        .unwrap();
+
+    assert_eq!(listed.len(), 2, "the settlements of another partner are not listed");
+    assert_eq!(listed[0].payment.token_jti, second.jti, "most recent first");
+    assert_eq!(listed[0].amount, euros("18.00"));
+    assert_eq!(listed[1].amount, euros("4.20"));
 }

@@ -12,6 +12,8 @@ pub mod settle;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::postgres::PgRow;
+use sqlx::{FromRow, Row};
 
 use crate::ids::{AccountId, Jti, OperationId, PartnerId};
 use crate::ledger::LedgerError;
@@ -19,7 +21,7 @@ use crate::money::Money;
 
 pub use authorize::{authorize, IssuedToken};
 pub use expire::expire_stale_tokens;
-pub use settle::settle;
+pub use settle::{cancel, settle};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "token_status", rename_all = "lowercase")]
@@ -60,6 +62,22 @@ pub struct Payment {
     pub entry_mode: EntryMode,
     pub scanned_at: DateTime<Utc>,
     pub synced_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Settlement {
+    pub payment: Payment,
+    pub amount: Money,
+}
+
+impl<'r> FromRow<'r, PgRow> for Settlement {
+    fn from_row(row: &'r PgRow) -> Result<Self, sqlx::Error>
+    {
+        Ok(Settlement {
+            payment: Payment::from_row(row)?,
+            amount: row.try_get("amount")?
+        })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

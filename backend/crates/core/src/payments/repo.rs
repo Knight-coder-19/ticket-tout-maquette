@@ -8,7 +8,7 @@
 use chrono::{DateTime, Utc};
 use sqlx::{PgConnection, PgPool};
 
-use super::{EntryMode, Payment, PaymentToken};
+use super::{EntryMode, Payment, PaymentToken, Settlement};
 use crate::ids::{AccountId, Jti, OperationId, PartnerId};
 use crate::money::Money;
 
@@ -17,6 +17,10 @@ const TOKEN_COLUMNS: &str =
 
 const PAYMENT_COLUMNS: &str =
     "operation_id, token_jti, partner_id, from_account, entry_mode, scanned_at, synced_at";
+
+const QUALIFIED_PAYMENT_COLUMNS: &str =
+    "p.operation_id, p.token_jti, p.partner_id, p.from_account, p.entry_mode, p.scanned_at,
+     p.synced_at";
 
 pub async fn insert_token(
     conn: &mut PgConnection,
@@ -214,20 +218,47 @@ pub async fn insert_payment(
         .await
 }
 
-pub async fn list_partner_payments(
+pub async fn operation_amount(
+    conn: &mut PgConnection,
+    operation_id: OperationId,
+) -> Result<Money, sqlx::Error>
+{
+    sqlx::query_scalar::<_, Money>("SELECT amount FROM ledger_operations WHERE id = $1")
+        .bind(operation_id)
+        .fetch_one(conn)
+        .await
+}
+
+pub async fn find_settlement_by_jti(
+    conn: &mut PgConnection,
+    jti: Jti,
+) -> Result<Option<Settlement>, sqlx::Error>
+{
+    let payment = match find_payment_by_jti(&mut *conn, jti).await? {
+        Some(payment) => payment,
+        None => return Ok(None)
+    };
+    let amount = operation_amount(conn, payment.operation_id).await?;
+
+    Ok(Some(Settlement { payment, amount }))
+}
+
+pub async fn list_partner_settlements(
     pool: &PgPool,
     partner: PartnerId,
     limit: i64,
-) -> Result<Vec<Payment>, sqlx::Error>
+) -> Result<Vec<Settlement>, sqlx::Error>
 {
     let statement = format!(
-        "SELECT {PAYMENT_COLUMNS} FROM payments
-          WHERE partner_id = $1
-          ORDER BY scanned_at DESC
+        "SELECT {QUALIFIED_PAYMENT_COLUMNS}, o.amount
+           FROM payments p
+           JOIN ledger_operations o ON o.id = p.operation_id
+          WHERE p.partner_id = $1
+          ORDER BY p.scanned_at DESC
           LIMIT $2"
     );
 
-    sqlx::query_as::<_, Payment>(&statement)
+    sqlx::query_as::<_, Settlement>(&statement)
         .bind(partner)
         .bind(limit)
         .fetch_all(pool)
