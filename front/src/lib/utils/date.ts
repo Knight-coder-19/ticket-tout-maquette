@@ -16,11 +16,11 @@ export function formaterDate(iso: string): string {
   }).format(instant);
 }
 
-/** Date + heure : "3 septembre 2026 a 14:05". */
+/** Date + heure : "3 septembre 2026 à 14:05". */
 export function formaterDateHeure(iso: string): string {
   const instant = Date.parse(iso);
   if (!Number.isFinite(instant)) throw new Error(`Date illisible : ${iso}`);
-  return `${formaterDate(iso)} a ${heure.format(instant)}`;
+  return `${formaterDate(iso)} à ${heure.format(instant)}`;
 }
 
 /** Nombre de jours entiers ecoules depuis `iso`. Jamais negatif. */
