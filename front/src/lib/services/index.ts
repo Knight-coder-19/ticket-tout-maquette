@@ -5,9 +5,19 @@
  * interface, ce qui permet a l'equipe front d'avancer sans backend
  * sans construire une architecture differente de celle de production.
  */
+import { env } from "@/lib/config/env";
+import type { ServiceSalarie } from "./salarie.service";
+import type { ServicePartenaire } from "./partenaire.service";
+import { salarieMock, partenaireMock } from "@/mocks/adapters";
 
+if (!env.utiliserMocks) {
+  // Les implementations HTTP reelles se brancheront ici quand l'API sera
+  // disponible. En attendant, une bascule vers l'API doit echouer
+  // franchement plutot que d'appeler des routes inexistantes.
+  throw new Error(
+    "API réelle non branchée. Laissez NEXT_PUBLIC_USE_MOCKS=true pour l'instant.",
+  );
+}
 
-// TODO: importer les implementations reelles et simulees, puis exporter
-// l'une ou l'autre selon env.utiliserMocks.
-
-export {};
+export const serviceSalarie: ServiceSalarie = salarieMock;
+export const servicePartenaire: ServicePartenaire = partenaireMock;
