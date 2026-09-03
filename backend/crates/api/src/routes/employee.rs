@@ -13,11 +13,12 @@ use cartepro_core::payments;
 use cartepro_core::reporting;
 
 use crate::dto::catalog::CatalogItem;
+use crate::dto::Paginated;
 use crate::dto::employee::{
     AuthorizeRequest, BalanceResponse, EmployeeTransaction, EmployeeTransactionList,
     IssuedTokenResponse, MinisterPick,
 };
-use crate::error::ApiError;
+use crate::error::{ApiError, ErrorBody};
 use crate::extractors::auth::{AuthUser, Employee};
 use crate::extractors::pagination::Pagination;
 use crate::extractors::validated::ValidatedJson;
@@ -35,6 +36,16 @@ pub fn routes() -> Router<AppState>
         .route("/me/payment-tokens/{jti}", axum::routing::delete(cancel_token))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/me/balance",
+    tag = "employee",
+    responses(
+        (status = 200, description = "Settled, held and available balance", body = BalanceResponse),
+        (status = 401, description = "Missing or expired session", body = ErrorBody),
+        (status = 403, description = "Wrong role, or no active account", body = ErrorBody)
+    )
+)]
 async fn balance(
     AuthUser(user, _): AuthUser<Employee>,
     State(app): State<AppState>,
@@ -53,6 +64,19 @@ async fn balance(
     Ok(Json(BalanceResponse::try_from(&account)?))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/me/transactions",
+    tag = "employee",
+    params(
+        ("cursor" = Option<String>, Query, description = "Identifier of the last row of the previous page"),
+        ("limit" = Option<u32>, Query, description = "Page size, capped server-side")
+    ),
+    responses(
+        (status = 200, description = "Statement, most recent first", body = Paginated<EmployeeTransaction>),
+        (status = 401, description = "Missing or expired session", body = ErrorBody)
+    )
+)]
 async fn transactions(
     AuthUser(user, _): AuthUser<Employee>,
     State(app): State<AppState>,
@@ -78,8 +102,17 @@ async fn transactions(
     Ok(Json(EmployeeTransactionList { items, next_cursor }))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/me/minister-picks",
+    tag = "employee",
+    responses(
+        (status = 200, description = "Partners highlighted by the ministry, in display order", body = Vec<MinisterPick>),
+        (status = 401, description = "Missing or expired session", body = ErrorBody)
+    )
+)]
 async fn minister_picks(
-    AuthUser(_, _): AuthUser<Employee>,
+    AuthUser(_user, _): AuthUser<Employee>,
     State(app): State<AppState>,
 ) -> Result<Json<Vec<MinisterPick>>, ApiError>
 {
@@ -95,6 +128,18 @@ async fn minister_picks(
     Ok(Json(items))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/me/payment-tokens",
+    tag = "employee",
+    request_body = AuthorizeRequest,
+    responses(
+        (status = 201, description = "Token issued, funds reserved", body = IssuedTokenResponse),
+        (status = 401, description = "Missing or expired session", body = ErrorBody),
+        (status = 403, description = "Account suspended or closed", body = ErrorBody),
+        (status = 422, description = "Amount invalid or above the available balance", body = ErrorBody)
+    )
+)]
 async fn authorize_token(
     AuthUser(user, _): AuthUser<Employee>,
     State(app): State<AppState>,
@@ -119,6 +164,18 @@ async fn authorize_token(
     Ok((StatusCode::CREATED, Json(IssuedTokenResponse::from(issued))))
 }
 
+#[utoipa::path(
+    delete,
+    path = "/api/v1/me/payment-tokens/{jti}",
+    tag = "employee",
+    params(("jti" = String, Path, description = "Identifier of the token to cancel")),
+    responses(
+        (status = 204, description = "Token cancelled, reservation released"),
+        (status = 401, description = "Missing or expired session", body = ErrorBody),
+        (status = 404, description = "Unknown token, or not owned by this employee", body = ErrorBody),
+        (status = 409, description = "Token already settled", body = ErrorBody)
+    )
+)]
 async fn cancel_token(
     AuthUser(user, _): AuthUser<Employee>,
     State(app): State<AppState>,

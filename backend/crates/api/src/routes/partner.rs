@@ -9,11 +9,12 @@ use cartepro_core::ids::PartnerId;
 use cartepro_core::partners;
 use cartepro_core::payments::{self, PaymentError, Settlement, TokenRef};
 
+use crate::dto::Paginated;
 use crate::dto::partner::{
     BatchSettleRequest, BatchSettleResponse, BatchSettleResult, PartnerSummary, PartnerTransaction,
     PartnerTransactionList, PaymentResponse, PeriodQuery, SettleRequest,
 };
-use crate::error::ApiError;
+use crate::error::{ApiError, ErrorBody};
 use crate::extractors::auth::{AuthUser, Partner};
 use crate::extractors::pagination::Pagination;
 use crate::extractors::validated::ValidatedJson;
@@ -28,6 +29,19 @@ pub fn routes() -> Router<AppState>
         .route("/partner/payments/batch", post(settle_batch))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/partner/summary",
+    tag = "partner",
+    params(
+        ("from" = Option<String>, Query, description = "Start of the period, ISO 8601"),
+        ("to" = Option<String>, Query, description = "End of the period, ISO 8601")
+    ),
+    responses(
+        (status = 200, description = "Total received over the period. Not a balance.", body = PartnerSummary),
+        (status = 401, description = "Missing or expired session", body = ErrorBody)
+    )
+)]
 async fn summary(
     AuthUser(user, _): AuthUser<Partner>,
     State(app): State<AppState>,
@@ -47,6 +61,15 @@ async fn summary(
     }))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/partner/transactions",
+    tag = "partner",
+    responses(
+        (status = 200, description = "Settlements received, most recent first", body = Paginated<PartnerTransaction>),
+        (status = 401, description = "Missing or expired session", body = ErrorBody)
+    )
+)]
 async fn transactions(
     AuthUser(user, _): AuthUser<Partner>,
     State(app): State<AppState>,
@@ -68,6 +91,20 @@ async fn transactions(
     Ok(Json(PartnerTransactionList { items, next_cursor }))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/partner/payments",
+    tag = "partner",
+    request_body = SettleRequest,
+    responses(
+        (status = 200, description = "Payment settled. A replay by the same partner returns the existing one.", body = PaymentResponse),
+        (status = 403, description = "Partner not approved, or account inactive", body = ErrorBody),
+        (status = 404, description = "Unknown token or short code", body = ErrorBody),
+        (status = 409, description = "Token already consumed by another partner", body = ErrorBody),
+        (status = 410, description = "Token had expired when it was scanned", body = ErrorBody),
+        (status = 422, description = "Insufficient funds, or resynchronisation past the allowed delay", body = ErrorBody)
+    )
+)]
 async fn settle_payment(
     AuthUser(user, _): AuthUser<Partner>,
     State(app): State<AppState>,
@@ -84,6 +121,16 @@ async fn settle_payment(
     Ok(Json(PaymentResponse::from(&settlement)))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/partner/payments/batch",
+    tag = "partner",
+    request_body = BatchSettleRequest,
+    responses(
+        (status = 200, description = "One result per item, in the order received. A failing line never fails the batch.", body = BatchSettleResponse),
+        (status = 401, description = "Missing or expired session", body = ErrorBody)
+    )
+)]
 async fn settle_batch(
     AuthUser(user, _): AuthUser<Partner>,
     State(app): State<AppState>,

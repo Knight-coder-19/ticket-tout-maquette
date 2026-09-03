@@ -134,6 +134,28 @@ curl -s http://127.0.0.1:8080/health
 
 Migrations are never run automatically at startup.
 
+### API documentation
+
+Swagger UI is served at `/docs`, and the raw specification at `/docs/openapi.json`:
+
+```sh
+curl -s http://127.0.0.1:8080/docs/openapi.json | jq '.paths | keys'
+```
+
+The document is generated from the handlers themselves — each one carries a `#[utoipa::path]`
+annotation — so it cannot drift from the code the way a hand-written contract does. Adding a route
+to the documentation means adding one line to the `paths(...)` list in `crates/api/src/openapi.rs`.
+
+`main.rs` must mount it, and should do so in development only:
+
+```rust
+let mut app = routes::router(state.clone());
+
+if state.env == Environment::Development {
+    app = app.merge(openapi::docs());
+}
+```
+
 ---
 
 ## 6. Seed
