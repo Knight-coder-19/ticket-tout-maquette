@@ -16,3 +16,4 @@ chrono = { workspace = true }
 uuid = { workspace = true }
 testcontainers = { workspace = true }
 testcontainers-modules = { workspace = true }
+ed25519-dalek = { workspace = true }
