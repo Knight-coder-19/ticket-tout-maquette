@@ -1,8 +1,3 @@
-// Declare Employee, Employer, EmploymentLink, City and DirectoryError, and re-export employees,
-// employment, employers, cities and repo.
-// One partner is one point of sale (decision 11): no multi-establishment field.
-// Priority: P1
-
 pub mod cities;
 pub mod employees;
 pub mod employers;
@@ -25,7 +20,7 @@ pub enum LinkStatus {
     Ended,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, sqlx::FromRow)]
 pub struct Employee {
     pub id: EmployeeId,
     pub user_id: UserId,
@@ -35,7 +30,7 @@ pub struct Employee {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, sqlx::FromRow)]
 pub struct Employer {
     pub id: EmployerId,
     pub legal_name: String,
@@ -46,7 +41,7 @@ pub struct Employer {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, sqlx::FromRow)]
 pub struct EmploymentLink {
     pub id: EmploymentLinkId,
     pub employee_id: EmployeeId,
@@ -56,9 +51,10 @@ pub struct EmploymentLink {
     pub status: LinkStatus,
     pub started_at: NaiveDate,
     pub ended_at: Option<NaiveDate>,
+    pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, sqlx::FromRow)]
 pub struct City {
     pub id: CityId,
     pub name: String,
@@ -73,6 +69,10 @@ pub enum DirectoryError {
     UnknownEmployerRef,
     #[error("employee already has an active employment link")]
     DuplicateActiveEmployment,
+    #[error("this staff number is already in use at this employer")]
+    EmployerRefTaken,
+    #[error("record not found")]
+    NotFound,
     #[error("city is required for a physical employer/partner")]
     CityRequired,
     #[error(transparent)]
