@@ -38,7 +38,6 @@ where
                 tracing::warn!(error = %err, "JSON validation failed");
                 ApiError::from(CoreError::Unauthorized)
             })?;
-
         Ok(ValidatedJson(value))
     }
 }

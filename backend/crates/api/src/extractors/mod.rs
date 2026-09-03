@@ -1,2 +1,4 @@
-// Declare and re-export the extractors used in the handler signatures.
-// Priority: P0
+pub mod api_client;
+pub mod auth;
+pub mod pagination;
+pub mod validated;
