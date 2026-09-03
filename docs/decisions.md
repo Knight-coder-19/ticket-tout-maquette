@@ -427,114 +427,65 @@ pub async fn approved_account(tx: &mut PgTransaction<'_>, id: PartnerId)
 Le filtre `status = 'approved'` doit vivre dans sa requête, pas chez l'appelant : c'est elle qui
 porte la règle « un commerçant non validé ne reçoit pas d'argent public ».
 
-### 16. `topup` reçoit une horloge et une référence optionnelle
+### 21. `BatchSettleResult.jti` est nullable
 
-**Le plan** (§4.1) annonce `topup(tx, admin, employer_id, account_id, amount, reference)`.
+**Le contrat publié** (`data-dictionary.md` §4.5) donne `jti: string` dans chaque résultat du lot de
+resynchronisation.
 
-**Ce que j'ai fait** : j'ai intercalé `clock: &dyn Clock` en deuxième position et typé la
-référence `Option<&str>`.
+**Ce que j'ai fait** : `Option<Jti>`, donc `string | null` côté front.
 
-**Pourquoi** : l'`occurred_at` de l'opération doit venir de l'horloge injectée, comme partout
-ailleurs sur le chemin monétaire — sinon un test ne peut pas dater un rechargement, et la
-démonstration de l'expiration à horloge fixe s'arrête au premier crédit. La référence est
-nullable en base (`topups.reference`), le type Rust le dit.
+**Pourquoi** : une ligne du lot peut être saisie par code court. Si ce code est inconnu — le
+commerçant s'est trompé de chiffre au comptoir, la veille, hors ligne — il n'existe aucun `jti` à
+renvoyer, et le contrat exige pourtant d'en écrire un. Les deux échappatoires étaient d'inventer un
+UUID nul, qui se lit comme un identifiant valide, ou de retirer la ligne de la réponse, ce qui
+décale la correspondance avec la file du commerçant.
 
-### 17. L'idempotence du rechargement s'appuie sur le verrou de chaîne
+Le front corrèle par le rang : `results[i]` répond à `items[i]`, et le lot conserve l'ordre reçu.
+Le `jti` est un confort d'affichage, pas la clé de corrélation. Un `null` sur une ligne `failed`
+dit exactement ce qui s'est passé : nous n'avons pas pu nommer ce jeton.
 
-**Le plan** décrit la référence comme « la clé d'idempotence naturelle », en priorité P3.
+### 22. `PaymentResponse` ne se construit pas par `From<Payment>`
 
-**Ce que j'ai fait** : `topup` prend `lock_chain` en première instruction, puis cherche un
-rechargement existant pour le couple `(employer_id, reference)` et le renvoie tel quel s'il
-existe.
+**La règle** (`file-guide.md` §4.4) demande un `impl From<DomainType> for ResponseDto` par DTO de
+réponse.
 
-**Pourquoi pas un index unique** : `uq_topup_reference` n'existe pas dans `0001_schema.sql`, et
-la migration est déjà appliquée sur les postes de l'équipe. Ajouter une migration `0003` pour
-une contrainte de priorité P3 revient à faire porter au schéma un risque de rejeu de migration
-la veille du rendu.
+**Ce que j'ai fait** : `PaymentResponse::settled(&Payment, Money)`.
 
-**Ce qui rend le contrôle correct malgré tout** : le verrou consultatif 42 est pris par tout
-chemin qui écrit dans le journal — `topup`, `settle`, et toute écriture future. Deux
-rechargements simultanés portant la même référence ne peuvent donc pas s'exécuter en parallèle :
-le second attend, puis lit la ligne écrite par le premier. La faille résiduelle est un `INSERT`
-direct dans `topups` qui contournerait la fonction ; c'est le genre de chose que l'index unique
-interdirait pour de bon, et c'est la raison de le poser un jour.
+**Pourquoi** : `Payment` ne porte pas le montant. Il porte `operation_id`, et le montant vit dans
+`ledger_operations.amount` — c'est le journal qui fait autorité sur les sommes, pas la table des
+paiements, et c'est voulu. Un `From<Payment>` seul ne peut donc pas remplir le champ `amount` du
+contrat. Le rendre optionnel aurait fait porter au front une absence qui n'existe pas ; faire lire
+la base au DTO aurait mis une requête dans une couche qui n'en fait jamais.
 
-### 18. Le compte système est refusé au crédit
+La deuxième valeur est fournie par l'appelant, qui l'a déjà sous la main : `settle` renvoie le
+`Payment`, et le montant est celui du jeton qu'il vient de consommer.
 
-**Le plan** ne dit rien du cas.
+### 23. `AuthorizeRequest` refuse le montant nul
 
-**Ce que j'ai fait** : `topup` renvoie `SystemAccountCredited` quand le compte destinataire porte
-`owner_type = 'system'`.
+**Ce que j'ai ajouté** : une validation de schéma sur `AuthorizeRequest`, qui rejette un `amount`
+non strictement positif.
 
-**Pourquoi** : `post_operation` refuse déjà le virement d'un compte vers lui-même, donc recharger
-`MINISTRY_ISSUANCE` depuis lui-même échouait de toute façon. Mais recharger `CLOSURE_FORFEIT`
-depuis l'émission passait sans rien signaler, et produisait une ligne de `topups` qui n'a aucun
-sens : un forfait de clôture n'est pas une dotation. Autant nommer le refus.
+**Pourquoi** : `Money` refuse le négatif et les décimales surnuméraires dès la désérialisation, mais
+il accepte zéro — c'est un montant légitime pour le type, `Money::zero()` existe. Un jeton de 0 €
+n'a en revanche aucun sens, et sans ce contrôle il descendait jusqu'à `place_hold`, remontait en
+`LedgerError::NonPositiveAmount`, que la conversion range dans `CoreError::Internal`, c'est-à-dire
+un **500**. Une saisie utilisateur invalide serait sortie en erreur serveur.
 
-### 19. Seul `topup.rs` est livré, et il ne compile pas encore
+Le refus appartient donc au bord : c'est un `422 VALIDATION_FAILED`, ce que le dictionnaire annonce
+déjà pour un montant mal formé.
 
-`TASK-DISTRIBUTION-BACKEND.md` §2 ne me confie que `funding/topup.rs` : `mod.rs` et `repo.rs`
-tombent dans le « tout le reste » de Giscard. J'avais écrit les trois ; je n'ai gardé que le
-mien. `topup.rs` appelle donc des choses qui n'existent pas encore, exactement comme `settle`
-appelle `approved_account` au point 15.
+### 24. Le code court sort formaté et rentre brut
 
-**Ce que Giscard doit fournir**, exactement :
+**Ce que j'ai fait** : `IssuedTokenResponse` applique `format_for_display` au code du domaine, donc
+`86RB57CT` sort en `86RB-57CT`. Dans l'autre sens, `SettleRequest::token_ref` transmet la saisie du
+commerçant **telle quelle** dans `TokenRef::ShortCode`, sans la normaliser.
 
-```rust
-// crates/core/src/lib.rs
-pub mod funding;
+**Pourquoi l'asymétrie** : l'affichage est une décision d'exposition, elle appartient au DTO. La
+normalisation, elle, est une règle de résolution : `settle::resolve` appelle déjà `normalize` puis
+`is_valid` avant de chercher en base, et c'est le seul endroit qui doit le faire. Normaliser aussi
+dans le DTO créerait une seconde autorité sur la même règle — inoffensive tant que les deux
+implémentations coïncident, et silencieusement fausse le jour où l'une des deux change.
 
-// crates/core/src/funding/mod.rs
-pub mod repo;
-pub mod topup;
-
-#[derive(Debug, Clone, PartialEq, Eq, sqlx::FromRow)]
-pub struct Topup {
-    pub operation_id: OperationId,
-    pub batch_id: Option<BatchId>,
-    pub employer_id: EmployerId,
-    pub to_account: AccountId,
-    pub reference: Option<String>,
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum FundingError {
-    SystemAccountMissing(&'static str),
-    SystemAccountCredited,
-    AccountInactive,
-    Ledger(#[from] LedgerError),
-    Db(#[from] sqlx::Error),
-}
-
-// crates/core/src/funding/repo.rs
-pub async fn find_topup_by_reference(
-    conn: &mut PgConnection, employer_id: EmployerId, reference: &str,
-) -> Result<Option<Topup>, sqlx::Error>;
-
-pub async fn insert_topup(
-    conn: &mut PgConnection, operation_id: OperationId, batch_id: Option<BatchId>,
-    employer_id: EmployerId, to_account: AccountId, reference: Option<&str>,
-) -> Result<Topup, sqlx::Error>;
-```
-
-Deux points qui ne se devinent pas. `find_topup_by_reference` ne doit filtrer que sur
-`(employer_id, reference)`, sans condition supplémentaire : c'est ce qui porte l'idempotence du
-point 17, et un filtre de plus la casserait. Et `insert_topup` doit renvoyer la ligne insérée par
-`RETURNING`, pas un `()` : `topup` rend le `Topup` à son appelant.
-
-`TopupBatch` et `BatchStatus` sont annoncés par `file-guide.md` §3.8 dans le même `mod.rs`. Le lot
-CSV étant coupé au §1 du plan de répartition, ils ne me manquent pas — mais la table
-`topup_batches` existe et `Topup.batch_id` la référence déjà, donc autant les écrire tant qu'il
-y est.
-
-### 20. Les tests de `funding` ne sont pas livrés
-
-`topup` a été vérifié par cinq tests contre un PostgreSQL réel : le rechargement nominal et les
-deux soldes qui bougent en sens inverse, la référence rejouée qui ne crédite pas deux fois, le
-compte suspendu refusé, le compte système refusé au crédit, et deux rechargements sans référence
-qui s'appliquent tous les deux. Ils passent, et ils ne sont pas dans le dépôt.
-
-**Pourquoi** : ils ont besoin de tout ce que liste le point 19, et livrer un fichier de test qui
-ne compile pas casserait le paquet `crates/tests` en entier, donc aussi `invariants.rs`. Ils
-reviendront quand Giscard aura livré — dans un `funding_topup.rs` à part, parce que ce ne sont
-pas des invariants et que `payments_flow.rs` est réservé au chemin `authorize` → `settle`.
+Le DTO ne valide donc pas la forme du code court non plus. Il plafonne seulement sa longueur, pour
+qu'une saisie absurde ne voyage pas jusqu'à la base. Un code mal formé ressort en `TOKEN_NOT_FOUND`,
+comme un code inconnu, ce qui est la même chose du point de vue du comptoir.
