@@ -2,11 +2,11 @@ import "@/styles/globals.css";
 
 export const metadata = {
   title: {
-    default: "CartePro (simulation) — Ministère du Job et Bonheur",
-    template: "%s — CartePro (simulation)",
+    default: "Ticket Tout (simulation) · Ministère du Job et Bonheur",
+    template: "%s · Ticket Tout (simulation)",
   },
   description:
-    "Démonstrateur du dispositif CartePro. Simulation fonctionnelle : aucune valeur réelle ne circule.",
+    "Démonstrateur du dispositif Ticket Tout. Simulation fonctionnelle : aucune valeur réelle ne circule.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
