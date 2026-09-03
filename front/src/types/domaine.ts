@@ -9,6 +9,12 @@ export type Identifiant = string;
 /** Montant en centimes. Jamais de flottant pour de la monnaie. */
 export type MontantCentimes = number;
 
+export interface Salarie {
+  id: Identifiant;
+  nom: string;
+  employeur: string;
+}
+
 export interface Categorie {
   id: Identifiant;
   libelle: string;
