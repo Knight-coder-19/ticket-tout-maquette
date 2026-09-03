@@ -96,6 +96,8 @@ async fn i3_user_accounts_never_go_negative(pool: PgPool)
             occurred_at: at("2026-03-01T12:00:00Z"),
             memo: None,
             created_by: None,
+            operation_id: None,
+            recorded_at: None,
         },
     )
     .await;
@@ -229,6 +231,8 @@ async fn i6_a_token_is_settled_only_once(pool: PgPool)
             occurred_at: at("2026-03-01T12:02:00Z"),
             memo: None,
             created_by: None,
+            operation_id: None,
+            recorded_at: None,
         },
     )
     .await

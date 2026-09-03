@@ -67,15 +67,19 @@ pub async fn insert_operation(
 ) -> Result<LedgerOperation, sqlx::Error>
 {
     sqlx::query_as::<_, LedgerOperation>(
-        "INSERT INTO ledger_operations (kind, amount, memo, created_by, occurred_at)
-         VALUES ($1, $2, $3, $4, $5)
+        "INSERT INTO ledger_operations
+             (id, kind, amount, memo, created_by, occurred_at, recorded_at)
+         VALUES (COALESCE($1::UUID, gen_random_uuid()), $2, $3, $4, $5, $6,
+                 COALESCE($7::TIMESTAMPTZ, now()))
          RETURNING id, kind, amount, memo, created_by, occurred_at, recorded_at",
     )
+    .bind(posting.operation_id)
     .bind(kind)
     .bind(posting.amount)
     .bind(posting.memo.as_deref())
     .bind(posting.created_by)
     .bind(posting.occurred_at)
+    .bind(posting.recorded_at)
     .fetch_one(conn)
     .await
 }

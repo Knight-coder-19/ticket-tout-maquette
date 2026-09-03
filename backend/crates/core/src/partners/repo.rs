@@ -9,13 +9,114 @@ use chrono::{DateTime, Utc};
 use sqlx::postgres::PgRow;
 use sqlx::{PgConnection, Row};
 
-use super::{Partner, PartnerError, PartnerStatus};
-use crate::ids::{AccountId, PartnerId, UserId};
+use super::{Partner, PartnerCard, PartnerError, PartnerStatus, ServiceMode};
+use crate::directory::City;
+use crate::ids::{AccountId, CityId, PartnerId, UserId};
 use crate::ledger::PgTransaction;
 
 const PARTNER_COLUMNS: &str = "id, user_id, account_id, legal_name, trade_name, category, ifu,
      service_mode, website_url, city_id, district, address_line, status, submitted_at,
      reviewed_by, reviewed_at, review_reason";
+
+pub const CARD_COLUMNS: &str =
+    "p.id, p.trade_name, p.category, p.service_mode, p.district, p.address_line, p.website_url,
+     (p.status = 'approved') AS is_official_partner,
+     p.city_id, c.name AS city_name, c.department AS city_department";
+
+pub fn card_from_row(row: &PgRow) -> Result<PartnerCard, sqlx::Error> {
+    let city = match row.try_get::<Option<CityId>, _>("city_id")? {
+        Some(id) => Some(City {
+            id,
+            name: row.try_get("city_name")?,
+            department: row.try_get("city_department")?,
+        }),
+        None => None,
+    };
+    Ok(PartnerCard {
+        id: row.try_get("id")?,
+        trade_name: row.try_get("trade_name")?,
+        category: row.try_get("category")?,
+        service_mode: row.try_get("service_mode")?,
+        city,
+        district: row.try_get("district")?,
+        address_line: row.try_get("address_line")?,
+        website_url: row.try_get("website_url")?,
+        is_official_partner: row.try_get("is_official_partner")?,
+    })
+}
+
+pub async fn insert_partner_account(
+    tx: &mut PgTransaction<'_>,
+    owner_id: UserId,
+    now: DateTime<Utc>,
+) -> Result<AccountId, sqlx::Error> {
+    sqlx::query_scalar::<_, AccountId>(
+        "INSERT INTO accounts (owner_type, owner_id, opened_at)
+         VALUES ('partner'::account_owner, $1, $2)
+         RETURNING id",
+    )
+    .bind(owner_id)
+    .bind(now)
+    .fetch_one(&mut **tx)
+    .await
+}
+
+#[allow(clippy::too_many_arguments)]
+pub async fn insert_partner(
+    tx: &mut PgTransaction<'_>,
+    user_id: UserId,
+    account_id: AccountId,
+    legal_name: &str,
+    trade_name: &str,
+    category: &str,
+    ifu: Option<&str>,
+    service_mode: ServiceMode,
+    website_url: Option<&str>,
+    city_id: Option<CityId>,
+    district: Option<&str>,
+    address_line: Option<&str>,
+    submitted_at: DateTime<Utc>,
+) -> Result<Partner, sqlx::Error> {
+    let statement = format!(
+        "INSERT INTO partners
+             (id, user_id, account_id, legal_name, trade_name, category, ifu, service_mode,
+              website_url, city_id, district, address_line, submitted_at)
+         VALUES ($1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+         RETURNING {PARTNER_COLUMNS}"
+    );
+    let row = sqlx::query(&statement)
+        .bind(user_id)
+        .bind(account_id)
+        .bind(legal_name)
+        .bind(trade_name)
+        .bind(category)
+        .bind(ifu)
+        .bind(service_mode)
+        .bind(website_url)
+        .bind(city_id)
+        .bind(district)
+        .bind(address_line)
+        .bind(submitted_at)
+        .fetch_one(&mut **tx)
+        .await?;
+    partner_from_row(&row)
+}
+
+pub async fn remove_highlights_for_partner(
+    tx: &mut PgTransaction<'_>,
+    partner: PartnerId,
+    now: DateTime<Utc>,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "UPDATE partner_highlights SET removed_at = $2
+         WHERE partner_id = $1 AND removed_at IS NULL",
+    )
+    .bind(partner)
+    .bind(now)
+    .execute(&mut **tx)
+    .await?;
+    Ok(())
+}
 
 fn partner_from_row(row: &PgRow) -> Result<Partner, sqlx::Error>
 {

@@ -57,7 +57,9 @@ pub async fn topup(
             amount,
             occurred_at: clock.now(),
             memo: None,
-            created_by: Some(admin)
+            created_by: Some(admin),
+            operation_id: None,
+            recorded_at: None
         },
     )
     .await?;

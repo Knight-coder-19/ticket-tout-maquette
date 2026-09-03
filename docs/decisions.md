@@ -831,12 +831,74 @@ Along the way, `summary` loses a transaction: since the helper returns the whole
 `Partner::is_official_partner()` answers the same question as the `approved_account` round trip
 (amendment A4, `status == Approved`), with one query fewer.
 
-**What remains true for the employee side**: `directory::employees::active_account` returns only an
-`AccountId`; no foreign key constrains how its argument is interpreted. It can therefore resolve by
-`user_id`, by joining on `employees.user_id`, and `routes/employee.rs` is unchanged.
-**That function receives a `users.id`, not an `employees.id`** — it is the only place where the
-original convention of this decision still holds, and it must be said explicitly because nothing in
-the signature reveals it.
+**The employee side went the same way, and I was wrong about it.** When I first wrote this decision
+I argued that `directory::employees::active_account` could keep the original convention, because it
+returns only an `AccountId` and no foreign key constrains how its argument is read. What was
+actually delivered resolves by `employees.id`: the query behind it reads
+`WHERE employee_id = $1 AND status = 'active'`. Passing `EmployeeId::from(user)`, which carries
+`users.id`, therefore matched no row, and all five employee routes — balance, statement, minister
+picks, token issuance, token cancellation — would have answered `NoAccount`.
 
-**What follows**: the `impl From<AuthenticatedUser> for PartnerId` in `identity/mod.rs` is now
-unused. It is harmless, but it is a trap left lying around, and it should be removed.
+Nothing in the test suite could have caught that. There is no HTTP test, `rbac.rs` is empty, and no
+server had ever been started: it would have appeared at the first `curl /me/balance`, during the
+demonstration.
+
+**What I did**: `routes/employee.rs` now resolves exactly like `routes/partner.rs`. Its `account_of`
+helper looks the employee up through `directory::repo::find_employee_by_user`, then hands the real
+`employees.id` to `active_account`. A valid session whose user has no employee record answers `403`,
+the same code as the role refusal of `AuthUser<Employee>`.
+
+**What this decision says now, in one line.** `AuthenticatedUser` never converts into a domain
+identifier. Both spaces resolve through a query, in the route layer, against the `user_id UNIQUE`
+column the schema provides for exactly that purpose. The two `impl From<AuthenticatedUser>` in
+`identity/mod.rs` are unused, and they should be removed: they are a trap, not a convenience.
+
+**The lesson worth keeping.** A convention that lives only in a document, and that nothing in a
+signature reveals, is not a contract — it is a bug waiting for its first execution. `active_account`
+and `approved_account` both take a newtype whose name says `Employee` or `Partner` while the caller
+was told to put a user identifier in it. The type system was available to say which one was meant,
+and we did not use it.
+
+### 33. The payment token lives five minutes, and the Minister's request is answered elsewhere
+
+**What was asked.** The specification sets the QR code at five minutes. The Minister asks for the
+opposite, a token that lives much longer. The reviewer explicitly declined to arbitrate and asked
+for the choice to be written down. This entry is that trace.
+
+**What I decided.** `TOKEN_TTL_SECONDS` stays at 300.
+
+**Why the two durations are not the same question.** `token_ttl` bounds how long an *unspent
+authorisation* stays alive. `resync_max_age`, at 72 hours, bounds how late a *scan that has already
+happened* may reach us. Conflating them is precisely what made the offline queue useless until §26.
+The need behind the Minister's request — a merchant in a valley with no signal, a customer who shows
+their QR code twenty minutes after generating it — is served by the second duration, not the first:
+since §26 a token scanned inside its validity window settles even if the synchronisation arrives
+three days later. Lengthening the token's life would not fix anything that is still broken; it would
+loosen a bound that is doing useful work.
+
+**What a long lifetime actually costs.**
+
+1. The funds stay reserved for the whole lifetime. A token blocks its amount until it is spent,
+   cancelled or swept. The employees hurt are the ones with little money — the seed deliberately
+   contains two below €5 — for whom a stale hold is the difference between paying and not paying.
+2. A screenshot of a QR code is a bearer instrument for as long as it lives. Five minutes is the
+   window in which a photographed code can be spent by someone else. Multiplying the lifetime
+   multiplies that window in exact proportion.
+3. Nothing shortens a hold except the employee cancelling the token or the sweep expiring it. A long
+   lifetime turns a mistyped amount into a long wait.
+
+**What it costs on the offline path: nothing.** That is the whole point of the paragraph above.
+
+**What would make me change my mind.** Field evidence that employees regularly fail to present the
+code within five minutes. The measurement already exists in the data: the ratio of `expired` to
+issued rows in `payment_tokens`. If that ratio rises above a few percent, the value is wrong, and I
+would move it to fifteen minutes — not to an hour, because points 1 and 2 grow linearly with it.
+
+**How to change it.** One environment variable, `TOKEN_TTL_SECONDS`. It is read into
+`CoreConfig.token_ttl` and consumed in exactly one place, `authorize`. No migration, no code change,
+no data rewrite: expiry is judged against the `expires_at` stored on each token, so tokens issued
+under the old value keep the deadline they were issued with.
+
+**What this decision does not change.** The server remains the authority on expiry (decision 2), the
+expiry written inside the QR code stays indicative, and the three bounds on `scanned_at` from §26 are
+untouched.

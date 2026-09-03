@@ -138,6 +138,8 @@ pub struct Posting {
     pub occurred_at: DateTime<Utc>,
     pub memo: Option<String>,
     pub created_by: Option<UserId>,
+    pub operation_id: Option<OperationId>,
+    pub recorded_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, thiserror::Error)]

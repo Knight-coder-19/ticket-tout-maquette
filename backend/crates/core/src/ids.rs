@@ -83,3 +83,4 @@ newtype_id!(CityId);
 newtype_id!(BatchId);
 newtype_id!(EmploymentLinkId);
 newtype_id!(HighlightId);
+newtype_id!(AttemptId);

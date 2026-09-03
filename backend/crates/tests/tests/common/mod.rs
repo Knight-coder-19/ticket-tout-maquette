@@ -195,6 +195,8 @@ pub async fn credit(pool: &PgPool, account: AccountId, amount: Money) -> Operati
             occurred_at: epoch(),
             memo: None,
             created_by: None,
+            operation_id: None,
+            recorded_at: None,
         },
     )
     .await
@@ -271,6 +273,8 @@ pub async fn settle_token(
             occurred_at: scanned_at,
             memo: None,
             created_by: None,
+            operation_id: None,
+            recorded_at: None,
         },
     )
     .await

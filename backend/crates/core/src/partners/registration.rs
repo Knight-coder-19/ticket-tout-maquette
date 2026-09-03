@@ -1,12 +1,10 @@
-// Implement submit_registration creating users, accounts and partners in pending status.
-// A1: validate the service_mode / city_id coherence before inserting, on top of the database CHECK
-// (a physical partner needs a city, an online one does not). Priority: P1
-
-use super::{Partner, PartnerError, ServiceMode};
+use super::{repo, Partner, PartnerError, ServiceMode};
+use crate::clock::Clock;
+use crate::directory;
+use crate::identity::UserRole;
 use crate::ids::CityId;
 use crate::PgTx;
 
-/// Partner registration form.
 #[derive(Debug, Clone)]
 pub struct RegistrationForm<'a> {
     pub email: &'a str,
@@ -22,12 +20,44 @@ pub struct RegistrationForm<'a> {
     pub address_line: Option<&'a str>,
 }
 
-/// Create `users` → `accounts` (owner partner) → `partners` in `pending` status.
-/// A1: reject with `CityRequired` when `service_mode != Online` and `city_id.is_none()`,
-/// before the INSERT, duplicating the `CHECK physical_needs_city`.
 pub async fn submit_registration(
     tx: &mut PgTx<'_>,
+    clock: &dyn Clock,
     form: RegistrationForm<'_>,
 ) -> Result<Partner, PartnerError> {
-    todo!()
+    if form.service_mode != ServiceMode::Online && form.city_id.is_none() {
+        return Err(PartnerError::CityRequired);
+    }
+
+    let now = clock.now();
+
+    let user_id = directory::repo::insert_user(
+        tx,
+        form.email,
+        form.password_hash,
+        UserRole::Partner,
+        now,
+    )
+    .await?;
+
+    let account_id = repo::insert_partner_account(tx, user_id, now).await?;
+
+    let partner = repo::insert_partner(
+        tx,
+        user_id,
+        account_id,
+        form.legal_name,
+        form.trade_name,
+        form.category,
+        form.ifu,
+        form.service_mode,
+        form.website_url,
+        form.city_id,
+        form.district,
+        form.address_line,
+        now,
+    )
+    .await?;
+
+    Ok(partner)
 }
