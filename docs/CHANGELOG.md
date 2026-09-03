@@ -3,6 +3,46 @@
 [//]: # (This is a changelog file)
 [//]: # (Each time you make a minor or minor change in the project, repertoriate it here according to the following format. So each changes equals to an affectation of this file with all the sections.)
 
+## 1.6.0 03.09.2026
+
+### Added
+
+- `crates/tests/tests/payments_flow.rs` : dix-neuf tests du chemin `authorize` → `settle` contre un
+  PostgreSQL réel. Parcours nominal et déplacement des deux soldes, jeton couvrant la totalité du
+  disponible, réservation qui interdit un second jeton, idempotence du même commerçant, refus du
+  commerçant suivant, code court dicté au comptoir, code inconnu et code absurde, expiration,
+  annulation par l'employé, annulation tentée par un autre employé, commerçant non agréé, compte
+  clôturé, compte suspendu à l'émission, fenêtre de resynchronisation dépassée, et le balayage des
+  jetons échus qui rend les fonds réservés.
+- Le jeton signé rendu par `authorize` est vérifié dans le test : signature, `jti`, montant,
+  émetteur et expiration. C'est la seule jonction entre `payments` et `crypto/token_sig`, elle
+  méritait d'être tenue par un test.
+
+### Changed
+
+- `crates/tests/Cargo.toml` : ajout d'`ed25519-dalek` en `[dev-dependencies]`. `authorize` réclame
+  une `SigningKey`, et le paquet de tests n'avait aucun moyen d'en fabriquer une. La clé du test est
+  déterministe — trente-deux octets constants — plutôt que tirée au hasard : un test qui échoue doit
+  échouer à chaque fois.
+
+### Notes
+
+- **La fenêtre de resynchronisation ne prolonge pas la vie d'un jeton, et les deux durées se
+  contredisent.** `settle` compare `expires_at` à l'horloge du serveur, conformément à la décision 2,
+  alors que `RESYNC_MAX_AGE_HOURS` vaut 72 h et `TOKEN_TTL_SECONDS` 300 s. Un commerçant hors ligne
+  qui encaisse puis se resynchronise plus de cinq minutes après le scan reçoit donc `TOKEN_EXPIRED`,
+  et la fenêtre de 72 h ne sert jamais. Le test
+  `the_resync_window_does_not_extend_the_token_lifetime` fige le comportement actuel pour que le jour
+  où on en décide autrement, ce soit un choix visible et non une dérive. Je ne touche pas à `settle`
+  tant que la question n'est pas tranchée.
+- Le refus d'un jeton expiré ne libère pas la réservation : c'est `expire_stale_tokens` qui le fait,
+  et le test l'affirme dans les deux sens.
+- `payments_flow.rs` reste du code mort tant que `core/src/lib.rs` ne déclare pas `pub mod payments;`
+  et `pub mod partners;`, et tant que `partners::repo::approved_account` n'existe pas. J'ai vérifié
+  les dix-neuf tests en posant ces trois éléments localement — `approved_account` avec son vrai
+  filtre `status = 'approved'`, sans quoi la moitié des tests ne prouverait rien — puis je les ai
+  retirés. Les neuf tests d'invariants passent toujours.
+
 ## 1.5.0 03.09.2026
 
 ### Added
