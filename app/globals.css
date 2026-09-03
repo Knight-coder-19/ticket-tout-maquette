@@ -1,0 +1,146 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f4f6fa;
+  --foreground: #0e1526;
+
+  /* CartePro - design tokens alignés sur la charte graphique ministérielle
+     (mail Sellami, 01/09) :
+       - bleu institutionnel #1B3A6B en primaire (= brand-700), JAMAIS en
+         fond de bouton → la couleur d'action est l'or (--gold-*), qui
+         renvoie aussi au "pouvoir d'achat".
+       - Marianne pour les titres, Spectral pour le corps.
+     Contrastes vérifiés >= 4.5:1 pour tout couple porteur de texte :
+       blanc / brand-700  ~11.3:1      ink-900 / gold-500  ~8.2:1
+       brand-700 / brand-100 ~9:1      gold-700 / white    ~5.9:1
+       ink-500 / white     ~4.9:1      garnet-700 / white  ~7.7:1
+     ink-300 reste décoratif (bordures, icônes désactivées), jamais du texte. */
+  --brand-900: #0f2244;
+  --brand-800: #14305a;
+  --brand-700: #1b3a6b; /* bleu institutionnel - couleur primaire d'identité */
+  --brand-600: #274a82;
+  --brand-500: #3a5f9c;
+  --brand-200: #b9c7de;
+  --brand-100: #dde5f0;
+  --brand-50: #eef2f8;
+
+  --gold-700: #8a5a00;
+  --gold-600: #b07300; /* hover du bouton d'action */
+  --gold-500: #e3a400; /* fond du bouton d'action (texte ink-900) */
+  --gold-100: #fbedcb;
+
+  --garnet-700: #9a2b1e;
+  --garnet-500: #d14a34;
+  --garnet-100: #fbe1db;
+
+  --ink-900: #0e1526;
+  --ink-700: #343a4d;
+  --ink-500: #666c82;
+  --ink-300: #a4a9bd;
+
+  --line: #e1e4ee;
+  --surface: #f4f6fa;
+  --slate-100: #ebedf4;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-brand-900: var(--brand-900);
+  --color-brand-800: var(--brand-800);
+  --color-brand-700: var(--brand-700);
+  --color-brand-600: var(--brand-600);
+  --color-brand-500: var(--brand-500);
+  --color-brand-200: var(--brand-200);
+  --color-brand-100: var(--brand-100);
+  --color-brand-50: var(--brand-50);
+
+  --color-gold-700: var(--gold-700);
+  --color-gold-600: var(--gold-600);
+  --color-gold-500: var(--gold-500);
+  --color-gold-100: var(--gold-100);
+
+  --color-garnet-700: var(--garnet-700);
+  --color-garnet-500: var(--garnet-500);
+  --color-garnet-100: var(--garnet-100);
+
+  --color-ink-900: var(--ink-900);
+  --color-ink-700: var(--ink-700);
+  --color-ink-500: var(--ink-500);
+  --color-ink-300: var(--ink-300);
+
+  --color-line: var(--line);
+  --color-surface: var(--surface);
+  --color-slate-100: var(--slate-100);
+
+  --font-display: var(--font-marianne);
+  --font-sans: var(--font-spectral);
+}
+
+html {
+  /* Défilement doux pour les liens d'ancre internes (#dispositif, etc.). */
+  scroll-behavior: smooth;
+  /* Marge sous une cible d'ancre pour ne pas la coller au bord haut. */
+  scroll-padding-top: 1.5rem;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* Chaque section ciblée par une ancre garde un peu d'air au-dessus. */
+:target {
+  scroll-margin-top: 1.5rem;
+}
+
+* {
+  border-color: var(--line);
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+}
+
+a {
+  color: var(--brand-600);
+}
+a:hover {
+  color: var(--brand-700);
+}
+
+::selection {
+  background: var(--brand-100);
+  color: var(--brand-700);
+}
+
+/* Lien d'évitement - visible uniquement au focus clavier (RGAA 12.7). */
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 100;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: var(--brand-700);
+  color: #fff;
+  font-weight: 600;
+  transform: translateY(-150%);
+  transition: transform 0.15s ease;
+}
+.skip-link:focus {
+  transform: translateY(0);
+  color: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
