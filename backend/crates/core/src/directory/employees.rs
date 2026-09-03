@@ -1,14 +1,11 @@
-// Implement create_employee_with_account inserting users, employees, accounts then employment_links in that order
-// because of the FK cycle, and resolve_account_by_ref used by the SIRH API and the CSV import.
-// Priority: P1
-
-use super::DirectoryError;
+use super::{repo, DirectoryError, Employee, EmploymentLink};
+use crate::clock::Clock;
+use crate::identity::UserRole;
 use crate::ids::*;
 use crate::PgTx;
 use chrono::NaiveDate;
 use sqlx::PgConnection;
 
-/// Input data to create an employee attached to an employer.
 #[derive(Debug, Clone)]
 pub struct NewEmployee<'a> {
     pub email: &'a str,
@@ -21,39 +18,71 @@ pub struct NewEmployee<'a> {
     pub started_at: NaiveDate,
 }
 
-/// Result: the created identifiers.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct CreatedEmployee {
-    pub user_id: UserId,
-    pub employee_id: EmployeeId,
+    pub employee: Employee,
     pub account_id: AccountId,
-    pub link_id: EmploymentLinkId,
+    pub link: EmploymentLink,
 }
 
-/// Create `users` → `employees` → `accounts` → `employment_links`, IN THAT ORDER
-/// (FK cycle: the account carries the employee, the link carries the account).
-/// Fails with `DuplicateActiveEmployment` if the partial index `uq_active_employment` bites.
 pub async fn create_employee_with_account(
     tx: &mut PgTx<'_>,
+    clock: &dyn Clock,
     new: NewEmployee<'_>,
 ) -> Result<CreatedEmployee, DirectoryError> {
-    todo!()
+    let now = clock.now();
+
+    let user_id =
+        repo::insert_user(tx, new.email, new.password_hash, UserRole::Employee, now).await?;
+    let employee =
+        repo::insert_employee(tx, user_id, new.last_name, new.first_name, new.phone, now).await?;
+    let account_id = repo::insert_account_for_employee(tx, employee.id, now).await?;
+
+    let link = match repo::insert_employment_link(
+        tx,
+        employee.id,
+        new.employer_id,
+        new.employer_ref,
+        account_id,
+        new.started_at,
+        now,
+    )
+    .await
+    {
+        Ok(link) => link,
+        Err(sqlx::Error::Database(db)) if db.is_unique_violation() => {
+            return Err(match db.constraint() {
+                Some("uq_employer_ref") => DirectoryError::EmployerRefTaken,
+                _ => DirectoryError::DuplicateActiveEmployment,
+            })
+        }
+        Err(error) => return Err(error.into()),
+    };
+
+    Ok(CreatedEmployee {
+        employee,
+        account_id,
+        link,
+    })
 }
 
-/// Resolve staff number (employer_ref) → account. CONTRACT with Sèdjro (topup and SIRH).
-/// Returns `UnknownEmployerRef` when the (employer, employer_ref) pair does not exist
-/// or when the link is not `active`.
 pub async fn resolve_account_by_ref(
     conn: &mut PgConnection,
     employer: EmployerId,
     employer_ref: &str,
 ) -> Result<AccountId, DirectoryError> {
-    todo!()
+    repo::find_active_link_by_ref(conn, employer, employer_ref)
+        .await?
+        .map(|link| link.account_id)
+        .ok_or(DirectoryError::UnknownEmployerRef)
 }
 
 pub async fn active_account(
     conn: &mut PgConnection,
     employee: EmployeeId,
 ) -> Result<AccountId, DirectoryError> {
-    todo!()
+    repo::find_active_link_by_employee(conn, employee)
+        .await?
+        .map(|link| link.account_id)
+        .ok_or(DirectoryError::NoAccount)
 }
