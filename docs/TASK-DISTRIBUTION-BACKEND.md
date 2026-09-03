@@ -1,50 +1,50 @@
-# CartePro — Répartition backend
+# CartePro — Backend distribution
 
-> **Sprint d'une nuit. Rendu demain soir.**
-> Deux développeurs : **Sèdjro** (S) et **Giscard** (G).
-> Ce document dit qui possède quel fichier, ce qu'il contient, et dans quel ordre.
-> Les références `CLAUDE.md`, `data-dictionary.md` et `file-guide.md` restent la source pour le détail.
-
----
-
-## 0. Le principe de la répartition
-
-**Une seule personne touche à l'argent.**
-
-Le ledger ne se parallélise pas : deux personnes qui écrivent dans la chaîne de hash produisent un chaînage cassé, et le bug ne se voit qu'en démo. Sèdjro possède tout le chemin monétaire de bout en bout. Giscard possède tout le reste, c'est-à-dire les trois quarts du code.
-
-**Personne ne modifie un fichier qui ne lui appartient pas.** Même pour un `use` manquant. On signale, l'autre corrige.
+> **A single night's sprint. Delivery tomorrow evening.**
+> Two developers: **Sèdjro** (S) and **Giscard** (G).
+> This document says who owns which file, what it contains, and in what order.
+> The references `CLAUDE.md`, `data-dictionary.md` and `file-guide.md` remain the source for detail.
 
 ---
 
-## 1. Périmètre : ce qu'on garde, ce qu'on coupe
+## 0. The principle behind the split
 
-### Gardé
+**Only one person touches the money.**
 
-Ledger complet avec partie double et chaînage · `authorize` / `settle` avec réservation de fonds · authentification 3 rôles · inscription et validation des partenaires · catalogue paginé · rechargement unitaire admin · endpoint SIRH · tableau de bord minimal · mises en avant (A2).
+The ledger does not parallelise: two people writing into the hash chain produce a broken chaining, and the bug only shows up during the demo. Sèdjro owns the whole money path end to end. Giscard owns everything else, that is to say three quarters of the code.
 
-### Coupé, avec la justification à donner au jury
+**Nobody modifies a file that is not theirs.** Not even for a missing `use`. You report it, the other fixes it.
 
-| Coupé | Ce qu'on répond |
+---
+
+## 1. Scope: what we keep, what we cut
+
+### Kept
+
+Full ledger with double entry and chaining · `authorize` / `settle` with fund reservation · three-role authentication · partner registration and approval · paginated catalogue · single admin top-up · HR-system endpoint · minimal dashboard · highlights (A2).
+
+### Cut, with the justification to give the jury
+
+| Cut | What we answer |
 |---|---|
-| Worker | Expiration des jetons traitée en paresseux à chaque lecture de solde |
-| Import CSV en lot | Le rechargement unitaire démontre le mécanisme ; le lot est documenté |
-| Compensations | Conçu et documenté, non implémenté |
-| Clôture / reprise de solde | Documenté |
-| Surface publique (A3) | Absente du cahier des charges, en attente de confirmation |
-| File d'attente hors ligne | **Le backend est prêt** : réservation à l'émission, idempotence sur `token_jti`, endpoint `/payments/batch`. La file locale est un travail front. |
-| Docker / Caddy | `cargo run` pour la démo |
+| Worker | Token expiry handled lazily on every balance read |
+| Bulk CSV import | The single top-up demonstrates the mechanism; the batch is documented |
+| Compensations | Designed and documented, not implemented |
+| Closure / balance forfeit | Documented |
+| Public surface (A3) | Absent from the specification, awaiting confirmation |
+| Offline queue | **The backend is ready**: reservation at issuance, idempotence on `token_jti`, `/payments/batch` endpoint. The local queue is front-end work. |
+| Docker / Caddy | `cargo run` for the demo |
 
-Chaque coupe a un argument. C'est ce qui fait la différence entre « pas eu le temps » et « choix assumé ».
+Every cut has an argument. That is what makes the difference between "we ran out of time" and "a deliberate choice".
 
 ---
 
-## 2. Propriété des fichiers
+## 2. File ownership
 
-### Sèdjro — le chemin monétaire
+### Sèdjro — the money path
 
 ```
-migrations/0001_schema.sql          ← tout le schéma en un seul fichier
+migrations/0001_schema.sql          <- the whole schema in a single file
 crates/core/src/ids.rs
 crates/core/src/money.rs
 crates/core/src/clock.rs
@@ -68,12 +68,12 @@ tests/invariants.rs
 tests/payments_flow.rs
 ```
 
-### Giscard — tout le reste
+### Giscard — everything else
 
 ```
 Cargo.toml  (workspace + 3 crates)
 rust-toolchain.toml   .env.example   .gitignore
-crates/core/src/lib.rs               ← figé à H+0, plus personne n'y touche
+crates/core/src/lib.rs               <- frozen at H+0, nobody touches it again
 crates/core/src/config.rs
 crates/core/src/crypto/mod.rs
 crates/core/src/crypto/password.rs
@@ -84,7 +84,7 @@ crates/core/src/reporting/mod.rs
 crates/api/src/main.rs
 crates/api/src/state.rs
 crates/api/src/error.rs
-crates/api/src/routes/mod.rs         ← figé à H+0
+crates/api/src/routes/mod.rs         <- frozen at H+0
 crates/api/src/extractors/*          (auth, validated, pagination, api_client)
 crates/api/src/routes/auth.rs
 crates/api/src/routes/catalog.rs
@@ -97,30 +97,30 @@ tests/common/mod.rs
 
 ---
 
-## 3. Contrat d'interface — à figer à H+0
+## 3. Interface contract — to be frozen at H+0
 
-Ces cinq signatures sont ce que chacun attend de l'autre. **On les écrit dans les fichiers avec `todo!()` dès la première heure**, pour que tout compile et que personne n'attende.
+These five signatures are what each of us expects from the other. **We write them into the files with `todo!()` within the first hour**, so that everything compiles and nobody waits.
 
 ```rust
-// ── Giscard fournit, Sèdjro consomme ────────────────────────────
-// partners/repo.rs — erreur si le partenaire n'est pas 'approved'
+// -- Giscard supplies, Sèdjro consumes --------------------------
+// partners/repo.rs — error if the partner is not 'approved'
 pub async fn approved_account(tx: &mut PgTransaction<'_>, id: PartnerId)
     -> Result<AccountId, PartnerError>;
 
-// directory/employees.rs — résolution matricule → compte, pour topup et SIRH
+// directory/employees.rs — payroll reference -> account, for topup and the HR system
 pub async fn resolve_account_by_ref(
     conn: &mut PgConnection, employer: EmployerId, employer_ref: &str,
 ) -> Result<AccountId, DirectoryError>;
 
-// extractors/auth.rs — corrigé, voir la note ci-dessous
+// extractors/auth.rs — corrected, see the note below
 pub struct AuthUser<R: Role>(pub AuthenticatedUser, pub PhantomData<R>);
 
-// Sans ces deux conversions, aucun handler ne sait de qui il parle.
+// Without these two conversions, no handler knows who it is talking about.
 impl From<AuthenticatedUser> for EmployeeId;
 impl From<AuthenticatedUser> for PartnerId;
 
-// ── Sèdjro fournit, Giscard consomme ────────────────────────────
-// ids.rs, money.rs, clock.rs      → livrés à H+1, DEADLINE DURE
+// -- Sèdjro supplies, Giscard consumes --------------------------
+// ids.rs, money.rs, clock.rs      -> delivered at H+1, HARD DEADLINE
 // ledger/mod.rs
 pub async fn post_operation(tx: &mut PgTransaction<'_>, kind: OperationKind, p: Posting)
     -> Result<LedgerOperation, LedgerError>;
@@ -129,52 +129,56 @@ pub async fn lock_account(tx: &mut PgTransaction<'_>, id: AccountId)
     -> Result<Account, LedgerError>;
 ```
 
-**Sèdjro bouchonne `approved_account` chez lui à H+1** avec un compte en dur, sinon il est bloqué toute la nuit sur `settle`. Giscard remplace le bouchon quand son `partners` est prêt.
+**Sèdjro stubs `approved_account` on his side at H+1** with a hard-coded account, otherwise he is blocked on `settle` all night. Giscard replaces the stub when his `partners` is ready.
 
-> **Amendement — `AuthUser` corrigé.** La forme d'origine, `AuthUser<R: Role>(pub AuthenticatedUser)`,
-> ne compile pas : Rust refuse un paramètre de type qui n'apparaît dans aucun champ, c'est l'erreur
-> `E0392`. Le marqueur de rôle n'étant utilisé que par l'implémentation de `FromRequestParts`, il
-> lui faut un `PhantomData<R>`. Je ne m'en suis aperçu qu'en compilant mes handlers contre ce
-> contrat, et je le corrige ici plutôt que dans mon coin : c'est une des cinq signatures que nous
-> avons gelées justement pour ne pas nous bloquer l'un l'autre.
+> **Amendment — `AuthUser` corrected.** The original form, `AuthUser<R: Role>(pub AuthenticatedUser)`,
+> does not compile: Rust refuses a type parameter that appears in no field, that is error `E0392`.
+> Since the role marker is used only by the `FromRequestParts` implementation, it needs a
+> `PhantomData<R>`. I only noticed when compiling my handlers against this contract, and I am fixing
+> it here rather than on my own: it is one of the five signatures we froze precisely so as not to
+> block each other.
 >
-> Conséquence sur les handlers : ils destructurent `AuthUser(user, _)` et non `AuthUser(user)`. Si
-> Giscard préfère garder un seul champ public et exposer un accesseur, ce sont mes deux fichiers de
-> routes qui changent, pas les siens — qu'il le dise, la correction est mécanique.
+> Consequence for the handlers: they destructure `AuthUser(user, _)` and not `AuthUser(user)`. If
+> Giscard prefers to keep a single public field and expose an accessor, it is my two route files
+> that change, not his — let him say so, the correction is mechanical.
 >
-> J'ajoute au passage les deux `From<AuthenticatedUser>` : le handler d'exemple de `file-guide.md`
-> §4.5 les suppose déjà avec son `partner.into()`, mais ils n'étaient écrits nulle part. Le détail
-> de tout ce que mes routes attendent est au §30 de `decisions.md`.
+> I am also adding the two `From<AuthenticatedUser>` impls: the example handler in `file-guide.md`
+> §4.5 already assumes them with its `partner.into()`, but they were written nowhere. The detail of
+> everything my routes expect is in §30 of `decisions.md`.
+>
+> **Later amendment.** `From<AuthenticatedUser> for PartnerId` cannot work: `insert_payment` binds
+> the `PartnerId` into `payments.partner_id`, whose foreign key points at `partners(id)`. The partner
+> routes resolve through `partners::repo::find_partner_by_user`. See §32 of `decisions.md`.
 
 ---
 
-## 4. Ce que contient chaque fichier
+## 4. What each file contains
 
-### 4.1 Fichiers de Sèdjro
+### 4.1 Sèdjro's files
 
 #### `migrations/0001_schema.sql`
 
-Tout le schéma en un fichier. Ordre imposé par les dépendances :
+The whole schema in one file. Order imposed by the dependencies:
 
 ```
 extensions (citext, pgcrypto)
-enums (13 types, dont service_mode et highlight_placement)
+enums (13 types, including service_mode and highlight_placement)
 cities, users, employers
-accounts                      -- pas de FK sur owner_id
+accounts                      -- no FK on owner_id
 employees, employment_links, partners
 payment_tokens
 ledger_operations, ledger_entries
 payments, topups
 partner_highlights
 sessions, api_clients, audit_log
-triggers d'immuabilité + REVOKE
-INSERT comptes système : MINISTRY_ISSUANCE, CLOSURE_FORFEIT
-INSERT référentiel de villes
+immutability triggers + REVOKE
+INSERT system accounts: MINISTRY_ISSUANCE, CLOSURE_FORFEIT
+INSERT city reference data
 ```
 
-Copier les définitions depuis `data-model.md`. Ne pas oublier les index uniques partiels (`uq_active_employment`, `uq_active_short_code`, `uq_employer_ref`, les deux de `partner_highlights`) : ce sont eux qui portent les règles.
+Copy the definitions from `data-model.md`. Do not forget the partial unique indexes (`uq_active_employment`, `uq_active_short_code`, `uq_employer_ref`, the two on `partner_highlights`): they are what carry the rules.
 
-#### `core/src/ids.rs` — **à livrer à H+1**
+#### `core/src/ids.rs` — **to be delivered at H+1**
 
 ```rust
 macro_rules! newtype_id {
@@ -192,24 +196,24 @@ newtype_id!(PartnerId); newtype_id!(AccountId); newtype_id!(OperationId);
 newtype_id!(Jti); newtype_id!(CityId); newtype_id!(HighlightId);
 ```
 
-#### `core/src/money.rs` — **à livrer à H+1**
+#### `core/src/money.rs` — **to be delivered at H+1**
 
 ```rust
-pub struct Money(i64);          // centimes d'euro, jamais de flottant
+pub struct Money(i64);          // euro cents, never a float
 
 impl Money {
-    pub fn try_new(cents: i64) -> Result<Self, InvalidMoneyError>   // refuse < 0
+    pub fn try_new(cents: i64) -> Result<Self, InvalidMoneyError>   // refuses < 0
     pub fn parse_euros(text: &str) -> Result<Self, InvalidMoneyError>
     pub fn checked_add(self, o: Money) -> Option<Money>
-    pub fn checked_sub(self, o: Money) -> Option<Money>   // refuse aussi le negatif
+    pub fn checked_sub(self, o: Money) -> Option<Money>   // also refuses negatives
     pub fn is_positive(self) -> bool
     pub fn cents(self) -> i64
 }
-// JSON : euros decimaux (456.56) dans les deux sens, conversion faite ici seulement.
-// Display : "456.56". sqlx::Type transparent sur BIGINT.
+// JSON: decimal euros (456.56) both ways, conversion done here only.
+// Display: "456.56". sqlx::Type transparent over BIGINT.
 ```
 
-#### `core/src/clock.rs` — **à livrer à H+1**
+#### `core/src/clock.rs` — **to be delivered at H+1**
 
 ```rust
 pub trait Clock: Send + Sync { fn now(&self) -> DateTime<Utc>; }
@@ -217,20 +221,20 @@ pub struct SystemClock;
 pub struct FixedClock { at: Mutex<DateTime<Utc>> }   // + advance(Duration)
 ```
 
-`FixedClock` est indispensable : sans lui, tester l'expiration à 5 minutes voudrait dire attendre 5 minutes.
+`FixedClock` is indispensable: without it, testing the five-minute expiry would mean waiting five minutes.
 
 #### `core/src/crypto/token_sig.rs`
 
-**Ed25519, jamais HMAC.** Le partenaire doit pouvoir vérifier hors ligne avec la clé publique ; un HMAC l'obligerait à détenir la clé secrète du serveur, donc de quoi forger des jetons.
+**Ed25519, never HMAC.** The partner must be able to verify offline with the public key; an HMAC would force them to hold the server's secret key, and therefore the means to forge tokens.
 
 ```rust
 pub struct TokenPayload { jti: Jti, amt: i64, exp: DateTime<Utc>, iss: String }
 
 pub fn sign(p: &TokenPayload, key: &SigningKey) -> String
-// → "CP1." + b64url(json canonique) + "." + b64url(signature)
+// -> "CP1." + b64url(canonical json) + "." + b64url(signature)
 
 pub fn verify(s: &str, key: &VerifyingKey) -> Result<TokenPayload>
-// découpe en 3, vérifie la signature AVANT de désérialiser
+// splits into 3, checks the signature BEFORE deserialising
 ```
 
 #### `core/src/ledger/hash.rs`
@@ -242,12 +246,12 @@ pub fn entry_hash(
     seq: i64, op: OperationId, acc: AccountId, dir: EntryDirection,
     amount: Money, recorded_at: DateTime<Utc>, prev: &[u8; 32],
 ) -> [u8; 32]
-// SHA-256 sur une concaténation canonique.
-// ⚠ DOCUMENTER LE FORMAT EN COMMENTAIRE : le changer plus tard
-//   invalide toute la chaîne déjà écrite.
+// SHA-256 over a canonical concatenation.
+// WARNING: DOCUMENT THE FORMAT IN A COMMENT: changing it later
+//   invalidates the whole chain already written.
 ```
 
-#### `core/src/ledger/mod.rs` — **le fichier le plus important du projet**
+#### `core/src/ledger/mod.rs` — **the most important file in the project**
 
 ```rust
 pub struct Posting {
@@ -257,7 +261,7 @@ pub struct Posting {
 
 pub async fn lock_chain(tx) -> Result<()> {
     // SELECT pg_advisory_xact_lock(42)
-    // sérialise le chaînage ; relâché au COMMIT/ROLLBACK
+    // serialises the chaining; released at COMMIT/ROLLBACK
 }
 
 pub async fn lock_account(tx, id) -> Result<Account> {
@@ -265,18 +269,18 @@ pub async fn lock_account(tx, id) -> Result<Account> {
 }
 
 pub async fn post_operation(tx, kind, p: Posting) -> Result<LedgerOperation> {
-    // 1. vérifier debit != credit, amount > 0
+    // 1. check debit != credit, amount > 0
     // 2. INSERT ledger_operations
-    // 3. lire le dernier (seq, hash) → prev
-    // 4. INSERT écriture DEBIT  : hash = entry_hash(...)
-    // 5. INSERT écriture CREDIT : prev = hash précédent
-    // 6. UPDATE accounts : debit.settled -= amount ; credit.settled += amount
-    //                      version += 1 sur les deux
-    // → l'appelant a DÉJÀ pris lock_chain et lock_account
+    // 3. read the last (seq, hash) -> prev
+    // 4. INSERT DEBIT entry  : hash = entry_hash(...)
+    // 5. INSERT CREDIT entry : prev = previous hash
+    // 6. UPDATE accounts: debit.settled -= amount ; credit.settled += amount
+    //                      version += 1 on both
+    // -> the caller has ALREADY taken lock_chain and lock_account
 }
 
 pub async fn place_hold(tx, id, amount) -> Result<()> {
-    // vérifie settled - held >= amount, sinon InsufficientFunds
+    // checks settled - held >= amount, otherwise InsufficientFunds
     // UPDATE accounts SET balance_held = balance_held + amount
 }
 
@@ -290,22 +294,22 @@ pub async fn recompute_balance(conn, id) -> Money
 // SUM(CASE direction WHEN 'credit' THEN amount ELSE -amount END)
 
 pub async fn recompute_held(conn, id) -> Money
-// SUM(amount) des payment_tokens actifs et non expirés
+// SUM(amount) of active, unexpired payment_tokens
 
 pub async fn verify_chain(conn, from_seq) -> Result<(), i64>
-// rejoue la chaîne, renvoie le premier seq incohérent
+// replays the chain, returns the first inconsistent seq
 ```
 
 #### `core/src/payments/authorize.rs`
 
 ```rust
 pub async fn authorize(tx, clock, config, account_id, amount) -> Result<IssuedToken> {
-    let acc = ledger::lock_account(tx, account_id)?;      // 1. verrou
+    let acc = ledger::lock_account(tx, account_id)?;      // 1. lock
     if acc.status != Active { return Err(AccountInactive) }
-    ledger::place_hold(tx, account_id, amount)?;          // 2. réservation
-                                                          //    (← futur plafond ICI)
+    ledger::place_hold(tx, account_id, amount)?;          // 2. reservation
+                                                          //    (<- future cap HERE)
     let jti  = Jti::new();
-    let code = short_code::generate();                    // 3. jeton
+    let code = short_code::generate();                    // 3. token
     INSERT payment_tokens (jti, account_id, amount, code,
                            expires_at = now + config.token_ttl);
     let payload = TokenPayload { jti, amt, exp, iss };
@@ -313,40 +317,40 @@ pub async fn authorize(tx, clock, config, account_id, amount) -> Result<IssuedTo
 }
 ```
 
-#### `core/src/payments/settle.rs` — **l'ordre est la protection**
+#### `core/src/payments/settle.rs` — **the order is the protection**
 
 ```rust
 pub async fn settle(tx, clock, partner, jti_or_code, scanned_at) -> Result<Payment> {
 
-    // 1. IDEMPOTENCE — avant tout le reste
+    // 1. IDEMPOTENCE — before anything else
     if let Some(p) = repo::find_payment_by_jti(tx, jti)? {
-        if p.partner_id == partner { return Ok(p); }      // rejeu → succès
-        return Err(TokenAlreadyUsed);                      // autre → erreur
+        if p.partner_id == partner { return Ok(p); }      // replay -> success
+        return Err(TokenAlreadyUsed);                      // other -> error
     }
 
-    // 2. VERROUS
+    // 2. LOCKS
     ledger::lock_chain(tx)?;
     let token = repo::lock_token(tx, jti)?.ok_or(UnknownToken)?;
     let acc   = ledger::lock_account(tx, token.account_id)?;
 
-    // 3. CONTRÔLES — jamais avant le verrou
+    // 3. CHECKS — never before the lock
     if token.status != Active          { return Err(TokenAlreadyUsed) }
-    if token.expires_at <= clock.now() { return Err(TokenExpired) }     // horloge SERVEUR
+    if token.expires_at <= clock.now() { return Err(TokenExpired) }     // SERVER clock
     if acc.status != Active            { return Err(AccountInactive) }
     let partner_acc = partners::approved_account(tx, partner)?;
 
-    // 4. ÉCRITURE
+    // 4. WRITE
     let op = ledger::post_operation(tx, Payment, Posting {
         debit: token.account_id, credit: partner_acc,
         amount: token.amount, occurred_at: scanned_at,
     })?;
-    ledger::release_hold(tx, token.account_id, token.amount)?;  // le hold devient réel
+    ledger::release_hold(tx, token.account_id, token.amount)?;  // the hold becomes real
     repo::consume_token(tx, jti, op.id)?;
     repo::insert_payment(tx, op.id, jti, partner, entry_mode, scanned_at)
 }
 ```
 
-> **Le piège :** un contrôle de solde placé avant le verrou ne protège de rien. Entre la lecture et l'écriture, une autre requête passe. C'est le cas du double QR, il ne se voit qu'avec deux utilisateurs simultanés.
+> **The trap:** a balance check placed before the lock protects nothing. Between the read and the write, another request slips through. That is the double-QR case, and it only shows up with two simultaneous users.
 
 #### `core/src/funding/topup.rs`
 
@@ -362,11 +366,11 @@ pub async fn topup(tx, admin, employer, account_id, amount, reference) -> Result
 }
 ```
 
-> Le compte système peut devenir négatif : c'est normal, c'est la source d'émission. La contrainte `balance_settled >= 0` doit être levée pour `owner_type = 'system'` ou ce compte pré-crédité d'un très gros montant au seed. **Choisir maintenant, pas à 4 h du matin.**
+> The system account may go negative: that is normal, it is the source of issuance. The `balance_settled >= 0` constraint must be lifted for `owner_type = 'system'`, or that account must be pre-credited with a very large amount in the seed. **Choose now, not at 4 a.m.**
 
-#### `api/src/routes/employee.rs` et `partner.rs`
+#### `api/src/routes/employee.rs` and `partner.rs`
 
-Handlers de la forme imposée, quinze lignes maximum :
+Handlers in the imposed shape, fifteen lines maximum:
 
 ```rust
 async fn create_token(
@@ -383,35 +387,35 @@ async fn create_token(
 }
 ```
 
-Routes : `GET /me/balance`, `GET /me/transactions`, `POST /me/payment-tokens`, `DELETE /me/payment-tokens/{jti}`, `GET /partner/summary`, `GET /partner/transactions`, `POST /partner/payments`, `POST /partner/payments/batch`.
+Routes: `GET /me/balance`, `GET /me/transactions`, `POST /me/payment-tokens`, `DELETE /me/payment-tokens/{jti}`, `GET /partner/summary`, `GET /partner/transactions`, `POST /partner/payments`, `POST /partner/payments/batch`.
 
-Le batch est le seul cas particulier : **une transaction SQL par ligne**, un statut par élément, une ligne en échec ne fait pas tomber le lot.
+The batch is the only special case: **one SQL transaction per line**, one status per item, a failing line does not bring down the batch.
 
-#### `tests/invariants.rs` — **le point de contrôle 1**
+#### `tests/invariants.rs` — **checkpoint 1**
 
 ```rust
 #[sqlx::test] async fn i1_two_entries_summing_to_zero()
 #[sqlx::test] async fn i2_cached_balance_matches_ledger()
 #[sqlx::test] async fn i3_held_matches_active_tokens()
-#[sqlx::test] async fn i4_balance_never_negative()          // attend une erreur
+#[sqlx::test] async fn i4_balance_never_negative()          // expects an error
 #[sqlx::test] async fn i5_held_within_settled()
-#[sqlx::test] async fn i6_token_consumed_once()             // 2× settle → 1 paiement
-#[sqlx::test] async fn i7_one_active_employment()           // attend une erreur
-#[sqlx::test] async fn i8_entries_immutable()               // UPDATE direct → erreur
+#[sqlx::test] async fn i6_token_consumed_once()             // 2x settle -> 1 payment
+#[sqlx::test] async fn i7_one_active_employment()           // expects an error
+#[sqlx::test] async fn i8_entries_immutable()               // direct UPDATE -> error
 #[sqlx::test] async fn i9_global_sum_is_zero()
 ```
 
-**Si ces neuf tests ne passent pas à H+6, tout le reste s'arrête et Giscard bascule sur le ledger.**
+**If these nine tests do not pass by H+6, everything else stops and Giscard switches to the ledger.**
 
 ---
 
-### 4.2 Fichiers de Giscard
+### 4.2 Giscard's files
 
-#### `Cargo.toml` (workspace) — **H+0, bloquant pour tout le monde**
+#### `Cargo.toml` (workspace) — **H+0, blocking for everyone**
 
-Trois membres, dépendances communes en `[workspace.dependencies]` : `tokio`, `axum 0.8`, `tower-http`, `sqlx 0.8`, `serde`, `thiserror`, `argon2`, `ed25519-dalek`, `sha2`, `subtle`, `chrono`, `uuid`, `rand`, `base64`, `tracing`, `validator`.
+Three members, common dependencies in `[workspace.dependencies]`: `tokio`, `axum 0.8`, `tower-http`, `sqlx 0.8`, `serde`, `thiserror`, `argon2`, `ed25519-dalek`, `sha2`, `subtle`, `chrono`, `uuid`, `rand`, `base64`, `tracing`, `validator`.
 
-#### `core/src/lib.rs` — **écrit à H+0, plus jamais touché**
+#### `core/src/lib.rs` — **written at H+0, never touched again**
 
 ```rust
 pub mod ids; pub mod money; pub mod clock; pub mod error; pub mod config;
@@ -419,7 +423,7 @@ pub mod crypto; pub mod ledger; pub mod payments; pub mod identity;
 pub mod directory; pub mod partners; pub mod funding; pub mod reporting;
 ```
 
-Tous les modules déclarés dès le départ, avec des fichiers contenant `todo!()`. **Le projet compile dès la première heure**, et plus personne n'a à modifier ce fichier ensuite. C'est ce qui évite les conflits de fusion à 3 h du matin.
+Every module declared from the start, with files containing `todo!()`. **The project compiles from the first hour onwards**, and nobody has to modify this file again. That is what avoids merge conflicts at 3 a.m.
 
 #### `api/src/state.rs`
 
@@ -436,15 +440,15 @@ pub struct AppState {
 
 #### `api/src/error.rs`
 
-`CoreError` → réponse HTTP. Table complète dans `data-dictionary.md` §6. Format :
+`CoreError` -> HTTP response. Full table in `data-dictionary.md` §6. Format:
 
 ```json
-{ "error": "TOKEN_EXPIRED", "message": "…", "request_id": "…" }
+{ "error": "TOKEN_EXPIRED", "message": "...", "request_id": "..." }
 ```
 
-**Jamais de détail SQL dans la réponse.** `Db(_)` devient `INTERNAL` / 500.
+**Never any SQL detail in the response.** `Db(_)` becomes `INTERNAL` / 500.
 
-#### `api/src/routes/mod.rs` — **écrit à H+0, figé**
+#### `api/src/routes/mod.rs` — **written at H+0, frozen**
 
 ```rust
 pub fn router(state: AppState) -> Router {
@@ -461,9 +465,9 @@ pub fn router(state: AppState) -> Router {
 }
 ```
 
-Chaque module expose `pub fn routes() -> Router<AppState>`. Sèdjro remplit `employee.rs` et `partner.rs` sans jamais toucher à ce fichier.
+Each module exposes `pub fn routes() -> Router<AppState>`. Sèdjro fills in `employee.rs` and `partner.rs` without ever touching this file.
 
-#### `api/src/extractors/auth.rs` — **la pièce la plus rentable de la nuit**
+#### `api/src/extractors/auth.rs` — **the most profitable piece of the night**
 
 ```rust
 pub trait Role { const VALUE: UserRole; }
@@ -472,39 +476,39 @@ pub struct Employee; pub struct Partner; pub struct Admin;
 pub struct AuthUser<R: Role>(pub AuthenticatedUser, PhantomData<R>);
 
 impl<R: Role> FromRequestParts<AppState> for AuthUser<R> {
-    // 1. lire le cookie "session"
-    // 2. hacher, chercher la session, vérifier expires_at et revoked_at
-    // 3. charger l'utilisateur, vérifier status == active
-    // 4. si user.role != R::VALUE → 403
+    // 1. read the "session" cookie
+    // 2. hash it, look the session up, check expires_at and revoked_at
+    // 3. load the user, check status == active
+    // 4. if user.role != R::VALUE -> 403
 }
 ```
 
-Le RBAC devient vérifié à la compilation : un handler d'espace partenaire qui recevrait `AuthUser<Employee>` ne compile pas.
+RBAC becomes compile-time checked: a partner-space handler receiving `AuthUser<Employee>` does not compile.
 
 #### `core/src/identity/`
 
 ```rust
 // login.rs
 pub async fn login(tx, clock, email, password, ip, ua) -> Result<String> {
-    // ⚠ hacher même si l'utilisateur n'existe pas (compare avec un hash bidon)
-    //   sinon le temps de réponse révèle les comptes existants
-    // vérifier status == active
-    // créer la session, renvoyer le jeton en clair (seul moment où il existe)
+    // WARNING: hash even if the user does not exist (compare against a dummy hash)
+    //   otherwise the response time reveals which accounts exist
+    // check status == active
+    // create the session, return the plaintext token (the only moment it exists)
 }
 
 // session.rs
 create_session   validate_session   revoke_session   revoke_all_for_user
 ```
 
-Le jeton de session est **haché en base**, le clair ne vit que dans le cookie. Cookie : `http_only`, `secure`, `SameSite=Strict`.
+The session token is **hashed in the database**, the plaintext lives only in the cookie. Cookie: `http_only`, `secure`, `SameSite=Strict`.
 
 #### `core/src/directory/`
 
 ```rust
-create_employee_with_account(tx, ...)   // users → employees → accounts → employment_links
-                                        // ⚠ cet ordre, à cause du cycle de FK
-resolve_account_by_ref(conn, employer, employer_ref) -> AccountId   // topup + SIRH
-account_of_employee(conn, user_id) -> AccountId                     // utilisé par Sèdjro
+create_employee_with_account(tx, ...)   // users -> employees -> accounts -> employment_links
+                                        // WARNING: this order, because of the FK cycle
+resolve_account_by_ref(conn, employer, employer_ref) -> AccountId   // topup + HR system
+account_of_employee(conn, user_id) -> AccountId                     // used by Sèdjro
 list_cities(conn)
 ```
 
@@ -512,8 +516,8 @@ list_cities(conn)
 
 ```rust
 // registration.rs
-submit_registration(tx, ...)   // users + accounts + partners en 'pending'
-                               // valider la cohérence service_mode / city_id
+submit_registration(tx, ...)   // users + accounts + partners in 'pending'
+                               // validate service_mode / city_id consistency
 
 // review.rs
 approve(tx, admin, id)         // status, reviewed_by/at, + audit_log
@@ -522,27 +526,27 @@ reject(tx, admin, id, reason)
 // catalog.rs
 search(conn, city, service_mode, q, cursor, limit)
 // WHERE status = 'approved'
-// pagination KEYSET : WHERE (trade_name, id) > ($cursor) ORDER BY trade_name, id
-// ⚠ jamais OFFSET (exigence 3.4)
+// KEYSET pagination: WHERE (trade_name, id) > ($cursor) ORDER BY trade_name, id
+// WARNING: never OFFSET (requirement 3.4)
 
 // highlights.rs
-add(tx, admin, partner, placement, position)   // refuse si partenaire non 'approved'
-remove(tx, admin, id)                          // renseigne removed_at, ne SUPPRIME PAS
-list(conn, placement)                          // JOIN filtrant status = 'approved'
+add(tx, admin, partner, placement, position)   // refuses if the partner is not 'approved'
+remove(tx, admin, id)                          // sets removed_at, does NOT DELETE
+list(conn, placement)                          // JOIN filtering on status = 'approved'
 
 // repo.rs
-approved_account(tx, partner_id) -> AccountId  // ← CONTRAT avec Sèdjro
+approved_account(tx, partner_id) -> AccountId  // <- CONTRACT with Sèdjro
 ```
 
 #### `core/src/reporting/mod.rs`
 
-Lecture seule. Trois requêtes suffisent pour la démo :
+Read-only. Three queries are enough for the demo:
 
 ```rust
-partner_summary(conn, partner, from, to)  // SUM des paiements crédités → total_received
-                                          // ⚠ "encaissé", jamais "solde"
-national_dashboard(conn, from, to)        // volume, nb transactions, partenaires actifs,
-                                          // by_city + bloc online_partners séparé
+partner_summary(conn, partner, from, to)  // SUM of credited payments -> total_received
+                                          // WARNING: "received", never "balance"
+national_dashboard(conn, from, to)        // volume, transaction count, active partners,
+                                          // by_city + a separate online_partners block
 employee_transactions(conn, account, cursor)
 ```
 
@@ -550,56 +554,58 @@ employee_transactions(conn, account, cursor)
 
 `GET /admin/partners?status=pending` · `POST /admin/partners/{id}/approve` · `POST /admin/partners/{id}/reject` · `POST /admin/topups` · `GET /admin/highlights` · `POST /admin/highlights` · `DELETE /admin/highlights/{id}` · `GET /admin/dashboard` · `GET /admin/audit/verify`.
 
-#### `scripts/seed.sql` — **sous-estimé, à ne pas bâcler**
+#### `scripts/seed.sql` — **underestimated, do not rush it**
 
-Un admin, deux employeurs, quatre employés crédités, six partenaires approuvés dont un en ligne, un partenaire en attente pour démontrer la validation, deux mises en avant. Sans ce fichier, la démo commence par vingt minutes de saisie manuelle.
+One admin, two employers, four credited employees, six approved partners including one online, one pending partner to demonstrate approval, two highlights. Without this file, the demo starts with twenty minutes of manual data entry.
 
 ---
 
-## 5. Déroulé de la nuit
+## 5. How the night runs
 
-| Créneau | Sèdjro | Giscard |
+| Slot | Sèdjro | Giscard |
 |---|---|---|
-| **H+0 → H+1** | `0001_schema.sql`, puis `ids`, `money`, `clock` | workspace, `lib.rs`, `routes/mod.rs`, `main.rs`, `state.rs`, tous les fichiers créés avec `todo!()` |
-| **jalon H+1** | **`cargo run` répond sur `/health`, migrations passées, tout compile.** `ids`/`money`/`clock` livrés à Giscard. Bouchon `approved_account` posé. | |
-| **H+1 → H+6** | `ledger` en entier, puis `tests/invariants.rs` | `crypto/password`, `identity`, `extractors/auth`, `routes/auth`, `partners` registration + review |
-| **jalon H+6** | **Les 9 invariants passent.** Sinon Giscard bascule sur le ledger et tout le reste attend. | |
-| **H+6 → H+10** | repos décalé : l'un dort 4 h pendant que l'autre finit son bloc, puis on inverse | |
-| **H+10 → H+16** | `token_sig`, `short_code`, `authorize`, `settle`, `routes/employee`, `routes/partner` | `catalog`, `routes/admin`, `topup` branché, `dto/*`, `seed.sql` |
-| **jalon H+16** | **Un paiement complet passe par HTTP** : créditer, générer un jeton, l'encaisser, voir les deux soldes bouger. | |
-| **H+16 → H+20** | `/payments/batch`, `/admin/audit/verify`, `tests/payments_flow.rs` | highlights, SIRH, tableau de bord, `openapi.json` pour le front |
-| **H+20** | **GEL. Plus aucune fonctionnalité.** | |
-| **H+20 → fin** | seed de démo, relecture des interdits, README, répétition du parcours **trois fois** | |
+| **H+0 -> H+1** | `0001_schema.sql`, then `ids`, `money`, `clock` | workspace, `lib.rs`, `routes/mod.rs`, `main.rs`, `state.rs`, all files created with `todo!()` |
+| **milestone H+1** | **`cargo run` answers on `/health`, migrations applied, everything compiles.** `ids`/`money`/`clock` delivered to Giscard. `approved_account` stub in place. | |
+| **H+1 -> H+6** | the whole `ledger`, then `tests/invariants.rs` | `crypto/password`, `identity`, `extractors/auth`, `routes/auth`, `partners` registration + review |
+| **milestone H+6** | **The 9 invariants pass.** Otherwise Giscard switches to the ledger and everything else waits. | |
+| **H+6 -> H+10** | staggered rest: one sleeps 4 h while the other finishes their block, then swap | |
+| **H+10 -> H+16** | `token_sig`, `short_code`, `authorize`, `settle`, `routes/employee`, `routes/partner` | `catalog`, `routes/admin`, `topup` wired in, `dto/*`, `seed.sql` |
+| **milestone H+16** | **A full payment goes through over HTTP**: credit an account, generate a token, settle it, watch both balances move. | |
+| **H+16 -> H+20** | `/payments/batch`, `/admin/audit/verify`, `tests/payments_flow.rs` | highlights, HR system, dashboard, `openapi.json` for the front end |
+| **H+20** | **FREEZE. No more features.** | |
+| **H+20 -> end** | demo seed, re-read the forbidden list, README, rehearse the walkthrough **three times** | |
 
-**Si le temps manque à H+16 :** couper d'abord les highlights et le tableau de bord. Ne jamais couper les tests du ledger.
-
----
-
-## 6. Règles de coexistence
-
-**Fichiers réservés.** Personne ne modifie un fichier de l'autre, même pour un import. On signale, l'autre corrige.
-
-**Une branche chacun, fusion aux jalons.** `feat/ledger` et `feat/api`. Fusion à H+1, H+6, H+16. Pas de fusion entre les jalons, pas de `git push --force`.
-
-**`cargo sqlx prepare --workspace` après chaque nouvelle requête SQL.** Sinon la compilation de l'autre casse sans raison apparente et vous perdez une heure à chercher.
-
-**Le bouchon `approved_account`** posé par Sèdjro à H+1 est supprimé par Giscard quand `partners/repo.rs` est prêt. Le noter quelque part, c'est le genre de chose qu'on oublie.
-
-**Décider à H+0**, pas à 4 h du matin : le compte système `MINISTRY_ISSUANCE` est-il autorisé à devenir négatif, ou pré-crédité au seed ?
+**If time runs short at H+16:** cut the highlights and the dashboard first. Never cut the ledger tests.
 
 ---
 
-## 7. Liste de vérification avant le rendu
+## 6. Rules of coexistence
 
-- [ ] Les 9 invariants passent
-- [ ] Un `UPDATE` direct sur `ledger_entries` échoue bien
-- [ ] Deux `settle` du même `jti` par le même partenaire → un seul débit
-- [ ] Un jeton expiré est refusé selon l'horloge serveur
-- [ ] Deux `authorize` concurrents dépassant le solde → le second échoue
-- [ ] Aucun `f32`/`f64` sur un chemin monétaire
-- [ ] Aucun type `axum` dans `crates/core`
-- [ ] Aucun `OFFSET` dans une pagination
-- [ ] Signature Ed25519, pas HMAC
-- [ ] Aucun secret ni `short_code` dans les logs
-- [ ] `seed.sql` permet la démo complète sans saisie manuelle
-- [ ] Le parcours de démo a été répété trois fois
+**Reserved files.** Nobody modifies someone else's file, not even for an import. You report it, the other fixes it.
+
+**One branch each, merges at the milestones.** `feat/ledger` and `feat/api`. Merge at H+1, H+6, H+16. No merging between milestones, no `git push --force`.
+
+**`cargo sqlx prepare --workspace` after every new SQL query.** Otherwise the other person's build breaks for no visible reason and you lose an hour looking for it.
+
+> **Amendment.** This rule is void: the queries are checked at run time (`decisions.md`, departure 5). `.sqlx/` stays empty and there is nothing to regenerate.
+
+**The `approved_account` stub** placed by Sèdjro at H+1 is removed by Giscard when `partners/repo.rs` is ready. Write it down somewhere, it is the kind of thing you forget.
+
+**Decide at H+0**, not at 4 a.m.: is the `MINISTRY_ISSUANCE` system account allowed to go negative, or is it pre-credited in the seed?
+
+---
+
+## 7. Checklist before delivery
+
+- [ ] The 9 invariants pass
+- [ ] A direct `UPDATE` on `ledger_entries` does fail
+- [ ] Two `settle` calls on the same `jti` by the same partner -> a single debit
+- [ ] An expired token is refused according to the server clock
+- [ ] Two concurrent `authorize` calls exceeding the balance -> the second fails
+- [ ] No `f32`/`f64` anywhere on a money path
+- [ ] No `axum` type in `crates/core`
+- [ ] No `OFFSET` in any pagination
+- [ ] Ed25519 signature, not HMAC
+- [ ] No secret and no `short_code` in the logs
+- [ ] `seed.sql` allows the full demo with no manual data entry
+- [ ] The demo walkthrough has been rehearsed three times
