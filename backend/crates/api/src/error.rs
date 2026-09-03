@@ -11,9 +11,10 @@ use cartepro_core::money::InvalidMoneyError;
 use cartepro_core::partners::PartnerError;
 use cartepro_core::payments::PaymentError;
 use serde::Serialize;
+use utoipa::ToSchema;
 
 /// The single error body of the API. `request_id` injected by the middleware.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct ErrorBody {
     /// Stable code, e.g. `TOKEN_EXPIRED`. SCREAMING_SNAKE, never renamed.
     pub error: &'static str,

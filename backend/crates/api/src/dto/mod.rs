@@ -10,8 +10,9 @@ pub mod partner;
 pub mod public;
 
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Paginated<T> {
     pub items: Vec<T>,
     pub next_cursor: Option<String>,
