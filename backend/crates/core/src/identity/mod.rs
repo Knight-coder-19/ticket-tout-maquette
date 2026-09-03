@@ -5,7 +5,7 @@ pub mod session;
 pub use login::{login, LoginContext};
 pub use session::{create_session, revoke_all_for_user, revoke_session, validate_session};
 
-use crate::ids::UserId;
+use crate::ids::{EmployeeId, PartnerId, UserId};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -32,6 +32,18 @@ pub struct AuthenticatedUser {
     pub id: UserId,
     pub role: UserRole,
     pub status: UserStatus,
+}
+
+impl From<AuthenticatedUser> for EmployeeId {
+    fn from(user: AuthenticatedUser) -> Self {
+        EmployeeId::from(user.id.as_uuid())
+    }
+}
+
+impl From<AuthenticatedUser> for PartnerId {
+    fn from(user: AuthenticatedUser) -> Self {
+        PartnerId::from(user.id.as_uuid())
+    }
 }
 
 #[derive(Debug, Clone)]
