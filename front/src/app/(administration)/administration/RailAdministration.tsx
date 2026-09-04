@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { Rail, type EntreeRail } from "@/components/layout/Rail";
+import { Icone } from "@/components/ui/Icone";
 
 /**
  * Les dix sections de l'espace d'administration.
@@ -15,20 +17,20 @@ import { Rail, type EntreeRail } from "@/components/layout/Rail";
  * Ministre » pour la mise en avant, « Comptes partenaires » pour les comptes.
  *
  * La mécanique du rail — entrée courante, `aria-current`, container queries —
- * vit dans `components/layout/Rail`, partagée avec l'espace partenaire. Ce
- * fichier ne porte que des données.
+ * vit dans `components/layout/Rail`, partagée avec l'espace partenaire et
+ * l'espace salarié. Ce fichier ne porte que des données.
  */
 const ENTREES: readonly EntreeRail[] = [
-  { href: "/administration", libelle: "Tableau de bord" },
-  { href: "/administration/validations", libelle: "Validations" },
-  { href: "/administration/mise-en-avant", libelle: "Sélection du Ministre" },
-  { href: "/administration/salaries", libelle: "Salariés" },
-  { href: "/administration/reclamations", libelle: "Réclamations" },
-  { href: "/administration/comptes", libelle: "Comptes partenaires" },
-  { href: "/administration/recharges", libelle: "Rechargements" },
-  { href: "/administration/registre", libelle: "Registre" },
-  { href: "/administration/transactions", libelle: "Transactions" },
-  { href: "/administration/api", libelle: "API" },
+  { href: "/administration", libelle: "Tableau de bord", icone: "solde" },
+  { href: "/administration/validations", libelle: "Validations", icone: "coche" },
+  { href: "/administration/mise-en-avant", libelle: "Sélection du Ministre", icone: "partenaires" },
+  { href: "/administration/salaries", libelle: "Salariés", icone: "demandes" },
+  { href: "/administration/reclamations", libelle: "Réclamations", icone: "info" },
+  { href: "/administration/comptes", libelle: "Comptes partenaires", icone: "partenaires" },
+  { href: "/administration/recharges", libelle: "Rechargements", icone: "actualiser" },
+  { href: "/administration/registre", libelle: "Registre", icone: "historique" },
+  { href: "/administration/transactions", libelle: "Transactions", icone: "paiement" },
+  { href: "/administration/api", libelle: "API", icone: "copier" },
 ];
 
 export function RailAdministration() {
@@ -39,6 +41,12 @@ export function RailAdministration() {
       racine="/administration"
       entrees={ENTREES}
       identifiantTitre="rail-administration"
+      pied={
+        <Link href="/connexion" className="rail__lien">
+          <Icone nom="deconnexion" taille={18} />
+          Se déconnecter
+        </Link>
+      }
     />
   );
 }

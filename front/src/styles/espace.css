@@ -43,49 +43,91 @@
   max-width: var(--largeur-page);
 }
 
-/* ══ Le rail ═══════════════════════════════════════════════════════════════ */
+/* ══ Le rail ═══════════════════════════════════════════════════════════════
+   Même coquille que l'espace salarié : aplat bleu institutionnel, bloc-marque
+   Ticket Tout en tête, entrées à icône. Les couleurs viennent des jetons
+   --rail-* (tokens.css), partagés par les quatre espaces. */
 
 .rail {
-  background: var(--couleur-rail-fond);
-  border-block-end: 1px solid var(--couleur-rail-separateur);
+  background: var(--rail-fond);
+  color: var(--rail-texte);
+  border-block-end: 1px solid var(--rail-separateur);
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espace-2);
+  padding: var(--espace-3) var(--espace-4);
+}
+
+.rail__marque {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--rail-texte);
+  flex-basis: 100%;
+}
+.rail__marque a {
+  display: inline-flex;
+  color: var(--rail-texte);
+  text-decoration: none;
+}
+.rail__sim {
+  font-family: var(--police-titre);
+  font-size: var(--taille-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.75;
 }
 
 .rail__titre {
   margin: 0;
-  padding: var(--espace-3) var(--espace-4) var(--espace-1);
+  font-family: var(--police-titre);
   font-size: var(--taille-xs);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--couleur-rail-texte);
+  color: var(--rail-texte);
+  opacity: 0.7;
 }
 
 .rail__liste {
   list-style: none;
   margin: 0;
-  padding: var(--espace-2);
+  padding: 0;
   display: flex;
   flex-direction: row;
+  flex-wrap: wrap;
   gap: var(--espace-1);
-  /* Barre horizontale : les dix entrees defilent plutot que de se tasser. */
+  /* Barre horizontale : les entrees defilent plutot que de se tasser. */
   overflow-x: auto;
 }
 
 .rail__lien {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: var(--espace-3);
   padding: var(--espace-2) var(--espace-3);
-  color: var(--couleur-rail-texte);
+  color: var(--rail-texte);
   text-decoration: none;
-  border-radius: var(--rayon-sm);
+  border-radius: var(--rayon-md);
   white-space: nowrap;
+  font-family: var(--police-titre);
+  font-size: var(--taille-sm);
   /* Le filet de l'entree active, reserve des le depart pour qu'aucun texte
      ne se decale au changement de page. */
   border-block-end: 3px solid transparent;
 }
 
 .rail__lien:hover {
-  background: var(--couleur-rail-survol-fond);
-  text-decoration: underline;
+  background: var(--rail-survol);
 }
+
+.rail__pied {
+  width: 100%;
+  font-size: var(--taille-xs);
+  opacity: 0.85;
+}
+.rail__pied a { color: var(--rail-texte); }
 
 /*
  * L'entree courante. Trois marqueurs, jamais la couleur seule :
@@ -97,8 +139,8 @@
  * ne peut donc pas diverger de ce qu'annonce l'attribut.
  */
 .rail__lien[aria-current="page"] {
-  background: var(--couleur-rail-actif-fond);
-  border-block-end-color: var(--couleur-rail-actif-filet);
+  background: var(--rail-actif);
+  border-block-end-color: var(--rail-filet);
   font-weight: 700;
 }
 
@@ -120,15 +162,24 @@
     top: var(--hauteur-bandeau);
     z-index: 1;
     align-self: start;
-    min-height: 100dvh;
+    min-height: calc(100dvh - var(--hauteur-bandeau));
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
     border-block-end: none;
-    border-inline-end: 1px solid var(--couleur-rail-separateur);
+    border-inline-end: 1px solid var(--rail-separateur);
+    padding: var(--espace-4);
   }
+
+  .rail__marque { margin-bottom: var(--espace-4); }
 
   .rail__liste {
     flex-direction: column;
+    flex-wrap: nowrap;
     overflow-x: visible;
   }
+
+  .rail__pied { margin-top: auto; padding-top: var(--espace-4); }
 
   .rail__lien {
     /* Le filet passe du bas au bord de depart : une liste verticale se lit
@@ -138,14 +189,14 @@
   }
 
   .rail__lien[aria-current="page"] {
-    border-inline-start-color: var(--couleur-rail-actif-filet);
+    border-inline-start-color: var(--rail-filet);
   }
 }
 
 /* Preference systeme, pas une taille : le filet s'epaissit. */
 @media (prefers-contrast: more) {
   .rail__lien[aria-current="page"] {
-    outline: 2px solid var(--couleur-rail-actif-filet);
+    outline: 2px solid var(--rail-filet);
     outline-offset: -2px;
   }
 }

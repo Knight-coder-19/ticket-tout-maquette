@@ -80,14 +80,23 @@
 
 
   /* ── Rail de navigation ────────────────────────────────────────────────
-     Jetons semantiques : un composant ne cite jamais une couleur brute, il
-     cite le role. Contrastes mesures, notes en regard.
-     Le bleu institutionnel sert ici au TEXTE et au FILET de l'entree active,
-     jamais de fond plein — charte de l'Etat. */
+     Un seul rail pour les quatre espaces (salarie, partenaire, administration) :
+     aplat bleu institutionnel, texte blanc, bloc-marque Ticket Tout en tete.
+     Le brand book autorise le bleu en fond de navigation et d'identite
+     (« identite, fonds, navigation »). Contraste blanc sur #1B3A6B = 11,27:1. */
+  --rail-fond: var(--couleur-primaire);
+  --rail-texte: #ffffff;
+  --rail-survol: rgba(255, 255, 255, 0.1);
+  --rail-actif: rgba(255, 255, 255, 0.16);   /* + graisse 700 + aria-current */
+  --rail-filet: var(--couleur-accent-ambre);
+  --rail-separateur: var(--couleur-primaire-sombre);
+
+  /* Jetons de l'ancien rail clair — encore cites par mise-en-avant.css,
+     reclamations.css, catalogue.css, primitives.css pour des fonds hors rail. */
   --couleur-rail-fond: var(--couleur-fond-secondaire);
-  --couleur-rail-texte: var(--couleur-primaire);          /* 10,41:1 sur le fond du rail */
-  --couleur-rail-survol-fond: #e8ecf3;                    /* 9,51:1 pour le texte du rail */
-  --couleur-rail-actif-fond: var(--couleur-fond);         /* 11,27:1 pour le texte actif */
+  --couleur-rail-texte: var(--couleur-primaire);
+  --couleur-rail-survol-fond: #e8ecf3;
+  --couleur-rail-actif-fond: var(--couleur-fond);
   --couleur-rail-actif-filet: var(--couleur-primaire);
   --couleur-rail-separateur: #c2c9d4;
 
