@@ -58,7 +58,11 @@
   margin: 0 auto;
   padding: var(--espace-12) var(--espace-6);
 }
-.acc__section--bord { border-block: 1px solid var(--couleur-bordure); background: var(--couleur-fond); }
+/* Filet de perforation en separateur de section : echo du talon du ticket. */
+.acc__section--bord {
+  border-block: 2px dashed var(--couleur-bordure);
+  background: var(--couleur-fond);
+}
 
 .acc__h2 {
   font-family: var(--police-titre);
@@ -79,10 +83,10 @@
   gap: var(--espace-4);
 }
 .acc__tuile {
-  border: 1px solid var(--couleur-bordure);
   border-radius: var(--rayon-carte);
   background: var(--couleur-fond);
   padding: var(--espace-6);
+  box-shadow: var(--ombre-repos);
 }
 .acc__tuile-ic {
   width: 46px;
@@ -109,7 +113,7 @@
 .acc__etape-b { font-size: var(--taille-sm); color: var(--couleur-texte-secondaire); }
 
 .acc__cats { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--espace-4); }
-.acc__cat { border: 1px solid var(--couleur-bordure); border-radius: var(--rayon-carte); background: var(--couleur-fond); padding: var(--espace-4); }
+.acc__cat { border-radius: var(--rayon-carte); background: var(--couleur-fond); padding: var(--espace-4); box-shadow: var(--ombre-repos); }
 .acc__cat-ic { width: 40px; height: 40px; border-radius: 10px; background: var(--couleur-accent-ambre-fond); color: var(--couleur-accent-ambre-sombre); display: flex; align-items: center; justify-content: center; margin-bottom: var(--espace-2); }
 .acc__cat-t { font-family: var(--police-titre); font-weight: 700; margin: 0 0 4px; }
 .acc__cat-c { font-size: var(--taille-xs); color: var(--couleur-texte-secondaire); margin: 0; }

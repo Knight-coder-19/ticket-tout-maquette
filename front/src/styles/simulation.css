@@ -11,12 +11,14 @@
 .bandeau-simulation {
   background: var(--couleur-simulation-fond);
   color: var(--couleur-simulation-texte);
-  border-block-end: 1px solid var(--couleur-simulation-filet);
-  border-inline-start: var(--espace-1) solid var(--couleur-simulation-filet);
+  /* Ligne de perforation en pied, echo du talon detachable du logo : la
+     mention fait partie de la metaphore du ticket, ce n'est pas une bande de
+     danger. */
+  border-block-end: 2px dashed var(--couleur-simulation-filet);
   /* Une ligne : la hauteur vient de la police, l'espace vertical est reduit au
      minimum lisible. Le bandeau est sur chaque ecran, il n'a pas a en prendre
      le tiers. */
-  padding: var(--espace-2) var(--espace-4);
+  padding: 6px var(--espace-4);
 
   /*
    * Il ne defile pas.
@@ -37,20 +39,30 @@
 
 .bandeau-simulation__texte {
   margin: 0;
-  font-size: var(--taille-sm);
-  line-height: 1.4;
+  font-family: var(--police-ui);
+  font-size: var(--taille-xs);
+  line-height: 1.5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--espace-2);
   /*
-   * PAS de `max-width` ici. C'est ce qui coutait trois lignes : la mesure de
-   * confort de lecture (`--largeur-contenu`, 72ch) est faite pour un
-   * paragraphe, pas pour une ligne d'avertissement qui doit tenir en largeur
-   * de page. Un bandeau n'est pas un texte courant.
+   * PAS de `max-width` ici. La mention doit tenir en largeur de page ; un
+   * bandeau n'est pas un texte courant.
    */
 }
 
+/* La mention obligatoire en pastille pleine, comme un tampon sur le ticket. */
 .bandeau-simulation__mention {
-  font-family: var(--police-titre);
+  font-family: var(--police-ui);
+  font-weight: 700;
+  font-size: var(--taille-xs);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--couleur-simulation-filet);
+  color: var(--couleur-simulation-fond);
 }
 
 /*

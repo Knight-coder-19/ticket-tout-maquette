@@ -57,45 +57,65 @@
 }
 
 /* ---- Carte -------------------------------------------------------- */
+/* Une profondeur, pas deux : ombre de repos, sans filet. Au survol elle se
+   souleve — elle se lit comme la surface saisissable qu'elle est. */
 .carte {
   background: var(--couleur-fond);
-  border: 1px solid var(--couleur-bordure);
   border-radius: var(--rayon-lg);
   padding: var(--espace-6);
+  box-shadow: var(--ombre-repos);
+  transition: box-shadow 0.14s ease, transform 0.14s ease;
+}
+a.carte:hover,
+button.carte:hover,
+.carteInteractive:hover {
+  box-shadow: var(--ombre-eleve);
+  transform: translateY(-1px);
 }
 .carteTitre {
+  font-family: var(--police-ui);
   font-size: var(--taille-lg);
   margin-bottom: var(--espace-4);
 }
 
-/* ---- Pastille (statut) ------------------------------------------- */
+/* ---- Pastille (statut) -------------------------------------------
+   Une seule taille, un point en tete, un aplat franc. On doit pouvoir
+   trier une liste a l'oeil, par la couleur, en une demi-seconde. */
 .pastille {
   display: inline-flex;
   align-items: center;
-  gap: var(--espace-1);
-  padding: 2px var(--espace-2);
-  font-family: var(--police-titre);
+  gap: 6px;
+  padding: 3px 10px 3px 8px;
+  font-family: var(--police-ui);
   font-size: var(--taille-xs);
-  font-weight: 500;
+  font-weight: 600;
+  line-height: 1.4;
   border-radius: 999px;
-  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.pastille::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  flex-shrink: 0;
 }
 .pastilleNeutre {
-  background: var(--couleur-fond-secondaire);
-  color: var(--couleur-texte-secondaire);
-  border-color: var(--couleur-bordure);
+  background: #ece7dd;
+  color: #4b5563;
 }
 .pastilleSucces {
-  background: var(--couleur-succes-fond);
-  color: var(--couleur-succes);
+  background: #d3e9df;
+  color: #0a5c44;
 }
 .pastilleAlerte {
-  background: var(--couleur-alerte-fond);
-  color: var(--couleur-alerte);
+  background: #f6dcd3;
+  color: #932f18;
 }
 .pastilleAttente {
-  background: var(--couleur-simulation-fond);
-  color: var(--couleur-simulation);
+  background: #f4e6c3;
+  color: #6b520f;
 }
 
 /* ---- Etat vide -------------------------------------------------- */
