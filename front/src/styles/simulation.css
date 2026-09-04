@@ -11,46 +11,56 @@
 .bandeau-simulation {
   background: var(--couleur-simulation-fond);
   color: var(--couleur-simulation-texte);
-  border-block-end: 1px solid var(--couleur-simulation-filet);
-  border-inline-start: var(--espace-1) solid var(--couleur-simulation-filet);
-  /* Une ligne : la hauteur vient de la police, l'espace vertical est reduit au
-     minimum lisible. Le bandeau est sur chaque ecran, il n'a pas a en prendre
-     le tiers. */
-  padding: var(--espace-2) var(--espace-4);
+  /* Ligne de perforation sur le bord haut, echo du talon detachable du logo :
+     la mention fait partie de la metaphore du ticket, pas une bande de danger. */
+  border-block-start: 2px dashed var(--couleur-simulation-filet);
+  padding: 5px var(--espace-4);
 
   /*
-   * Il ne defile pas.
+   * Fixe en bas de la fenetre.
    *
-   * Sur un ecran long -- le registre en compte des dizaines de lignes -- un
-   * bandeau qui part vers le haut laisse un tableau de montants sans sa
-   * mention. Une capture prise a mi-page passerait alors pour un document
-   * reel. Il colle donc en haut, et tout ce qui colle sous lui est cale sur
-   * `--hauteur-bandeau`.
+   * L'exigence (F. Pontaillac) est qu'aucun ecran -- ni aucune capture -- ne
+   * puisse etre pris pour un document reel : la mention doit donc etre visible
+   * en permanence. Ancree en bas, elle l'est sur toute capture sans encombrer
+   * le haut de page ni pousser le contenu. `padding-block-end` est ajoute aux
+   * conteneurs d'espace (`--hauteur-bandeau`) pour que rien ne se cache
+   * derriere.
    *
-   * `z-index` au-dessus du rail et de l'en-tete de tableau, qui collent aussi :
-   * c'est lui qui doit rester visible si deux se rencontrent.
+   * `z-index` eleve : c'est elle qui reste visible si deux elements collants
+   * se rencontrent.
    */
-  position: sticky;
-  top: 0;
-  z-index: 3;
+  position: fixed;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: 20;
 }
 
 .bandeau-simulation__texte {
   margin: 0;
-  font-size: var(--taille-sm);
-  line-height: 1.4;
+  font-family: var(--police-ui);
+  font-size: var(--taille-xs);
+  line-height: 1.5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--espace-2);
   /*
-   * PAS de `max-width` ici. C'est ce qui coutait trois lignes : la mesure de
-   * confort de lecture (`--largeur-contenu`, 72ch) est faite pour un
-   * paragraphe, pas pour une ligne d'avertissement qui doit tenir en largeur
-   * de page. Un bandeau n'est pas un texte courant.
+   * PAS de `max-width` ici. La mention doit tenir en largeur de page ; un
+   * bandeau n'est pas un texte courant.
    */
 }
 
+/* La mention obligatoire en pastille pleine, comme un tampon sur le ticket. */
 .bandeau-simulation__mention {
-  font-family: var(--police-titre);
+  font-family: var(--police-ui);
+  font-weight: 700;
+  font-size: var(--taille-xs);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--couleur-simulation-filet);
+  color: var(--couleur-simulation-fond);
 }
 
 /*

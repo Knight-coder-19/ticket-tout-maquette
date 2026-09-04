@@ -36,8 +36,10 @@
   --couleur-texte: #1a1a1a;
   --couleur-texte-secondaire: #55606b;
   --couleur-fond: #ffffff;
-  --couleur-fond-secondaire: #f4f6f9;
-  --couleur-bordure: #d6dbe3;
+  /* Fond de page : papier chaud plutot que gris-bleu froid. Le bleu reste
+     l'encre, pas l'atmosphere ; les cartes blanches ressortent mieux dessus. */
+  --couleur-fond-secondaire: #faf8f3;
+  --couleur-bordure: #dcd7cd;
 
   /* --- Statuts --- */
   --couleur-alerte: #a0341c;
@@ -52,6 +54,10 @@
      Polices auto-hebergees dans public/fonts, aucun CDN externe. */
   --police-titre: "Marianne", system-ui, sans-serif;
   --police-corps: "Spectral", Georgia, serif;
+  /* Spectral (serif) est fait pour l'editorial — accueil, CGU, mentions.
+     Pour l'UI dense (tableaux, metadonnees, chiffres), Marianne tient mieux. */
+  --police-ui: "Marianne", system-ui, sans-serif;
+  --police-nombre: "Marianne", ui-monospace, system-ui, sans-serif;
 
   --taille-xs: 0.75rem;
   --taille-sm: 0.875rem;
@@ -75,7 +81,17 @@
   --rayon-lg: 10px;
   --rayon-carte: 16px;
 
-  --ombre-1: 0 1px 2px rgba(18, 41, 76, 0.06), 0 8px 24px rgba(18, 41, 76, 0.08);
+  /* Elevation : trois niveaux. Une surface prend UNE profondeur — ombre OU
+     filet, jamais les deux.
+       repos   : cartes posees sur le fond de page
+       eleve   : survol, element saisissable, tuile mise en avant
+       fenetre : dialogue, menu, ce qui flotte au-dessus du reste */
+  --ombre-repos: 0 1px 2px rgba(30, 41, 59, 0.04), 0 2px 8px rgba(30, 41, 59, 0.06);
+  --ombre-eleve: 0 2px 6px rgba(30, 41, 59, 0.08), 0 12px 28px -8px rgba(30, 41, 59, 0.14);
+  --ombre-fenetre: 0 8px 20px rgba(30, 41, 59, 0.12), 0 32px 64px -16px rgba(30, 41, 59, 0.28);
+
+  /* Compat : anciens noms encore cites par des composants. */
+  --ombre-1: var(--ombre-repos);
   --ombre-carte: 0 24px 60px -28px rgba(18, 41, 76, 0.55);
 
 

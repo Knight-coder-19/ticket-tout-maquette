@@ -383,7 +383,7 @@
   /* Colle sous le bandeau, pas sous le haut de la fenetre : un long tableau
      garde ses en-tetes ET sa mention de simulation. */
   position: sticky;
-  top: var(--hauteur-bandeau);
+  top: 0;
   z-index: 1;
 }
 
