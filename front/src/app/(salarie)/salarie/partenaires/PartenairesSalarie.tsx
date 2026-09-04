@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Categorie, Partenaire } from "@/types/domaine";
 import { Carte } from "@/components/ui/Carte";
 import { Chargement } from "@/components/ui/Chargement";
@@ -13,7 +13,7 @@ import { ListeResultats } from "./ListeResultats";
 
 export function PartenairesSalarie() {
   const [categories, setCategories] = useState<Categorie[]>([]);
-  const [categorieId, setCategorieId] = useState<string | null>(null);
+  const [categorieIds, setCategorieIds] = useState<string[]>([]);
   const [recherche, setRecherche] = useState("");
   const [resultats, setResultats] = useState<Partenaire[] | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -27,15 +27,11 @@ export function PartenairesSalarie() {
 
   useEffect(() => {
     let vivant = true;
-    // Repasse en etat "chargement" a chaque changement de filtre (volontaire).
+    // Repasse en etat "chargement" a chaque changement de recherche (volontaire).
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setResultats(null);
     servicePartenaire
-      .listerPartenaires({
-        page: 1,
-        categorieId: categorieId ?? undefined,
-        recherche: recherche || undefined,
-      })
+      .listerPartenaires({ page: 1, recherche: recherche || undefined })
       .then((page) => {
         if (vivant) setResultats(page.elements);
       })
@@ -45,7 +41,15 @@ export function PartenairesSalarie() {
     return () => {
       vivant = false;
     };
-  }, [categorieId, recherche]);
+  }, [recherche]);
+
+  // Le filtre categorie est multi-selection : on l'applique cote client sur la
+  // liste rendue, aucune categorie cochee = toutes.
+  const affiches = useMemo(() => {
+    if (resultats === null) return null;
+    if (categorieIds.length === 0) return resultats;
+    return resultats.filter((p) => categorieIds.includes(p.categorieId));
+  }, [resultats, categorieIds]);
 
   return (
     <>
@@ -61,16 +65,16 @@ export function PartenairesSalarie() {
           <Carte>
             <div className={styles.barreFiltres}>
               <RecherchePartenaires valeur={recherche} onChange={setRecherche} />
+              <FiltreCategories
+                categories={categories}
+                selection={categorieIds}
+                onChange={setCategorieIds}
+              />
             </div>
-            <FiltreCategories
-              categories={categories}
-              selection={categorieId}
-              onChange={setCategorieId}
-            />
-            {resultats === null ? (
+            {affiches === null ? (
               <Chargement libelle="Recherche…" />
             ) : (
-              <ListeResultats partenaires={resultats} categories={categories} />
+              <ListeResultats partenaires={affiches} categories={categories} />
             )}
           </Carte>
         )}
