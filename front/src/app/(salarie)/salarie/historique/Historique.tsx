@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { Transaction } from "@/types/domaine";
-import { BandeauSimulation } from "@/components/simulation/BandeauSimulation";
 import { Carte } from "@/components/ui/Carte";
 import { Bouton } from "@/components/ui/Bouton";
 import { Chargement } from "@/components/ui/Chargement";
@@ -75,7 +74,6 @@ export function Historique() {
       </header>
 
       <div className={styles.pile}>
-        <BandeauSimulation />
 
         {erreur ? (
           <EtatErreur message={erreur} onReessayer={charger} />

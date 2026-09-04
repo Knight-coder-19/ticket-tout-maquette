@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { BandeauSimulation } from "@/components/simulation/BandeauSimulation";
 import { CarteVisuelle } from "@/components/marque/CarteVisuelle";
 import { Bouton } from "@/components/ui/Bouton";
 import { Carte } from "@/components/ui/Carte";
@@ -50,7 +49,6 @@ export function Paiement() {
       </header>
 
       <div className={styles.paiement}>
-        <BandeauSimulation />
 
         {erreur ? (
           <EtatErreur

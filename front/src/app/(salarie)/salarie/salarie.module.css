@@ -2,16 +2,21 @@
    Aucune couleur en dur, tout vient des jetons. */
 
 .espace {
+  min-height: 100vh;
+}
+/* Le bandeau de simulation reste en tete (position: sticky, simulation.css) ;
+   le rail et le contenu s'organisent sous lui, comme dans les autres espaces. */
+.grille {
   display: grid;
   grid-template-columns: var(--largeur-rail) 1fr;
-  min-height: 100vh;
+  align-items: start;
 }
 .contenu {
   padding: var(--espace-8);
   max-width: var(--largeur-page);
 }
 @media (max-width: 720px) {
-  .espace {
+  .grille {
     grid-template-columns: 1fr;
   }
   .contenu {
@@ -27,6 +32,10 @@
   padding: var(--espace-4);
   background: var(--couleur-primaire);
   color: #fff;
+  position: sticky;
+  top: var(--hauteur-bandeau);
+  align-self: start;
+  min-height: calc(100dvh - var(--hauteur-bandeau));
 }
 .railMarque {
   display: flex;
@@ -80,6 +89,8 @@
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
+    position: static;
+    min-height: 0;
   }
   .railMarque {
     margin-bottom: 0;
