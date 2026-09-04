@@ -33,7 +33,7 @@
   background: var(--couleur-primaire);
   color: #fff;
   position: sticky;
-  top: var(--hauteur-bandeau);
+  top: 0;
   align-self: start;
   min-height: calc(100dvh - var(--hauteur-bandeau));
 }

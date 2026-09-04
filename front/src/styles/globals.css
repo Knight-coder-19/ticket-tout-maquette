@@ -56,6 +56,9 @@
 
 body {
   margin: 0;
+  /* Reserve la hauteur de la mention de simulation, fixee en bas de fenetre
+     (simulation.css) : rien ne se cache derriere. */
+  padding-block-end: var(--hauteur-bandeau);
   font-family: var(--police-corps);
   font-size: var(--taille-base);
   line-height: 1.6;

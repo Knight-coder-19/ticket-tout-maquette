@@ -11,30 +11,28 @@
 .bandeau-simulation {
   background: var(--couleur-simulation-fond);
   color: var(--couleur-simulation-texte);
-  /* Ligne de perforation en pied, echo du talon detachable du logo : la
-     mention fait partie de la metaphore du ticket, ce n'est pas une bande de
-     danger. */
-  border-block-end: 2px dashed var(--couleur-simulation-filet);
-  /* Une ligne : la hauteur vient de la police, l'espace vertical est reduit au
-     minimum lisible. Le bandeau est sur chaque ecran, il n'a pas a en prendre
-     le tiers. */
-  padding: 6px var(--espace-4);
+  /* Ligne de perforation sur le bord haut, echo du talon detachable du logo :
+     la mention fait partie de la metaphore du ticket, pas une bande de danger. */
+  border-block-start: 2px dashed var(--couleur-simulation-filet);
+  padding: 5px var(--espace-4);
 
   /*
-   * Il ne defile pas.
+   * Fixe en bas de la fenetre.
    *
-   * Sur un ecran long -- le registre en compte des dizaines de lignes -- un
-   * bandeau qui part vers le haut laisse un tableau de montants sans sa
-   * mention. Une capture prise a mi-page passerait alors pour un document
-   * reel. Il colle donc en haut, et tout ce qui colle sous lui est cale sur
-   * `--hauteur-bandeau`.
+   * L'exigence (F. Pontaillac) est qu'aucun ecran -- ni aucune capture -- ne
+   * puisse etre pris pour un document reel : la mention doit donc etre visible
+   * en permanence. Ancree en bas, elle l'est sur toute capture sans encombrer
+   * le haut de page ni pousser le contenu. `padding-block-end` est ajoute aux
+   * conteneurs d'espace (`--hauteur-bandeau`) pour que rien ne se cache
+   * derriere.
    *
-   * `z-index` au-dessus du rail et de l'en-tete de tableau, qui collent aussi :
-   * c'est lui qui doit rester visible si deux se rencontrent.
+   * `z-index` eleve : c'est elle qui reste visible si deux elements collants
+   * se rencontrent.
    */
-  position: sticky;
-  top: 0;
-  z-index: 3;
+  position: fixed;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: 20;
 }
 
 .bandeau-simulation__texte {

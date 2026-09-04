@@ -159,7 +159,7 @@
     position: sticky;
     /* Sous le bandeau, qui colle lui aussi : sinon le rail passerait derriere
        et la mention de simulation serait recouverte. */
-    top: var(--hauteur-bandeau);
+    top: 0;
     z-index: 1;
     align-self: start;
     min-height: calc(100dvh - var(--hauteur-bandeau));
