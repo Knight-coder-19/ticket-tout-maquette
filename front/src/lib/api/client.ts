@@ -49,6 +49,11 @@ import { ErreurService } from "@/types/erreurs";
  */
 async function joindre(chemin: string, options: RequestInit): Promise<Response> {
   try {
+    /* Maquette statique : pas de réseau, on rejoue les handlers en mémoire. */
+    if (env.modeMaquette) {
+      const { repondreLocalement } = await import("@/mocks/serveur-local");
+      return await repondreLocalement(`${env.baseApi}${chemin}`, options);
+    }
     return await fetch(`${env.baseApi}${chemin}`, { ...options, credentials: "include" });
   } catch {
     /* Le réseau a lâché. On ne sait pas si le serveur a écrit ou non : c'est

@@ -33,10 +33,19 @@ const apiUrl = utiliserMocks
  */
 const baseApi = utiliserMocks ? "/api" : apiUrl;
 
+/*
+ * Maquette statique (GitHub Pages) : aucun backend et, en export statique,
+ * aucun route handler Next. Le client HTTP rejoue alors les handlers de
+ * `src/mocks/api/` directement dans le navigateur (`mocks/serveur-local.ts`).
+ * Piloté par NEXT_PUBLIC_MAQUETTE, jamais actif dans un build normal.
+ */
+const modeMaquette = process.env.NEXT_PUBLIC_MAQUETTE === "true";
+
 export const env = {
   apiUrl,
   utiliserMocks,
   baseApi,
+  modeMaquette,
   qrTtlSecondes: Number(process.env.NEXT_PUBLIC_QR_TTL_SECONDS ?? 300),
   nomApplication: process.env.NEXT_PUBLIC_APP_NAME ?? "Ticket Tout",
 } as const;
