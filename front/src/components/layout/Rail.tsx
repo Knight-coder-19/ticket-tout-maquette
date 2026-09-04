@@ -1,42 +1,36 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
+import { Logo } from "@/components/marque/Logo";
+import { Icone, type NomIcone } from "@/components/ui/Icone";
 
 /**
  * Le rail de navigation d'un espace.
  *
- * ─── Pourquoi il vit ici ───
+ * ─── Un seul rail pour les quatre espaces ───
  *
- * `RailAdministration` et `RailPartenaire` ne diffèrent que par quatre choses :
- * la liste des entrées, le titre du rail, le nom accessible de la navigation, et
- * la racine de l'espace. Quatre propriétés ne font pas deux composants.
+ * Salarié, partenaire et administration partagent la même coquille : bloc-marque
+ * Ticket Tout + mention « simulation » en tête, entrées à icône, entrée courante
+ * marquée (`aria-current` + graisse + filet ambre), pied optionnel (profil,
+ * déconnexion). Chaque espace ne fournit que ses données : ses entrées, son
+ * titre, sa racine.
  *
- * Il est partagé par deux espaces, il vit donc dans `src/components/` — pas à
- * la racine d'un espace, qui est réservée à ce que deux ÉCRANS d'un même
- * espace partagent (`front/CLAUDE.md`).
- *
- * Chaque espace garde son propre fichier `Rail<Espace>.tsx` : il n'y porte que
- * ses entrées, qui sont des données propres à lui, pas de la mécanique.
+ * Il est partagé par plusieurs espaces, il vit donc dans `src/components/`.
  */
 
 export interface EntreeRail {
   href: string;
   libelle: string;
+  /** Icône du jeu interne (`components/ui/Icone`). */
+  icone?: NomIcone;
 }
 
 /**
  * Une entrée est courante si elle mène à la page affichée, ou à l'une de ses
- * sous-pages.
- *
- * Le préfixe est indispensable : `/administration/salaries/SAL-001` doit
- * marquer « Salariés », sinon l'agent perd sa position dès qu'il ouvre une
- * fiche. Mais il se compare sur une frontière de segment, `${href}/`, sans quoi
- * `/administration/recharges` marquerait aussi une hypothétique
- * `/administration/recharges-archivees`.
- *
- * La racine de l'espace est le seul cas exact : elle est le préfixe de toutes
- * les autres entrées, et un préfixe l'allumerait sur toutes les pages.
+ * sous-pages. Le préfixe se compare sur une frontière de segment, `${href}/`.
+ * La racine de l'espace est le seul cas exact.
  */
 export function estCourante(href: string, chemin: string, racine: string): boolean {
   if (href === racine) return chemin === racine;
@@ -49,8 +43,9 @@ export function Rail({
   racine,
   entrees,
   identifiantTitre,
+  pied,
 }: {
-  /** Le nom de l'espace, affiché en tête du rail. */
+  /** Le nom de l'espace, affiché sous le bloc-marque. */
   titre: string;
   /** Le nom de la navigation pour les technologies d'assistance. */
   nomAccessible: string;
@@ -59,40 +54,43 @@ export function Rail({
   entrees: readonly EntreeRail[];
   /** Identifiant du titre, pour `aria-labelledby`. Unique par espace. */
   identifiantTitre: string;
+  /** Pied du rail : profil, déconnexion… Optionnel. */
+  pied?: ReactNode;
 }) {
-  /* `usePathname` peut rendre `null` hors contexte de routage (rendu de test,
-     erreur de montage). Le rail s'affiche alors sans entrée courante plutôt
-     que de casser. */
   const chemin = usePathname() ?? "";
 
   return (
     <nav className="rail" aria-label={nomAccessible}>
+      <div className="rail__marque">
+        <Link href="/" aria-label="Ticket Tout, accueil">
+          <Logo hauteur={22} />
+        </Link>
+        <span className="rail__sim">simulation</span>
+      </div>
+
       <h2 className="rail__titre" id={identifiantTitre}>
         {titre}
       </h2>
+
       <ul className="rail__liste" aria-labelledby={identifiantTitre}>
-        {entrees.map(({ href, libelle }) => {
+        {entrees.map(({ href, libelle, icone }) => {
           const courante = estCourante(href, chemin, racine);
           return (
             <li key={href}>
-              {/*
-               * `aria-current="page"` et non une simple couleur : un
-               * utilisateur de lecteur d'écran, ou qui ne perçoit pas les
-               * contrastes de teinte, doit savoir où il est. La règle CSS de
-               * l'état actif porte d'ailleurs sur cet attribut, ce qui
-               * interdit aux deux de diverger.
-               */}
               <Link
                 className="rail__lien"
                 href={href}
                 aria-current={courante ? "page" : undefined}
               >
+                {icone ? <Icone nom={icone} taille={18} /> : null}
                 {libelle}
               </Link>
             </li>
           );
         })}
       </ul>
+
+      {pied ? <div className="rail__pied">{pied}</div> : null}
     </nav>
   );
 }

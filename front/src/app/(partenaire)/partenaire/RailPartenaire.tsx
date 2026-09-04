@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { Rail, type EntreeRail } from "@/components/layout/Rail";
+import { Icone } from "@/components/ui/Icone";
 
 /**
  * Les cinq sections de l'espace partenaire.
@@ -15,14 +17,14 @@ import { Rail, type EntreeRail } from "@/components/layout/Rail";
  * vers l'encaissement, qui reste à un geste.
  *
  * La mécanique du rail vit dans `components/layout/Rail`, partagée avec
- * l'administration. Ce fichier ne porte que des données.
+ * l'administration et l'espace salarié. Ce fichier ne porte que des données.
  */
 const ENTREES: readonly EntreeRail[] = [
-  { href: "/partenaire", libelle: "Tableau de bord" },
-  { href: "/partenaire/encaissement", libelle: "Encaisser" },
-  { href: "/partenaire/transactions", libelle: "Transactions" },
-  { href: "/partenaire/catalogue", libelle: "Catalogue" },
-  { href: "/partenaire/compte", libelle: "Mon compte" },
+  { href: "/partenaire", libelle: "Tableau de bord", icone: "solde" },
+  { href: "/partenaire/encaissement", libelle: "Encaisser", icone: "paiement" },
+  { href: "/partenaire/transactions", libelle: "Transactions", icone: "historique" },
+  { href: "/partenaire/catalogue", libelle: "Catalogue", icone: "partenaires" },
+  { href: "/partenaire/compte", libelle: "Mon compte", icone: "info" },
 ];
 
 export function RailPartenaire() {
@@ -33,6 +35,12 @@ export function RailPartenaire() {
       racine="/partenaire"
       entrees={ENTREES}
       identifiantTitre="rail-partenaire"
+      pied={
+        <Link href="/connexion" className="rail__lien">
+          <Icone nom="deconnexion" taille={18} />
+          Se déconnecter
+        </Link>
+      }
     />
   );
 }
